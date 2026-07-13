@@ -11,7 +11,12 @@ import (
 
 func main() {
 	// fang wraps cobra with styled help/errors, --version, and shell completions.
-	if err := fang.Execute(context.Background(), cmd.Root()); err != nil {
+	if err := fang.Execute(
+		context.Background(),
+		cmd.Root(),
+		fang.WithVersion(cmd.Version),
+		fang.WithCommit(cmd.Commit),
+	); err != nil {
 		os.Exit(1)
 	}
 }

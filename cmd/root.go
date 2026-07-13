@@ -13,6 +13,13 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// Build metadata, stamped by goreleaser via -ldflags -X at release time and
+// left at these defaults for local/dev builds.
+var (
+	Version = "dev"
+	Commit  = "none"
+)
+
 // Persistent (global) flags, resolved once for every command.
 var (
 	flagOutput  string
@@ -45,7 +52,7 @@ func Root() *cobra.Command {
 	pf.StringVar(&flagBaseURL, "base-url", "", "Override the API host")
 	pf.StringVar(&flagOrg, "org", "", "Organization slug (reserved for multi-org keys)")
 
-	root.AddCommand(loginCmd(), logoutCmd(), statusCmd(), sessionsCmd(), phonesCmd())
+	root.AddCommand(loginCmd(), logoutCmd(), statusCmd(), sessionsCmd(), phonesCmd(), runsCmd(), apiKeysCmd())
 	return root
 }
 
