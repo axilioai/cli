@@ -3,7 +3,7 @@ module github.com/axilioai/cli
 go 1.26.3
 
 require (
-	github.com/axilioai/platform-go v0.0.0-20260713042758-a548071077b0
+	github.com/axilioai/platform-go v0.1.0
 	github.com/charmbracelet/fang v1.0.0
 	github.com/pterm/pterm v0.12.83
 	github.com/spf13/cobra v1.10.2
