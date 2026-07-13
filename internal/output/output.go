@@ -5,7 +5,6 @@
 package output
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -26,11 +25,17 @@ func New(format string, noColor bool) *Printer {
 	return &Printer{JSON: format == "json"}
 }
 
-// Raw prints the API response as pretty JSON to stdout in JSON mode; otherwise
-// it runs the table builder. JSON stays faithful to the server's own response.
-func (p *Printer) Raw(raw []byte, table func()) {
+// Emit prints v as indented JSON to stdout in JSON mode; otherwise it runs the
+// table builder. The generated SDK response types marshal cleanly (omitempty
+// drops nil pointers), so JSON stays faithful without leaking defaults.
+func (p *Printer) Emit(v any, table func()) {
 	if p.JSON {
-		fmt.Println(prettyJSON(raw))
+		b, err := json.MarshalIndent(v, "", "  ")
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			return
+		}
+		fmt.Println(string(b))
 		return
 	}
 	table()
@@ -56,12 +61,4 @@ func KV(pairs [][2]string) {
 		rows = append(rows, []string{kv[0], kv[1]})
 	}
 	_ = pterm.DefaultTable.WithData(pterm.TableData(rows)).Render()
-}
-
-func prettyJSON(raw []byte) string {
-	var buf bytes.Buffer
-	if json.Indent(&buf, raw, "", "  ") != nil {
-		return string(raw)
-	}
-	return buf.String()
 }

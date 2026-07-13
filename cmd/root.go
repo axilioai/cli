@@ -5,10 +5,11 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/axilioai/cli/internal/api"
 	"github.com/axilioai/cli/internal/config"
 	"github.com/axilioai/cli/internal/output"
 	"github.com/axilioai/cli/internal/util"
+	"github.com/axilioai/platform-go/client"
+	"github.com/axilioai/platform-go/option"
 	"github.com/spf13/cobra"
 )
 
@@ -58,11 +59,20 @@ func resolvedCreds() (apiKey, baseURL string) {
 	return apiKey, baseURL
 }
 
-// client builds an authenticated client, or a friendly error when no key is set.
-func client() (*api.Client, error) {
-	key, base := resolvedCreds()
+// sdkBaseURL turns a host (or empty) into the base URL the SDK expects: the SDK's
+// generated default is just "/api/v1", so it needs the host prepended.
+func sdkBaseURL(host string) string {
+	if host == "" {
+		host = "https://api.axilio.ai"
+	}
+	return host + "/api/v1"
+}
+
+// newClient builds an authenticated SDK client, or a friendly error when no key is set.
+func newClient() (*client.Client, error) {
+	key, host := resolvedCreds()
 	if key == "" {
 		return nil, fmt.Errorf("no API key found; run `axilio login` or set AXILIO_API_KEY")
 	}
-	return api.New(key, base), nil
+	return client.NewClient(option.WithAPIKey(key), option.WithBaseURL(sdkBaseURL(host))), nil
 }

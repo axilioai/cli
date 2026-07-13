@@ -1,13 +1,15 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
 
-	"github.com/axilioai/cli/internal/api"
 	"github.com/axilioai/cli/internal/config"
 	"github.com/axilioai/cli/internal/output"
+	"github.com/axilioai/platform-go/client"
+	"github.com/axilioai/platform-go/option"
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
 )
@@ -32,7 +34,8 @@ func loginCmd() *cobra.Command {
 			}
 
 			// Verify the key against the API before persisting it.
-			_, bal, err := api.New(key, flagBaseURL).GetBalance()
+			cl := client.NewClient(option.WithAPIKey(key), option.WithBaseURL(sdkBaseURL(flagBaseURL)))
+			bal, err := cl.Billing.GetBalance(context.Background())
 			if err != nil {
 				return fmt.Errorf("could not verify the key: %w", err)
 			}
@@ -78,21 +81,26 @@ func statusCmd() *cobra.Command {
 		Use:   "status",
 		Short: "Check your credentials and reach the API.",
 		RunE: func(_ *cobra.Command, _ []string) error {
-			cl, err := client()
+			cl, err := newClient()
 			if err != nil {
 				return err
 			}
-			raw, bal, err := cl.GetBalance()
+			bal, err := cl.Billing.GetBalance(context.Background())
 			if err != nil {
 				return err
 			}
-			printer().Raw(raw, func() {
-				output.KV([][2]string{
-					{"Status", "ok"},
-					{"API host", cl.BaseURL()},
-					{"Balance", bal.BalanceDisplay},
-				})
-			})
+			_, host := resolvedCreds()
+			apiHost := sdkBaseURL(host)
+			printer().Emit(
+				map[string]string{"status": "ok", "api_host": apiHost, "balance": bal.BalanceDisplay},
+				func() {
+					output.KV([][2]string{
+						{"Status", "ok"},
+						{"API host", apiHost},
+						{"Balance", bal.BalanceDisplay},
+					})
+				},
+			)
 			return nil
 		},
 	}

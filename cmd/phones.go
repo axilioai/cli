@@ -1,10 +1,12 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/axilioai/cli/internal/output"
 	"github.com/axilioai/cli/internal/util"
+	platformgo "github.com/axilioai/platform-go"
 	"github.com/spf13/cobra"
 )
 
@@ -19,23 +21,23 @@ func phonesListCmd() *cobra.Command {
 		Use:   "list",
 		Short: "List phones you can claim from the shared pool.",
 		RunE: func(_ *cobra.Command, _ []string) error {
-			cl, err := client()
+			cl, err := newClient()
 			if err != nil {
 				return err
 			}
-			raw, r, err := cl.AvailablePhones()
+			resp, err := cl.Phones.Available(context.Background(), &platformgo.PhonesAvailableRequest{})
 			if err != nil {
 				return err
 			}
-			printer().Raw(raw, func() {
-				if len(r.Phones) == 0 {
+			printer().Emit(resp, func() {
+				if len(resp.Phones) == 0 {
 					fmt.Println("No phones available.")
 					return
 				}
 				rows := [][]string{{"PHONE ID", "TYPE", "MODEL", "STATUS"}}
-				for _, p := range r.Phones {
+				for _, ph := range resp.Phones {
 					rows = append(rows, []string{
-						p.PhoneID, util.OrDash(p.PhoneType), util.OrDash(p.ModelName), util.OrDash(p.Status),
+						ph.PhoneID, util.OrDash(enumv(ph.PhoneType)), util.OrDash(strv(ph.ModelName)), string(ph.Status),
 					})
 				}
 				output.Table(rows)

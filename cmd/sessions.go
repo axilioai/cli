@@ -1,12 +1,13 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
-	"github.com/axilioai/cli/internal/api"
 	"github.com/axilioai/cli/internal/output"
 	"github.com/axilioai/cli/internal/util"
+	platformgo "github.com/axilioai/platform-go"
 	"github.com/spf13/cobra"
 )
 
@@ -21,23 +22,23 @@ func sessionsListCmd() *cobra.Command {
 		Use:   "list",
 		Short: "List active sessions.",
 		RunE: func(_ *cobra.Command, _ []string) error {
-			cl, err := client()
+			cl, err := newClient()
 			if err != nil {
 				return err
 			}
-			raw, r, err := cl.ActiveSessions()
+			resp, err := cl.Phones.ActiveSessions(context.Background(), &platformgo.PhonesActiveSessionsRequest{})
 			if err != nil {
 				return err
 			}
-			printer().Raw(raw, func() {
-				if len(r.Sessions) == 0 {
+			printer().Emit(resp, func() {
+				if len(resp.Sessions) == 0 {
 					fmt.Println("No active sessions.")
 					return
 				}
-				rows := [][]string{{"SESSION", "PHONE", "TYPE", "WORKFLOW"}}
-				for _, s := range r.Sessions {
+				rows := [][]string{{"SESSION", "PHONE", "TYPE", "MODEL"}}
+				for _, s := range resp.Sessions {
 					rows = append(rows, []string{
-						s.SessionID, s.PhoneID, util.OrDash(s.PhoneType), util.OrDash(s.WorkflowName),
+						s.SessionID, s.PhoneID, util.OrDash(enumv(s.PhoneType)), util.OrDash(strv(s.ModelName)),
 					})
 				}
 				output.Table(rows)
@@ -48,31 +49,37 @@ func sessionsListCmd() *cobra.Command {
 }
 
 func sessionsStartCmd() *cobra.Command {
-	var phoneType, phoneID, workflowID string
+	var phoneType, phoneID string
 	cmd := &cobra.Command{
 		Use:   "start",
 		Short: "Acquire a phone and open a session; the lease persists until you stop it.",
 		RunE: func(_ *cobra.Command, _ []string) error {
-			cl, err := client()
+			cl, err := newClient()
 			if err != nil {
 				return err
 			}
-			raw, a, err := cl.Allocate(api.AllocateRequest{
-				PhoneType:  strings.ToUpper(strings.TrimSpace(phoneType)),
-				PhoneID:    phoneID,
-				WorkflowID: workflowID,
-			})
+			pt := strings.ToLower(strings.TrimSpace(phoneType))
+			if pt == "ios" {
+				pt = "iphone"
+			}
+			req := &platformgo.PhoneAllocateRequest{
+				PhoneType: platformgo.PhoneAllocateRequestPhoneType(pt),
+			}
+			if phoneID != "" {
+				req.PhoneID = &phoneID
+			}
+			a, err := cl.Phones.Allocate(context.Background(), req)
 			if err != nil {
 				return err
 			}
 			p := printer()
-			p.Raw(raw, func() {
+			p.Emit(a, func() {
 				output.KV([][2]string{
 					{"Session", a.SessionID},
 					{"Phone", a.PhoneID},
-					{"Region", util.OrDash(a.Region)},
-					{"Live view", util.OrDash(a.LiveViewURL)},
-					{"Control URL", util.OrDash(a.ControlURL)},
+					{"Region", util.OrDash(strv(a.Region))},
+					{"Live view", util.OrDash(strv(a.LiveViewURL))},
+					{"Control URL", util.OrDash(strv(a.ControlURL))},
 				})
 			})
 			p.Note("\nRelease it with:  axilio sessions stop %s", a.SessionID)
@@ -81,7 +88,6 @@ func sessionsStartCmd() *cobra.Command {
 	}
 	cmd.Flags().StringVar(&phoneType, "phone-type", "android", "android or ios")
 	cmd.Flags().StringVar(&phoneID, "phone-id", "", "Pin a dedicated phone")
-	cmd.Flags().StringVar(&workflowID, "workflow", "", "Attach the session to a workflow")
 	return cmd
 }
 
@@ -92,15 +98,15 @@ func sessionsStopCmd() *cobra.Command {
 		Short: "Release a session by session id or phone id.",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
-			cl, err := client()
+			cl, err := newClient()
 			if err != nil {
 				return err
 			}
 			id := args[0]
 			phoneID := id
 			// deallocate takes a phone_id; resolve a session_id to it via the active list.
-			if _, r, err := cl.ActiveSessions(); err == nil {
-				for _, s := range r.Sessions {
+			if resp, err := cl.Phones.ActiveSessions(context.Background(), &platformgo.PhonesActiveSessionsRequest{}); err == nil {
+				for _, s := range resp.Sessions {
 					if id == s.SessionID || id == s.PhoneID {
 						phoneID = s.PhoneID
 						break
@@ -110,7 +116,7 @@ func sessionsStopCmd() *cobra.Command {
 			if !yes && !util.Confirm(fmt.Sprintf("Release %s?", phoneID)) {
 				return fmt.Errorf("aborted")
 			}
-			if _, err := cl.Deallocate(phoneID); err != nil {
+			if _, err := cl.Phones.Deallocate(context.Background(), &platformgo.PhonesDeallocateRequest{PhoneID: phoneID}); err != nil {
 				return err
 			}
 			printer().Note("Released %s.", phoneID)
