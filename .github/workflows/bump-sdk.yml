@@ -1,0 +1,106 @@
+name: Bump platform-go SDK
+
+# Opens a PR pinning github.com/axilioai/platform-go to a newly published
+# version. Fired by platform-go's tag-on-merge.yml (repository_dispatch
+# platform-go-released) right after it cuts a release, so the CLI's dependency
+# tracks the SDK automatically. This is the last link of the release chain:
+#   platform-python regen PR -> platform-go regen PR -> platform-go release
+#   -> (this) CLI bump PR
+# The PR is opened, not merged: a human approves it (the third approval in the
+# python -> go -> cli sequence).
+#
+# workflow_dispatch is provided for manual re-pinning to a specific version.
+
+on:
+  repository_dispatch:
+    types: [platform-go-released]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'platform-go version to pin (e.g. v0.1.1)'
+        required: true
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  bump:
+    name: Bump platform-go pin
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Resolve target version
+        id: v
+        env:
+          PAYLOAD_VERSION: ${{ github.event.client_payload.version }}
+          INPUT_VERSION: ${{ github.event.inputs.version }}
+        run: |
+          VERSION="${PAYLOAD_VERSION:-$INPUT_VERSION}"
+          if [[ -z "$VERSION" ]]; then
+            echo "::error::No version supplied"; exit 1
+          fi
+          # Normalise to a leading v (go get wants v-prefixed semver).
+          [[ "$VERSION" == v* ]] || VERSION="v${VERSION}"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Target platform-go version: $VERSION"
+
+      - name: Bump the pin
+        env:
+          # direct + off: fetch straight from GitHub and skip the sum DB so the
+          # bump works immediately after a release, before the module proxy /
+          # checksum DB have indexed the new tag.
+          GOPROXY: direct
+          GOSUMDB: 'off'
+          VERSION: ${{ steps.v.outputs.version }}
+        run: |
+          go get "github.com/axilioai/platform-go@${VERSION}"
+          go mod tidy
+          go build ./...
+
+      - name: Detect change
+        id: diff
+        run: |
+          if git diff --quiet -- go.mod go.sum; then
+            echo "Pin already at ${{ steps.v.outputs.version }}; nothing to PR."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Open bump PR
+        if: steps.diff.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          # A PAT (SDK_BUMP_TOKEN) makes the PR trigger ci.yml so you can see it
+          # green before approving; without it, falls back to GITHUB_TOKEN and
+          # the PR is still opened (and this job already ran go build).
+          token: ${{ secrets.SDK_BUMP_TOKEN || secrets.GITHUB_TOKEN }}
+          branch: bump/platform-go
+          base: main
+          add-paths: |
+            go.mod
+            go.sum
+          title: "[AXI-1252] - bump platform-go to ${{ steps.v.outputs.version }}"
+          commit-message: |
+            [AXI-1252] - bump platform-go to ${{ steps.v.outputs.version }}
+
+            Auto-opened by .github/workflows/bump-sdk.yml on a new platform-go
+            release. Pins github.com/axilioai/platform-go to ${{ steps.v.outputs.version }}.
+          body: |
+            Automated dependency bump: pins `github.com/axilioai/platform-go` to
+            **${{ steps.v.outputs.version }}**, the version platform-go just
+            published.
+
+            Opened by `bump-sdk.yml` on a `platform-go-released` dispatch — the
+            last link of the SDK release chain (platform-python regen ->
+            platform-go regen -> platform-go release -> this). `go mod tidy` +
+            `go build ./...` passed in the workflow before this PR was opened.
+
+            Approve + merge to ship the CLI against the new SDK.
