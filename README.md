@@ -41,5 +41,5 @@ completions via `axilio completion <shell>`.
 
 Early scaffold. The API layer under `internal/api` is a temporary hand-written
 client for the endpoints the CLI needs today; it will be replaced by the
-Fern-generated Go SDK (`github.com/axilioai/axilio-go`) generated from the same
+Fern-generated Go SDK (`github.com/axilioai/platform-go`) generated from the same
 OpenAPI spec.

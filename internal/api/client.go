@@ -2,7 +2,7 @@
 //
 // TEMPORARY: this hand-written client covers only the handful of endpoints the
 // CLI needs today. It is a placeholder for the Fern-generated Go SDK
-// (github.com/axilioai/axilio-go), which will replace it once the go-sdk
+// (github.com/axilioai/platform-go), which will replace it once the go-sdk
 // generation group is wired up. Command code talks to this via small methods,
 // so swapping in the generated SDK is a localized change.
 package api
