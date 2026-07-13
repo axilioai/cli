@@ -49,7 +49,7 @@ func sessionsListCmd() *cobra.Command {
 }
 
 func sessionsStartCmd() *cobra.Command {
-	var phoneType, phoneID string
+	var phoneType, phoneID, workflowID string
 	cmd := &cobra.Command{
 		Use:   "start",
 		Short: "Acquire a phone and open a session; the lease persists until you stop it.",
@@ -63,6 +63,9 @@ func sessionsStartCmd() *cobra.Command {
 			}
 			if phoneID != "" {
 				req.PhoneID = &phoneID
+			}
+			if workflowID != "" {
+				req.WorkflowID = &workflowID
 			}
 			a, err := cl.Phones.Allocate(context.Background(), req)
 			if err != nil {
@@ -84,6 +87,7 @@ func sessionsStartCmd() *cobra.Command {
 	}
 	cmd.Flags().StringVar(&phoneType, "phone-type", "android", "android or iphone")
 	cmd.Flags().StringVar(&phoneID, "phone-id", "", "Pin a dedicated phone")
+	cmd.Flags().StringVar(&workflowID, "workflow", "", "Attach the session to a workflow (omit for an interactive lease)")
 	return cmd
 }
 
