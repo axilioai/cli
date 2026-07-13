@@ -1,0 +1,12 @@
+# Build output
+/axilio
+/dist/
+
+# Test / coverage
+*.out
+coverage.txt
+
+# Editors / OS
+.DS_Store
+.idea/
+.vscode/
