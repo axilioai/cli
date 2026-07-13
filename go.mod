@@ -3,7 +3,7 @@ module github.com/axilioai/cli
 go 1.26.3
 
 require (
-	github.com/axilioai/platform-go v0.1.1
+	github.com/axilioai/platform-go v0.1.2
 	github.com/charmbracelet/fang v1.0.0
 	github.com/pterm/pterm v0.12.83
 	github.com/spf13/cobra v1.10.2
@@ -25,6 +25,7 @@ require (
 	github.com/clipperhouse/displaywidth v0.4.1 // indirect
 	github.com/clipperhouse/stringish v0.1.1 // indirect
 	github.com/clipperhouse/uax29/v2 v2.7.0 // indirect
+	github.com/coder/websocket v1.8.15 // indirect
 	github.com/containerd/console v1.0.5 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/gookit/color v1.6.0 // indirect

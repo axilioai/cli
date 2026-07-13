@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/axilioai/cli/internal/output"
+	"github.com/axilioai/cli/internal/session"
 	"github.com/axilioai/cli/internal/util"
 	platformgo "github.com/axilioai/platform-go"
 	"github.com/spf13/cobra"
@@ -71,6 +72,17 @@ func sessionsStartCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			// Record the lease as the current session so `axilio phone ...`
+			// verbs target it by default. control_url is minted only here, so
+			// capturing it now is what lets us drive the phone later.
+			if a.ControlURL != nil {
+				_ = session.Save(session.Session{
+					SessionID:  a.SessionID,
+					PhoneID:    a.PhoneID,
+					PhoneType:  strings.ToLower(strings.TrimSpace(phoneType)),
+					ControlURL: *a.ControlURL,
+				})
+			}
 			p := printer()
 			p.Emit(a, func() {
 				output.KV([][2]string{
@@ -81,7 +93,10 @@ func sessionsStartCmd() *cobra.Command {
 					{"Control URL", util.OrDash(strv(a.ControlURL))},
 				})
 			})
-			p.Note("\nRelease it with:  axilio sessions stop %s", a.SessionID)
+			if a.ControlURL != nil {
+				p.Note("\nThis is now the current session. Drive it:  axilio phone observe")
+			}
+			p.Note("Release it with:  axilio sessions stop %s", a.SessionID)
 			return nil
 		},
 	}
@@ -118,6 +133,10 @@ func sessionsStopCmd() *cobra.Command {
 			}
 			if _, err := cl.Phones.Deallocate(context.Background(), &platformgo.PhonesDeallocateRequest{PhoneID: phoneID}); err != nil {
 				return err
+			}
+			// Drop the current-session record if this was it.
+			if cur, ok := session.Load(); ok && (cur.Matches(id) || cur.Matches(phoneID)) {
+				_ = session.Clear()
 			}
 			printer().Note("Released %s.", phoneID)
 			return nil
