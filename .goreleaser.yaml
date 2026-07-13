@@ -1,0 +1,63 @@
+# goreleaser config for the axilio CLI (schema v2).
+# Local check:   goreleaser check
+# Dry-run build: goreleaser release --snapshot --clean
+# Real release:  git tag v0.1.0 && git push origin v0.1.0  (Release workflow runs this)
+version: 2
+
+project_name: axilio
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: axilio
+    main: .
+    binary: axilio
+    env:
+      - CGO_ENABLED=0
+    goos: [linux, darwin, windows]
+    goarch: [amd64, arm64]
+    ldflags:
+      - -s -w
+      - -X github.com/axilioai/cli/cmd.Version={{ .Version }}
+      - -X github.com/axilioai/cli/cmd.Commit={{ .ShortCommit }}
+
+archives:
+  - id: axilio
+    formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+
+checksum:
+  name_template: checksums.txt
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+
+release:
+  draft: false
+  prerelease: auto
+
+# Homebrew tap. Enable once the tap repo (axilioai/homebrew-tap) exists and a
+# HOMEBREW_TAP_TOKEN secret with push rights to it is set on this repo; then
+# uncomment and drop skip_upload. Left off by default so a tag never fails a
+# release on a missing token/repo.
+# brews:
+#   - name: axilio
+#     repository:
+#       owner: axilioai
+#       name: homebrew-tap
+#       token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
+#     homepage: "https://axilio.ai"
+#     description: "Acquire and drive Axilio phones from the command line."
+#     commit_author:
+#       name: axilio-bot
+#       email: bot@axilio.ai
