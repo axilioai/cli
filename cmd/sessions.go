@@ -58,12 +58,8 @@ func sessionsStartCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			pt := strings.ToLower(strings.TrimSpace(phoneType))
-			if pt == "ios" {
-				pt = "iphone"
-			}
 			req := &platformgo.PhoneAllocateRequest{
-				PhoneType: platformgo.PhoneAllocateRequestPhoneType(pt),
+				PhoneType: platformgo.PhoneAllocateRequestPhoneType(strings.ToLower(strings.TrimSpace(phoneType))),
 			}
 			if phoneID != "" {
 				req.PhoneID = &phoneID
@@ -86,7 +82,7 @@ func sessionsStartCmd() *cobra.Command {
 			return nil
 		},
 	}
-	cmd.Flags().StringVar(&phoneType, "phone-type", "android", "android or ios")
+	cmd.Flags().StringVar(&phoneType, "phone-type", "android", "android or iphone")
 	cmd.Flags().StringVar(&phoneID, "phone-id", "", "Pin a dedicated phone")
 	return cmd
 }
