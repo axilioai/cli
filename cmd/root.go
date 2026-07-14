@@ -54,7 +54,7 @@ func Root() *cobra.Command {
 	pf.StringVar(&flagBaseURL, "base-url", "", "Override the API host")
 	pf.StringVar(&flagOrg, "org", "", "Organization slug (reserved for multi-org keys)")
 
-	root.AddCommand(loginCmd(), logoutCmd(), statusCmd(), doctorCmd(), sessionsCmd(), phonesCmd(), phoneCmd(), runsCmd(), apiKeysCmd())
+	root.AddCommand(loginCmd(), logoutCmd(), statusCmd(), doctorCmd(), configCmd(), sessionsCmd(), phonesCmd(), phoneCmd(), runsCmd(), apiKeysCmd())
 	return root
 }
 
