@@ -9,6 +9,7 @@ require (
 	github.com/pterm/pterm v0.12.83
 	github.com/spf13/cobra v1.10.2
 	github.com/zalando/go-keyring v0.2.8
+	golang.org/x/mod v0.38.0
 	golang.org/x/term v0.40.0
 )
 
