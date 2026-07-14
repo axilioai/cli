@@ -95,7 +95,9 @@ to `https://api.axilio.ai`.
 | `phones list` | List phones you can claim from the shared pool. |
 | `sessions start` / `stop` / `list` / `current` | Acquire, release, and inspect phone leases. |
 | `phone observe` / `find` / `find-text` / `tap` / `long-press` / `swipe` / `type` / `key` / `screenshot` / `wait-for` | Drive the current phone session. |
+| `workflows list` / `get` | Inspect workflows (read-only). |
 | `runs list` / `get` / `cancel` | Inspect and manage workflow runs. |
+| `usage summary` / `inferences` | Inspect usage and cost metrics (read-only). |
 | `api-keys list` / `create` / `delete` | Manage your organization's API keys. |
 | `completion <shell>` | Generate a shell-completion script. |
 
