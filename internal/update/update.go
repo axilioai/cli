@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"net/http"
 	"os"
 	"path/filepath"
 	"time"
@@ -42,18 +41,30 @@ func cachePath() string {
 // the latest GitHub release. Dev / source builds (non-semver versions) are
 // never nagged. Safe to call on every command.
 func Notify(ctx context.Context, w io.Writer, current string) {
-	cv := ensureV(current)
-	if !semver.IsValid(cv) {
+	if !IsReleaseVersion(current) {
 		return // dev / source build: don't nag
 	}
 	latest := latestVersion(ctx)
 	if latest == "" {
 		return
 	}
-	if semver.Compare(ensureV(latest), cv) > 0 {
+	if Newer(latest, current) {
 		fmt.Fprintf(w, "\nA new release of axilio is available: %s -> %s\nUpgrade with `axilio upgrade` or `go install github.com/axilioai/cli@latest`.\n",
 			current, latest)
 	}
+}
+
+// IsReleaseVersion reports whether v is a real released (semver) version rather
+// than a dev / source / go-install build ("dev", a bare commit, etc.). Only
+// release binaries can self-update; everything else defers to the toolchain.
+func IsReleaseVersion(v string) bool {
+	return semver.IsValid(ensureV(v))
+}
+
+// Newer reports whether release version latest is strictly newer than current.
+// Both may be bare ("0.2.0") or v-prefixed; invalid inputs compare as not newer.
+func Newer(latest, current string) bool {
+	return semver.Compare(ensureV(latest), ensureV(current)) > 0
 }
 
 // latestVersion returns the latest known release tag, reading the cache when it
@@ -71,31 +82,17 @@ func latestVersion(ctx context.Context) string {
 	return latest
 }
 
+// fetchLatest returns just the latest release tag for the passive notifier,
+// delegating to the shared release fetch. A missing release ("" tag) is the
+// no-releases-yet signal the cache stores.
 func fetchLatest(ctx context.Context) (string, error) {
 	ctx, cancel := context.WithTimeout(ctx, fetchTimeout)
 	defer cancel()
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, releasesURL, nil)
-	if err != nil {
+	rel, err := FetchLatestRelease(ctx)
+	if err != nil || rel == nil {
 		return "", err
 	}
-	req.Header.Set("Accept", "application/vnd.github+json")
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return "", err
-	}
-	defer func() { _ = resp.Body.Close() }()
-	if resp.StatusCode != http.StatusOK {
-		// 404 = no releases yet; treat as "no update" and cache it so we don't
-		// re-hit GitHub every command until the interval passes.
-		return "", nil
-	}
-	var body struct {
-		TagName string `json:"tag_name"`
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
-		return "", err
-	}
-	return body.TagName, nil
+	return rel.Tag, nil
 }
 
 func readCache() (cacheState, error) {

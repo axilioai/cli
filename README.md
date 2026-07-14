@@ -100,6 +100,7 @@ session.
 | `doctor` | One-shot setup check: auth, connectivity, account, environment. |
 | `config` / `config set` / `config unset` | Show and edit CLI configuration (API host, paths, auth). |
 | `org list` / `org use` / `org clear` | List and switch the active organization (OAuth sessions). |
+| `upgrade` / `upgrade --check` | Update axilio to the latest release (Homebrew installs defer to `brew upgrade`). |
 | `phones list` | List phones you can claim from the shared pool. |
 | `sessions start` / `stop` / `list` / `current` | Acquire, release, and inspect phone leases. |
 | `phone observe` / `find` / `find-text` / `tap` / `long-press` / `swipe` / `type` / `key` / `screenshot` / `wait-for` | Drive the current phone session. |
