@@ -111,7 +111,7 @@ func runsCancelCmd() *cobra.Command {
 			if _, err := cl.Runs.Cancel(context.Background(), &platformgo.RunsCancelRequest{RunID: id}); err != nil {
 				return err
 			}
-			printer().Note("Cancelled %s", id)
+			printer().Note("Canceled %s", id)
 			return nil
 		},
 	}

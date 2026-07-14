@@ -1,0 +1,24 @@
+# golangci-lint config for the axilio CLI. Pinned to v1.64.8 in CI (ci.yml);
+# install that exact version locally (`golangci-lint run`) before pushing.
+run:
+  timeout: 5m
+
+linters:
+  # The defaults (errcheck, gosimple, govet, ineffassign, staticcheck, unused)
+  # plus a focused, low-noise set that matters for a network CLI.
+  enable:
+    - bodyclose   # every HTTP response body must be closed
+    - errorlint   # correct errors.Is/As usage + %w wrapping (the exit taxonomy leans on this)
+    - gocritic    # opinionated but high-signal correctness/style checks
+    - misspell    # typos in comments and strings
+    - unconvert   # redundant type conversions
+    - gofmt
+    - goimports
+
+linters-settings:
+  misspell:
+    locale: US
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0

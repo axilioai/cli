@@ -9,7 +9,9 @@ permissions:
   contents: read
 
 jobs:
-  build:
+  # gofmt + vet + golangci-lint + race tests. The single source of truth for
+  # "is the code healthy".
+  quality:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -25,7 +27,34 @@ jobs:
           fi
       - name: vet
         run: go vet ./...
-      - name: build
-        run: go build ./...
-      - name: test
-        run: go test ./...
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: v1.64.8
+          # Build golangci-lint from source with this repo's Go toolchain
+          # (go.mod pins a very new Go). A prebuilt binary compiled against an
+          # older Go can't parse newer source; goinstall sidesteps that.
+          install-mode: goinstall
+      - name: test (race)
+        run: go test -race ./...
+
+  # Prove every release target builds before goreleaser ever runs, so a tag
+  # never fails on a platform we don't build locally.
+  cross-compile:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        goos: [linux, darwin, windows]
+        goarch: [amd64, arm64]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: build ${{ matrix.goos }}/${{ matrix.goarch }}
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+        run: go build -o /dev/null .

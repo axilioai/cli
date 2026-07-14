@@ -48,7 +48,7 @@ func Root() *cobra.Command {
 	}
 	pf := root.PersistentFlags()
 	pf.StringVarP(&flagOutput, "output", "o", "table", "Output format: table or json")
-	pf.BoolVar(&flagNoColor, "no-color", false, "Disable coloured output")
+	pf.BoolVar(&flagNoColor, "no-color", false, "Disable colored output")
 	pf.BoolVarP(&flagQuiet, "quiet", "q", false, "Suppress stderr chrome (notes/prompts) for non-interactive use")
 	pf.StringVar(&flagAPIKey, "api-key", "", "Override the API key for this call")
 	pf.StringVar(&flagBaseURL, "base-url", "", "Override the API host")
