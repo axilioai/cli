@@ -21,7 +21,8 @@ builds:
     ldflags:
       - -s -w
       - -X github.com/axilioai/cli/cmd.Version={{ .Version }}
-      - -X github.com/axilioai/cli/cmd.Commit={{ .ShortCommit }}
+      - -X github.com/axilioai/cli/cmd.Commit={{ .FullCommit }}
+      - -X github.com/axilioai/cli/cmd.Date={{ .Date }}
 
 archives:
   - id: axilio

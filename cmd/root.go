@@ -3,9 +3,12 @@ package cmd
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"net/url"
 	"os"
+	"runtime"
+	"runtime/debug"
 	"strings"
 
 	"github.com/axilioai/cli/internal/config"
@@ -19,11 +22,50 @@ import (
 )
 
 // Build metadata, stamped by goreleaser via -ldflags -X at release time and
-// left at these defaults for local/dev builds.
+// filled from the Go build's VCS stamp otherwise (so a source build still
+// reports a real commit and date).
 var (
 	Version = "dev"
-	Commit  = "none"
+	Commit  = ""
+	Date    = ""
 )
+
+// versionString renders the full version line, matching a conventional CLI
+// format: "<version> (<commit>) <go-version> <build-date>". When -ldflags did
+// not set the commit/date (a plain `go build` or `go install`), they are read
+// from the module's embedded VCS stamp.
+func versionString() string {
+	v, commit, date := Version, Commit, Date
+	fromLdflags := commit != "" // a release build; its commit is authoritative
+	if info, ok := debug.ReadBuildInfo(); ok {
+		var dirty bool
+		for _, s := range info.Settings {
+			switch s.Key {
+			case "vcs.revision":
+				if commit == "" {
+					commit = s.Value
+				}
+			case "vcs.time":
+				if date == "" {
+					date = s.Value
+				}
+			case "vcs.modified":
+				dirty = s.Value == "true"
+			}
+		}
+		// Only mark a VCS-derived commit dirty; never an ldflags-pinned one.
+		if dirty && !fromLdflags && commit != "" {
+			commit += "-dirty"
+		}
+	}
+	if commit == "" {
+		commit = "unknown"
+	}
+	if date == "" {
+		date = "unknown"
+	}
+	return fmt.Sprintf("%s (%s) %s %s", v, commit, runtime.Version(), date)
+}
 
 // Persistent (global) flags, resolved once for every command.
 var (
@@ -60,6 +102,11 @@ func Root() *cobra.Command {
 	pf.StringVar(&flagOrg, "org", "", "Organization slug (reserved for multi-org keys)")
 
 	root.AddCommand(loginCmd(), logoutCmd(), statusCmd(), doctorCmd(), configCmd(), sessionsCmd(), phonesCmd(), phoneCmd(), runsCmd(), apiKeysCmd())
+
+	// Own the --version output (fang truncates the commit and adds a "version"
+	// word); cobra adds the --version flag when root.Version is set.
+	root.Version = versionString()
+	root.SetVersionTemplate("{{.Name}} {{.Version}}\n")
 	return root
 }
 

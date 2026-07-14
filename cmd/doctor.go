@@ -140,7 +140,7 @@ func environmentChecks() []check {
 		cur = s.SessionID + " (" + s.PhoneID + ")"
 	}
 	return []check{
-		{Name: "CLI version", Status: statusOK, Detail: fmt.Sprintf("%s (commit %s)", Version, Commit)},
+		{Name: "CLI version", Status: statusOK, Detail: versionString()},
 		{Name: "Config file", Status: statusOK, Detail: config.Path()},
 		{Name: "Sessions dir", Status: statusOK, Detail: session.Dir()},
 		{Name: "Current session", Status: statusOK, Detail: cur},
