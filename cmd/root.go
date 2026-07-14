@@ -2,10 +2,10 @@
 package cmd
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/axilioai/cli/internal/config"
+	"github.com/axilioai/cli/internal/exit"
 	"github.com/axilioai/cli/internal/output"
 	"github.com/axilioai/cli/internal/util"
 	"github.com/axilioai/platform-go/client"
@@ -24,6 +24,7 @@ var (
 var (
 	flagOutput  string
 	flagNoColor bool
+	flagQuiet   bool
 	flagAPIKey  string
 	flagBaseURL string
 	flagOrg     string
@@ -41,13 +42,14 @@ func Root() *cobra.Command {
 			case "", "table", "json":
 				return nil
 			default:
-				return fmt.Errorf("invalid --output %q (want table or json)", flagOutput)
+				return exit.Usagef("invalid --output %q (want table or json)", flagOutput)
 			}
 		},
 	}
 	pf := root.PersistentFlags()
 	pf.StringVarP(&flagOutput, "output", "o", "table", "Output format: table or json")
 	pf.BoolVar(&flagNoColor, "no-color", false, "Disable coloured output")
+	pf.BoolVarP(&flagQuiet, "quiet", "q", false, "Suppress stderr chrome (notes/prompts) for non-interactive use")
 	pf.StringVar(&flagAPIKey, "api-key", "", "Override the API key for this call")
 	pf.StringVar(&flagBaseURL, "base-url", "", "Override the API host")
 	pf.StringVar(&flagOrg, "org", "", "Organization slug (reserved for multi-org keys)")
@@ -56,7 +58,7 @@ func Root() *cobra.Command {
 	return root
 }
 
-func printer() *output.Printer { return output.New(flagOutput, flagNoColor) }
+func printer() *output.Printer { return output.New(flagOutput, flagNoColor, flagQuiet) }
 
 // resolvedCreds applies flag > env > config precedence for the key and host.
 func resolvedCreds() (apiKey, baseURL string) {
@@ -79,7 +81,7 @@ func sdkBaseURL(host string) string {
 func newClient() (*client.Client, error) {
 	key, host := resolvedCreds()
 	if key == "" {
-		return nil, fmt.Errorf("no API key found; run `axilio login` or set AXILIO_API_KEY")
+		return nil, exit.Authf("no API key found; run `axilio login` or set AXILIO_API_KEY")
 	}
 	return client.NewClient(option.WithAPIKey(key), option.WithBaseURL(sdkBaseURL(host))), nil
 }

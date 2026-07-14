@@ -25,6 +25,32 @@ axilio sessions stop <id>    # release it
 Add `-o json` to any command for scripting; `--help` on any command; shell
 completions via `axilio completion <shell>`.
 
+## Scripting & agents
+
+The CLI is built to be driven by scripts and coding agents, not just people:
+
+- **`-o json`** — deterministic JSON on stdout for every command; human chrome
+  (notes, prompts, spinners) stays on stderr and is suppressed in JSON mode.
+- **`-q` / `--quiet`** — suppress the stderr chrome for non-interactive use.
+  Destructive commands (`sessions stop`, `runs cancel`, `api-keys delete`) never
+  prompt in `--quiet` or JSON mode; pass `--yes` to proceed.
+- **Stable exit codes** — branch on the exit code instead of parsing stderr:
+
+  | Code | Meaning | Examples |
+  |------|---------|----------|
+  | `0` | success | |
+  | `1` | error | unclassified failure, executor-internal error |
+  | `2` | usage | bad flag/arg, unknown command, invalid input |
+  | `3` | auth | no API key, unauthorized (HTTP 401/403) |
+  | `4` | not found | element/session/resource not found (HTTP 404) |
+  | `5` | timeout | a call or wait loop deadline (retryable) |
+  | `6` | unavailable | network / device offline / server error (transient) |
+  | `7` | canceled | the operation was canceled |
+
+  The codes map the phone driver's error taxonomy and the API's HTTP status onto
+  one stable table, so `axilio phone find "..."` returning `4` means "no match"
+  regardless of transport.
+
 ## Design
 
 - **Standalone Go CLI** (cobra + [fang](https://github.com/charmbracelet/fang) +
