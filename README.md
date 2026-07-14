@@ -29,24 +29,23 @@ multi-language SDK support lands. It does three things:
 
 ## Install
 
-`go install` works today:
+### Homebrew (macOS, recommended)
 
 ```bash
-go install github.com/axilioai/cli@main
-```
-
-This installs the `axilio` binary into `$(go env GOPATH)/bin`. Make sure that's
-on your `PATH`.
-
-Homebrew, a `curl | sh` installer, and versioned `@latest` builds ship with the
-first tagged release:
-
-```bash
-# coming with the first release
 brew install axilioai/tap/axilio
-curl -fsSL https://axilio.ai/install.sh | sh
-go install github.com/axilioai/cli@latest
 ```
+
+### go install
+
+```bash
+go install github.com/axilioai/cli/cmd/axilio@latest
+```
+
+This puts the `axilio` binary in `$(go env GOPATH)/bin` — make sure that's on
+your `PATH`.
+
+A one-line `curl | sh` installer is on the way. Update an existing install any
+time with `axilio upgrade`.
 
 ## Quick start
 
