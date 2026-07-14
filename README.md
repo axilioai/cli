@@ -16,6 +16,7 @@ brew install axilioai/tap/axilio
 ```bash
 axilio login                 # stores your axl_ key in ~/.config/axilio/config.json (0600)
 axilio status                # verify credentials + balance
+axilio doctor                # one-shot setup check: auth, connectivity, account, environment
 axilio phones list           # phones you can claim
 axilio sessions start        # acquire a phone (the lease persists)
 axilio sessions list
