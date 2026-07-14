@@ -35,9 +35,9 @@ func TestOrgHeaderSentFromEnv(t *testing.T) {
 // fail as a usage error, not attempt a call it can't authenticate.
 func TestOrgListRequiresOAuth(t *testing.T) {
 	srv := fakeAPI(t) // run() configures an API key
-	_, err := run(t, srv, "org", "list")
+	_, err := run(t, srv, "orgs", "list")
 	if err == nil {
-		t.Fatal("expected `org list` to fail with only an API key configured")
+		t.Fatal("expected `orgs list` to fail with only an API key configured")
 	}
 	if got := exit.Classify(err); got != exit.Usage {
 		t.Fatalf("exit code = %d, want %d (usage)", got, exit.Usage)

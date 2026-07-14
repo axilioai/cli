@@ -31,13 +31,14 @@ type orgListResponse struct {
 
 func orgCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "org",
-		Short: "List and switch the active organization (OAuth sessions).",
+		Use:     "orgs",
+		Aliases: []string{"org"},
+		Short:   "List and switch the active organization (OAuth sessions).",
 		Long: "Work across the organizations you belong to without signing in again. " +
-			"`org list` shows them, `org use <slug>` sets the active org for future " +
+			"`orgs list` shows them, `orgs use <slug>` sets the active org for future " +
 			"commands, and `--org` / `AXILIO_ORG` override it for a single call. API " +
 			"keys are bound to one org, so this applies to `axilio login` (OAuth) sessions.",
-		// Bare `axilio org` lists the organizations you belong to.
+		// Bare `axilio orgs` lists the organizations you belong to.
 		RunE: func(_ *cobra.Command, _ []string) error { return runOrgList() },
 	}
 	cmd.AddCommand(orgListCmd(), orgUseCmd(), orgClearCmd())
@@ -75,7 +76,7 @@ func runOrgList() error {
 			}
 			output.Table(rows)
 			if active == "" {
-				printer().Note("\nNo active org set; using your session default. Set one with `axilio org use <slug>`.")
+				printer().Note("\nNo active org set; using your session default. Set one with `axilio orgs use <slug>`.")
 			}
 		},
 	)
@@ -101,7 +102,7 @@ func orgUseCmd() *cobra.Command {
 				}
 			}
 			if match == nil {
-				return exit.Usagef("you are not a member of an organization matching %q (run `axilio org list`)", sel)
+				return exit.Usagef("you are not a member of an organization matching %q (run `axilio orgs list`)", sel)
 			}
 			cfg := config.Load()
 			cfg.ActiveOrg = match.Slug // slug is human-readable; the header resolves slug or id server-side
@@ -156,7 +157,7 @@ func fetchMyOrgs(ctx context.Context) ([]orgSummary, error) {
 	key, host := resolvedCreds()
 	apiHost := util.FirstNonEmpty(host, defaultAPIHost)
 	if key != "" {
-		return nil, exit.Usagef("`org` needs an OAuth login (API keys are bound to one org); run `axilio login`")
+		return nil, exit.Usagef("`orgs` needs an OAuth login (API keys are bound to one org); run `axilio login`")
 	}
 	tok, err := oauth.ValidAccessToken(ctx, apiHost)
 	if err != nil {
