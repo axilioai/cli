@@ -10,6 +10,7 @@ import (
 
 	"github.com/axilioai/cli/internal/config"
 	"github.com/axilioai/cli/internal/exit"
+	"github.com/axilioai/cli/internal/oauth"
 	"github.com/axilioai/cli/internal/output"
 	"github.com/axilioai/cli/internal/session"
 	"github.com/axilioai/platform-go/client"
@@ -106,20 +107,27 @@ func runDoctor(ctx context.Context) []check {
 	var checks []check
 
 	key, source := credSource()
-	if key == "" {
-		checks = append(checks,
-			check{Name: "Authentication", Status: statusOK, Detail: "method: api-key (oauth pending, AXI-1258)"},
-			check{Name: "Credentials", Status: statusFail, required: true,
-				Detail: "no API key; run `axilio login` or set AXILIO_API_KEY"},
-			probeConnectivity(ctx),
-		)
-	} else {
+	switch {
+	case key != "":
 		checks = append(checks,
 			check{Name: "Authentication", Status: statusOK, Detail: "method: api-key (source: " + source + ")"},
 			check{Name: "Credentials", Status: statusOK, Detail: "API key present (axl_…)"},
 		)
 		// One authenticated call decides both connectivity and auth validity.
 		checks = append(checks, verifyAPIKey(ctx)...)
+	case oauth.HasSession():
+		checks = append(checks,
+			check{Name: "Authentication", Status: statusOK, Detail: "method: oauth (browser session)"},
+			check{Name: "Credentials", Status: statusOK, Detail: "oauth session present"},
+		)
+		checks = append(checks, verifyAPIKey(ctx)...)
+	default:
+		checks = append(checks,
+			check{Name: "Authentication", Status: statusOK, Detail: "method: none configured (api-key or oauth)"},
+			check{Name: "Credentials", Status: statusFail, required: true,
+				Detail: "not signed in; run `axilio login` or set AXILIO_API_KEY"},
+			probeConnectivity(ctx),
+		)
 	}
 
 	return append(checks, environmentChecks()...)
