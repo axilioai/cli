@@ -61,8 +61,9 @@ func loginWithAPIKey(ctx context.Context, key string) error {
 		return err
 	}
 	p := printer()
-	p.Note("Saved credentials to %s.", config.Path())
-	p.Note("Signed in. Balance: %s.", bal.BalanceDisplay)
+	p.Success("Signed in to %s", util.FirstNonEmpty(host, defaultAPIHost))
+	p.Note("  Balance  %s", bal.BalanceDisplay)
+	p.Note("  Saved to %s", config.Path())
 	return nil
 }
 
@@ -72,9 +73,9 @@ func loginWithBrowser(ctx context.Context) error {
 	_, host := resolvedCreds()
 	apiHost := util.FirstNonEmpty(host, defaultAPIHost)
 	p := printer()
-	p.Note("Opening your browser to authorize the CLI...")
+	p.Step("Opening your browser to authorize the CLI…")
 	tokens, err := oauth.Login(ctx, apiHost, dashboardBaseURL(apiHost), func(u string) {
-		p.Note("If your browser did not open, visit:\n  %s", u)
+		p.Note("  If it doesn't open, visit:\n  %s", u)
 	})
 	if err != nil {
 		return err
@@ -82,13 +83,13 @@ func loginWithBrowser(ctx context.Context) error {
 	if err := oauth.Save(tokens); err != nil {
 		return err
 	}
+	p.Success("Signed in to %s", apiHost)
 	cl := client.NewClient(option.WithHTTPHeader(cliHeader(tokens.AccessToken)), option.WithBaseURL(sdkBaseURL(host)))
-	bal, err := cl.Billing.GetBalance(ctx)
-	if err != nil {
-		p.Note("Signed in. (Could not fetch balance: %v)", err)
-		return nil
+	if bal, err := cl.Billing.GetBalance(ctx); err != nil {
+		p.Note("  (could not fetch balance: %v)", err)
+	} else {
+		p.Note("  Balance  %s", bal.BalanceDisplay)
 	}
-	p.Note("Signed in. Balance: %s.", bal.BalanceDisplay)
 	return nil
 }
 
@@ -121,7 +122,7 @@ func logoutCmd() *cobra.Command {
 				printer().Note("Already signed out.")
 				return nil
 			}
-			printer().Note("Signed out.")
+			printer().Success("Signed out.")
 			return nil
 		},
 	}

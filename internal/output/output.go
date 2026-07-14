@@ -55,6 +55,24 @@ func (p *Printer) Note(format string, a ...any) {
 	fmt.Fprintf(os.Stderr, format+"\n", a...)
 }
 
+// Success prints a green check-marked line to stderr (human chrome), suppressed
+// in JSON/quiet mode. For terminal confirmations like "Signed in".
+func (p *Printer) Success(format string, a ...any) {
+	if p.silent() {
+		return
+	}
+	fmt.Fprintf(os.Stderr, "%s %s\n", pterm.Green("✓"), fmt.Sprintf(format, a...))
+}
+
+// Step prints a progress line to stderr with a dim arrow prefix, suppressed in
+// JSON/quiet mode. For "doing X…" chrome ahead of a result.
+func (p *Printer) Step(format string, a ...any) {
+	if p.silent() {
+		return
+	}
+	fmt.Fprintf(os.Stderr, "%s %s\n", pterm.Gray("→"), fmt.Sprintf(format, a...))
+}
+
 // Confirm asks a yes/no question on stderr and reads the answer from stdin.
 // When output is non-interactive (JSON or --quiet), it never prompts and
 // returns false, so a destructive command declines rather than hanging — pass
