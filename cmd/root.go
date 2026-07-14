@@ -2,10 +2,15 @@
 package cmd
 
 import (
+	"context"
+	"net/http"
+	"net/url"
 	"os"
+	"strings"
 
 	"github.com/axilioai/cli/internal/config"
 	"github.com/axilioai/cli/internal/exit"
+	"github.com/axilioai/cli/internal/oauth"
 	"github.com/axilioai/cli/internal/output"
 	"github.com/axilioai/cli/internal/util"
 	"github.com/axilioai/platform-go/client"
@@ -77,11 +82,39 @@ func sdkBaseURL(host string) string {
 	return host + "/api/v1"
 }
 
-// newClient builds an authenticated SDK client, or a friendly error when no key is set.
+// newClient builds an authenticated SDK client. An explicit API key (flag / env
+// / config) wins; otherwise it uses a stored OAuth session (refreshed
+// proactively). A friendly error results when neither is present.
 func newClient() (*client.Client, error) {
 	key, host := resolvedCreds()
-	if key == "" {
-		return nil, exit.Authf("no API key found; run `axilio login` or set AXILIO_API_KEY")
+	base := sdkBaseURL(host)
+	if key != "" {
+		return client.NewClient(option.WithAPIKey(key), option.WithBaseURL(base)), nil
 	}
-	return client.NewClient(option.WithAPIKey(key), option.WithBaseURL(sdkBaseURL(host))), nil
+	apiHost := util.FirstNonEmpty(host, defaultAPIHost)
+	if tok, err := oauth.ValidAccessToken(context.Background(), apiHost); err == nil {
+		return client.NewClient(option.WithHTTPHeader(bearerHeader(tok)), option.WithBaseURL(base)), nil
+	}
+	return nil, exit.Authf("not signed in; run `axilio login` or set AXILIO_API_KEY")
+}
+
+// bearerHeader builds the Authorization header for an OAuth access token.
+func bearerHeader(token string) http.Header {
+	h := http.Header{}
+	h.Set("Authorization", "Bearer "+token)
+	return h
+}
+
+// dashboardBaseURL is where the CLI opens the OAuth consent page. The consent
+// page lives on the dashboard host, not the API host, so derive it from the API
+// host (api.axilio.ai -> app.axilio.ai); AXILIO_DASHBOARD_URL overrides.
+func dashboardBaseURL(apiHost string) string {
+	if v := strings.TrimSpace(os.Getenv("AXILIO_DASHBOARD_URL")); v != "" {
+		return v
+	}
+	if u, err := url.Parse(apiHost); err == nil && u.Host != "" {
+		u.Host = strings.Replace(u.Host, "api", "app", 1)
+		return u.Scheme + "://" + u.Host
+	}
+	return "https://app.axilio.ai"
 }

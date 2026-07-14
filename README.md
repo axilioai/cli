@@ -51,7 +51,7 @@ go install github.com/axilioai/cli@latest
 ## Quick start
 
 ```bash
-axilio login                 # store your axl_ key (verified against the API)
+axilio login                 # sign in (browser OAuth, or --api-key)
 axilio doctor                # one-shot check: auth, connectivity, account, environment
 axilio phones list           # phones you can claim
 axilio sessions start        # acquire a phone; the lease persists until you stop it
@@ -61,29 +61,36 @@ axilio sessions stop <id>    # release it
 
 ## Authentication
 
-Today the CLI authenticates with an **API key** (an `axl_...` value from your
-Axilio dashboard).
+`axilio login` signs you in two ways.
+
+**Browser (OAuth), the default.** Run `axilio login` on a terminal and it opens
+your browser to authorize the CLI. The Axilio session token is stored in your OS
+keychain (with a `0600` file fallback) and refreshed automatically.
 
 ```bash
-axilio login                                   # prompts for the key, verifies, saves it
-echo "$AXILIO_API_KEY" | axilio login          # non-interactive (pipe the key in)
-axilio login --api-key axl_xxx                 # or pass it directly
+axilio login                                   # opens the browser (OAuth)
 ```
 
-`axilio login` writes a language-agnostic config file that every Axilio SDK also
-reads, so one login makes the CLI and the SDKs work:
+**API key.** Pass a key, or pipe one in, to store an `axl_` key instead, which
+the SDKs also read:
+
+```bash
+axilio login --api-key axl_xxx                 # store a key directly
+echo "$AXILIO_API_KEY" | axilio login          # non-interactive (pipe the key in)
+```
+
+The API key is written to a language-agnostic config file that every Axilio SDK
+also reads, so one login makes the CLI and the SDKs work:
 
 ```
 $XDG_CONFIG_HOME/axilio/config.json   (else ~/.config/axilio/config.json), mode 0600
 ```
 
-Credentials resolve in this order (first wins): the `--api-key` flag, the
-`AXILIO_API_KEY` environment variable, then the config file. The API host
-resolves the same way via `--base-url` / `AXILIO_BASE_URL` / config, defaulting
-to `https://api.axilio.ai`.
-
-> Browser-based OAuth login (PKCE) is planned (AXI-1258 / AXI-1265). It will be
-> additive: the API key path keeps working.
+Credentials resolve in this order (first wins): an explicit API key (`--api-key`
+flag, `AXILIO_API_KEY` env, or config file), then your OAuth session. The API
+host resolves via `--base-url` / `AXILIO_BASE_URL` / config, defaulting to
+`https://api.axilio.ai`. `axilio logout` clears both the key and the OAuth
+session.
 
 ## Commands
 
