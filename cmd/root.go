@@ -15,10 +15,12 @@ import (
 	"github.com/axilioai/cli/internal/exit"
 	"github.com/axilioai/cli/internal/oauth"
 	"github.com/axilioai/cli/internal/output"
+	"github.com/axilioai/cli/internal/update"
 	"github.com/axilioai/cli/internal/util"
 	"github.com/axilioai/platform-go/client"
 	"github.com/axilioai/platform-go/option"
 	"github.com/spf13/cobra"
+	"golang.org/x/term"
 )
 
 // Build metadata, stamped by goreleaser via -ldflags -X at release time and
@@ -92,6 +94,14 @@ func Root() *cobra.Command {
 				return exit.Usagef("invalid --output %q (want table or json)", flagOutput)
 			}
 		},
+		// Runs only after a command succeeds. A passive, once-a-day upgrade
+		// nudge on stderr; suppressed in quiet/JSON and non-interactive shells.
+		PersistentPostRun: func(cmd *cobra.Command, _ []string) {
+			if flagQuiet || flagOutput == "json" || !term.IsTerminal(int(os.Stderr.Fd())) {
+				return
+			}
+			update.Notify(cmd.Context(), os.Stderr, Version)
+		},
 	}
 	pf := root.PersistentFlags()
 	pf.StringVarP(&flagOutput, "output", "o", "table", "Output format: table or json")
@@ -136,19 +146,24 @@ func newClient() (*client.Client, error) {
 	key, host := resolvedCreds()
 	base := sdkBaseURL(host)
 	if key != "" {
-		return client.NewClient(option.WithAPIKey(key), option.WithBaseURL(base)), nil
+		return client.NewClient(option.WithAPIKey(key), option.WithBaseURL(base), option.WithHTTPHeader(cliHeader(""))), nil
 	}
 	apiHost := util.FirstNonEmpty(host, defaultAPIHost)
 	if tok, err := oauth.ValidAccessToken(context.Background(), apiHost); err == nil {
-		return client.NewClient(option.WithHTTPHeader(bearerHeader(tok)), option.WithBaseURL(base)), nil
+		return client.NewClient(option.WithBaseURL(base), option.WithHTTPHeader(cliHeader(tok))), nil
 	}
 	return nil, exit.Authf("not signed in; run `axilio login` or set AXILIO_API_KEY")
 }
 
-// bearerHeader builds the Authorization header for an OAuth access token.
-func bearerHeader(token string) http.Header {
+// cliHeader builds the per-request headers: the CLI version on every request
+// (X-Axilio-Cli-Version, for support/telemetry), plus an OAuth Bearer when a
+// token is supplied.
+func cliHeader(bearerToken string) http.Header {
 	h := http.Header{}
-	h.Set("Authorization", "Bearer "+token)
+	h.Set("X-Axilio-Cli-Version", versionString())
+	if bearerToken != "" {
+		h.Set("Authorization", "Bearer "+bearerToken)
+	}
 	return h
 }
 

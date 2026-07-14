@@ -47,7 +47,7 @@ func loginWithAPIKey(ctx context.Context, key string) error {
 		return fmt.Errorf("that does not look like an Axilio key (expected an axl_... value)")
 	}
 	_, host := resolvedCreds()
-	cl := client.NewClient(option.WithAPIKey(key), option.WithBaseURL(sdkBaseURL(host)))
+	cl := client.NewClient(option.WithAPIKey(key), option.WithBaseURL(sdkBaseURL(host)), option.WithHTTPHeader(cliHeader("")))
 	bal, err := cl.Billing.GetBalance(ctx)
 	if err != nil {
 		return fmt.Errorf("could not verify the key: %w", err)
@@ -82,7 +82,7 @@ func loginWithBrowser(ctx context.Context) error {
 	if err := oauth.Save(tokens); err != nil {
 		return err
 	}
-	cl := client.NewClient(option.WithHTTPHeader(bearerHeader(tokens.AccessToken)), option.WithBaseURL(sdkBaseURL(host)))
+	cl := client.NewClient(option.WithHTTPHeader(cliHeader(tokens.AccessToken)), option.WithBaseURL(sdkBaseURL(host)))
 	bal, err := cl.Billing.GetBalance(ctx)
 	if err != nil {
 		p.Note("Signed in. (Could not fetch balance: %v)", err)
