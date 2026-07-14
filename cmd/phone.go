@@ -32,21 +32,17 @@ func phoneCmd() *cobra.Command {
 	return cmd
 }
 
-// currentDriver resolves the session to drive and opens a MobileDriver on its
-// control URL. The control URL is captured at `sessions start` (it is minted
-// only then), so the CLI can only drive a session it started.
+// currentDriver resolves which lease to drive (precedence: --session flag >
+// AXILIO_SESSION env > sole active lease > current pointer) and opens a
+// MobileDriver on its control URL. The control URL is captured at
+// `sessions start` (it is minted only then).
 func currentDriver() (*mobile.MobileDriver, error) {
-	s, ok := session.Load()
-	if !ok {
-		return nil, fmt.Errorf("no current session; run `axilio sessions start` first")
-	}
-	if flagPhoneSession != "" && !s.Matches(flagPhoneSession) {
-		return nil, fmt.Errorf(
-			"session %q is not the current session (%s); this CLI can only drive a session it started",
-			flagPhoneSession, s.SessionID)
+	s, err := session.Resolve(flagPhoneSession)
+	if err != nil {
+		return nil, err
 	}
 	if s.ControlURL == "" {
-		return nil, fmt.Errorf("current session has no control URL; re-run `axilio sessions start`")
+		return nil, fmt.Errorf("session %s has no control URL; re-run `axilio sessions start`", s.SessionID)
 	}
 	return mobile.ConnectRemote(s.ControlURL), nil
 }
