@@ -111,7 +111,7 @@ func Root() *cobra.Command {
 	pf.StringVar(&flagBaseURL, "base-url", "", "Override the API host")
 	pf.StringVar(&flagOrg, "org", "", "Organization slug or id to act as for this call (OAuth sessions only; overrides `org use`)")
 
-	root.AddCommand(loginCmd(), logoutCmd(), statusCmd(), doctorCmd(), configCmd(), orgCmd(), sessionsCmd(), phonesCmd(), phoneCmd(), runsCmd(), apiKeysCmd())
+	root.AddCommand(loginCmd(), logoutCmd(), statusCmd(), doctorCmd(), configCmd(), orgCmd(), upgradeCmd(), sessionsCmd(), phonesCmd(), phoneCmd(), runsCmd(), apiKeysCmd())
 
 	// Own the --version output (fang truncates the commit and adds a "version"
 	// word); cobra adds the --version flag when root.Version is set.
