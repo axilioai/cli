@@ -12,7 +12,7 @@ before:
 
 builds:
   - id: axilio
-    main: .
+    main: ./cmd/axilio
     binary: axilio
     env:
       - CGO_ENABLED=0
@@ -47,18 +47,31 @@ release:
   draft: false
   prerelease: auto
 
-# Homebrew tap. Enable once the tap repo (axilioai/homebrew-tap) exists and a
-# HOMEBREW_TAP_TOKEN secret with push rights to it is set on this repo; then
-# uncomment and drop skip_upload. Left off by default so a tag never fails a
-# release on a missing token/repo.
-# brews:
-#   - name: axilio
-#     repository:
-#       owner: axilioai
-#       name: homebrew-tap
-#       token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
-#     homepage: "https://axilio.ai"
-#     description: "Acquire and drive Axilio phones from the command line."
-#     commit_author:
-#       name: axilio-bot
-#       email: bot@axilio.ai
+# Homebrew tap (macOS). Publishes the axilio cask to axilioai/homebrew-tap on
+# each non-prerelease tag — goreleaser deprecated formula `brews` in favor of
+# casks. Requires the tap repo to exist and a HOMEBREW_TAP_TOKEN secret (PAT with
+# contents:write on the tap) set on this repo. skip_upload: auto skips the push
+# for prereleases (e.g. v0.1.0-rc1), so an -rc tag validates the pipeline without
+# needing the token. Linux users install via `go install` / the curl script.
+homebrew_casks:
+  - name: axilio
+    binaries:
+      - axilio
+    repository:
+      owner: axilioai
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
+    homepage: "https://axilio.ai"
+    description: "Acquire and drive Axilio phones from the command line."
+    commit_author:
+      name: axilio-bot
+      email: bot@axilio.ai
+    skip_upload: auto
+    # The release binary is unsigned; strip the macOS quarantine attribute so it
+    # runs without a Gatekeeper prompt on first launch.
+    hooks:
+      post:
+        install: |
+          if OS.mac?
+            system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/axilio"]
+          end
