@@ -36,6 +36,15 @@ func fakeAPI(t *testing.T) *httptest.Server {
 			body = `{"runs":[
 				{"id":"r1","status":"completed","trigger":"manual","workflow_id":"w1","success":true}],
 				"total":1,"limit":20,"offset":0}`
+		case strings.HasSuffix(p, "/workflows"):
+			body = `{"workflows":[
+				{"workflow":{"id":"wf1","name":"demo","platform":"android","status":"active"},
+				 "stats":{"total_runs":3,"success_rate":0.66}}],
+				"total":1,"limit":20,"offset":0}`
+		case strings.Contains(p, "/usage/metrics"):
+			body = `{"period_start":"2026-07-01T00:00:00Z","period_end":"2026-07-14T00:00:00Z",
+				"compute_minutes":{"total_minutes":12.5,"change":0},
+				"cost_by_product":{"inference":1.2,"sessions":3.4,"other":0}}`
 		default:
 			http.Error(w, `{"error":"not found"}`, http.StatusNotFound)
 			return
@@ -102,6 +111,28 @@ func TestRunsListJSON(t *testing.T) {
 	}
 	if !strings.Contains(out, `"id": "r1"`) {
 		t.Fatalf("expected the fake run in output:\n%s", out)
+	}
+}
+
+func TestWorkflowsListJSON(t *testing.T) {
+	srv := fakeAPI(t)
+	out, err := run(t, srv, "-o", "json", "workflows", "list")
+	if err != nil {
+		t.Fatalf("workflows list: %v", err)
+	}
+	if !strings.Contains(out, `"id": "wf1"`) {
+		t.Fatalf("expected the fake workflow in output:\n%s", out)
+	}
+}
+
+func TestUsageSummaryJSON(t *testing.T) {
+	srv := fakeAPI(t)
+	out, err := run(t, srv, "-o", "json", "usage", "summary")
+	if err != nil {
+		t.Fatalf("usage summary: %v", err)
+	}
+	if !strings.Contains(out, `"total_minutes": 12.5`) {
+		t.Fatalf("expected compute minutes in output:\n%s", out)
 	}
 }
 
