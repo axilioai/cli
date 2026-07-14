@@ -35,6 +35,16 @@ multi-language SDK support lands. It does three things:
 brew install axilioai/tap/axilio
 ```
 
+### curl (macOS / Linux)
+
+```bash
+curl -fsSL https://axilio.ai/install.sh | sh
+```
+
+Installs the latest release for your OS/arch. Override the target directory with
+`INSTALL_DIR=…`, or pin a version with `VERSION=v0.1.0`. The script is
+[auditable on GitHub](https://github.com/axilioai/cli/blob/main/install.sh).
+
 ### go install
 
 ```bash
@@ -44,8 +54,7 @@ go install github.com/axilioai/cli/cmd/axilio@latest
 This puts the `axilio` binary in `$(go env GOPATH)/bin` — make sure that's on
 your `PATH`.
 
-A one-line `curl | sh` installer is on the way. Update an existing install any
-time with `axilio upgrade`.
+Update any install with `axilio upgrade`.
 
 ## Quick start
 
