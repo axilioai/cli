@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/axilioai/cli/internal/exit"
 	"github.com/axilioai/cli/internal/output"
 	"github.com/axilioai/cli/internal/session"
 	"github.com/axilioai/cli/internal/util"
@@ -188,8 +189,8 @@ func sessionsStopCmd() *cobra.Command {
 					}
 				}
 			}
-			if !yes && !util.Confirm(fmt.Sprintf("Release %s?", phoneID)) {
-				return fmt.Errorf("aborted")
+			if !yes && !printer().Confirm(fmt.Sprintf("Release %s?", phoneID)) {
+				return exit.Usagef("aborted (pass --yes to release non-interactively)")
 			}
 			if _, err := cl.Phones.Deallocate(context.Background(), &platformgo.PhonesDeallocateRequest{PhoneID: phoneID}); err != nil {
 				return err

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/axilioai/cli/internal/exit"
 	"github.com/axilioai/cli/internal/output"
 	"github.com/axilioai/cli/internal/util"
 	platformgo "github.com/axilioai/platform-go"
@@ -104,8 +105,8 @@ func runsCancelCmd() *cobra.Command {
 				return err
 			}
 			id := args[0]
-			if !yes && !util.Confirm(fmt.Sprintf("Cancel run %s?", id)) {
-				return fmt.Errorf("aborted")
+			if !yes && !printer().Confirm(fmt.Sprintf("Cancel run %s?", id)) {
+				return exit.Usagef("aborted (pass --yes to cancel non-interactively)")
 			}
 			if _, err := cl.Runs.Cancel(context.Background(), &platformgo.RunsCancelRequest{RunID: id}); err != nil {
 				return err
