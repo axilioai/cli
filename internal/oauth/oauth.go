@@ -18,10 +18,11 @@ import (
 )
 
 const (
-	consentPath   = "/cli/authorize"           // dashboard consent page
-	tokenPath     = "/api/v1/auth/oauth/token" // backend token endpoint
-	flowTimeout   = 5 * time.Minute            // whole browser round trip
-	refreshWindow = 60 * time.Second           // refresh this long before expiry
+	consentPath   = "/cli/authorize"            // dashboard consent page
+	tokenPath     = "/api/v1/auth/oauth/token"  // backend token endpoint
+	revokePath    = "/api/v1/auth/oauth/revoke" // backend session-revoke endpoint
+	flowTimeout   = 5 * time.Minute             // whole browser round trip
+	refreshWindow = 60 * time.Second            // refresh this long before expiry
 )
 
 // ErrNoSession means no usable OAuth session is stored for the target host.
@@ -139,6 +140,38 @@ func ValidAccessToken(ctx context.Context, apiBase string) (string, error) {
 	}
 	_ = Save(nt)
 	return nt.AccessToken, nil
+}
+
+// Revoke asks the backend to invalidate the stored session's refresh-token
+// family server-side (AXI-1279), so `axilio logout` truly ends the session
+// rather than merely forgetting the local tokens. Best-effort: the caller should
+// clear the local session regardless of the outcome. A no-op when no session is
+// stored. It refreshes to obtain a valid access token to authenticate the call;
+// if the session is already dead (refresh fails), the refresh family will lapse
+// on its own.
+func Revoke(ctx context.Context) error {
+	t, ok := Load()
+	if !ok {
+		return nil
+	}
+	tok, err := ValidAccessToken(ctx, t.Host)
+	if err != nil {
+		return err
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, t.Host+revokePath, nil)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Authorization", "Bearer "+tok)
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = resp.Body.Close() }()
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("revoke failed (HTTP %d)", resp.StatusCode)
+	}
+	return nil
 }
 
 // exchange POSTs a grant to the token endpoint and returns stored-shape tokens.
