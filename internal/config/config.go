@@ -15,7 +15,7 @@ type Config struct {
 	BaseURL string `json:"base_url,omitempty"`
 }
 
-// Path is the location of the config file, honouring XDG_CONFIG_HOME.
+// Path is the location of the config file, honoring XDG_CONFIG_HOME.
 func Path() string {
 	base := os.Getenv("XDG_CONFIG_HOME")
 	if base == "" {
