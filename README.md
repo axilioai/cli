@@ -99,6 +99,7 @@ session.
 | `login` / `logout` / `status` | Store, remove, and check credentials. |
 | `doctor` | One-shot setup check: auth, connectivity, account, environment. |
 | `config` / `config set` / `config unset` | Show and edit CLI configuration (API host, paths, auth). |
+| `org list` / `org use` / `org clear` | List and switch the active organization (OAuth sessions). |
 | `phones list` | List phones you can claim from the shared pool. |
 | `sessions start` / `stop` / `list` / `current` | Acquire, release, and inspect phone leases. |
 | `phone observe` / `find` / `find-text` / `tap` / `long-press` / `swipe` / `type` / `key` / `screenshot` / `wait-for` | Drive the current phone session. |
@@ -115,7 +116,7 @@ session.
 | `--no-color` | Disable colored output. |
 | `--api-key` | Override the API key for this call. |
 | `--base-url` | Override the API host for this call. |
-| `--org` | Organization slug (reserved for multi-org keys). |
+| `--org` | Organization slug or id to act as for this call (OAuth sessions; also `AXILIO_ORG` / `org use`). |
 | `-v, --version` | Print the version. |
 
 Run `axilio <command> --help` for the flags on any command.

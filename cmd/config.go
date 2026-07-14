@@ -42,11 +42,13 @@ func showConfig() error {
 		method = "api-key"
 	}
 
+	activeOrg := resolvedOrg()
 	printer().Emit(
 		map[string]string{
 			"api_host":     apiHost,
 			"auth_method":  method,
 			"auth_source":  source,
+			"active_org":   activeOrg,
 			"config_path":  config.Path(),
 			"sessions_dir": session.Dir(),
 		},
@@ -54,6 +56,7 @@ func showConfig() error {
 			output.KV([][2]string{
 				{"API host", apiHost},
 				{"Auth method", authMethodDisplay(method, source)},
+				{"Active org", orgDisplay(activeOrg)},
 				{"Config file", config.Path()},
 				{"Sessions dir", session.Dir()},
 			})

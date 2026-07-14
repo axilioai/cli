@@ -96,17 +96,27 @@ func logoutCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "logout",
 		Short: "Remove stored credentials (API key and OAuth session).",
-		RunE: func(_ *cobra.Command, _ []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			cfg := config.Load()
 			hadKey := cfg.APIKey != ""
-			if hadKey {
+			hadOAuth := oauth.HasSession()
+			// Revoke the refresh-token family server-side before dropping the
+			// local copy, so the session is truly dead and not merely forgotten
+			// (AXI-1279). Best-effort: clear locally regardless.
+			if hadOAuth {
+				if err := oauth.Revoke(cmd.Context()); err != nil {
+					printer().Note("Could not revoke the session server-side (%v); clearing locally.", err)
+				}
+			}
+			oauth.Clear()
+			// Drop the API key and any active-org selection from the shared config.
+			if hadKey || cfg.ActiveOrg != "" {
 				cfg.APIKey = ""
+				cfg.ActiveOrg = ""
 				if err := config.Save(cfg); err != nil {
 					return err
 				}
 			}
-			hadOAuth := oauth.HasSession()
-			oauth.Clear()
 			if !hadKey && !hadOAuth {
 				printer().Note("Already signed out.")
 				return nil
@@ -132,12 +142,14 @@ func statusCmd() *cobra.Command {
 			}
 			_, host := resolvedCreds()
 			apiHost := sdkBaseURL(host)
+			activeOrg := resolvedOrg()
 			printer().Emit(
-				map[string]string{"status": "ok", "api_host": apiHost, "balance": bal.BalanceDisplay},
+				map[string]string{"status": "ok", "api_host": apiHost, "balance": bal.BalanceDisplay, "active_org": activeOrg},
 				func() {
 					output.KV([][2]string{
 						{"Status", "ok"},
 						{"API host", apiHost},
+						{"Active org", orgDisplay(activeOrg)},
 						{"Balance", bal.BalanceDisplay},
 					})
 				},

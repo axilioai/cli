@@ -9,10 +9,13 @@ import (
 	"path/filepath"
 )
 
-// Config is the on-disk credential file. Field names match what the SDKs read.
+// Config is the on-disk credential file. Field names match what the SDKs read;
+// ActiveOrg is CLI-only (the SDKs ignore unknown keys) and records the org an
+// OAuth-signed-in user has switched to via `axilio org use` (AXI-1280).
 type Config struct {
-	APIKey  string `json:"api_key,omitempty"`
-	BaseURL string `json:"base_url,omitempty"`
+	APIKey    string `json:"api_key,omitempty"`
+	BaseURL   string `json:"base_url,omitempty"`
+	ActiveOrg string `json:"active_org,omitempty"`
 }
 
 // Path is the location of the config file, honoring XDG_CONFIG_HOME.

@@ -109,9 +109,9 @@ func Root() *cobra.Command {
 	pf.BoolVarP(&flagQuiet, "quiet", "q", false, "Suppress stderr chrome (notes/prompts) for non-interactive use")
 	pf.StringVar(&flagAPIKey, "api-key", "", "Override the API key for this call")
 	pf.StringVar(&flagBaseURL, "base-url", "", "Override the API host")
-	pf.StringVar(&flagOrg, "org", "", "Organization slug (reserved for multi-org keys)")
+	pf.StringVar(&flagOrg, "org", "", "Organization slug or id to act as for this call (OAuth sessions only; overrides `org use`)")
 
-	root.AddCommand(loginCmd(), logoutCmd(), statusCmd(), doctorCmd(), configCmd(), sessionsCmd(), phonesCmd(), phoneCmd(), runsCmd(), apiKeysCmd())
+	root.AddCommand(loginCmd(), logoutCmd(), statusCmd(), doctorCmd(), configCmd(), orgCmd(), sessionsCmd(), phonesCmd(), phoneCmd(), runsCmd(), apiKeysCmd())
 
 	// Own the --version output (fang truncates the commit and adds a "version"
 	// word); cobra adds the --version flag when root.Version is set.
@@ -156,15 +156,27 @@ func newClient() (*client.Client, error) {
 }
 
 // cliHeader builds the per-request headers: the CLI version on every request
-// (X-Axilio-Cli-Version, for support/telemetry), plus an OAuth Bearer when a
-// token is supplied.
+// (X-Axilio-Cli-Version, for support/telemetry); the active org selector when
+// one is set (X-Axilio-Org, honored only for OAuth sessions — AXI-1280); plus
+// an OAuth Bearer when a token is supplied.
 func cliHeader(bearerToken string) http.Header {
 	h := http.Header{}
 	h.Set("X-Axilio-Cli-Version", versionString())
+	if org := resolvedOrg(); org != "" {
+		h.Set("X-Axilio-Org", org)
+	}
 	if bearerToken != "" {
 		h.Set("Authorization", "Bearer "+bearerToken)
 	}
 	return h
+}
+
+// resolvedOrg applies flag > env > config precedence for the active org selector
+// (an org slug or id). It is sent as X-Axilio-Org and re-scopes an OAuth session
+// to another org the user belongs to; API-key auth ignores it (keys are
+// single-org). Empty means "use the session's default org".
+func resolvedOrg() string {
+	return util.FirstNonEmpty(flagOrg, os.Getenv("AXILIO_ORG"), config.Load().ActiveOrg)
 }
 
 // dashboardBaseURL is where the CLI opens the OAuth consent page. The consent
