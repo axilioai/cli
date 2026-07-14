@@ -1,44 +1,131 @@
-# axilio CLI
+# axilio
 
-The Axilio command-line interface: acquire and drive phones from your terminal,
-and inspect sessions, runs, and phones. A single static Go binary.
+The Axilio command-line interface: acquire and drive real phones from your
+terminal, and inspect sessions, runs, and API keys. A single static Go binary,
+built to be driven by people and coding agents alike.
+
+```bash
+axilio sessions start                 # lease a phone
+axilio phone observe                  # see what's on screen
+axilio phone tap --query "the search box"
+axilio phone type "androiddev"
+axilio sessions stop <id>             # release it
+```
+
+## What it is
+
+Axilio gives you a fleet of real mobile phones on demand. The CLI is a thin,
+standalone client over the generated [`platform-go`](https://github.com/axilioai/platform-go)
+SDK, decoupled from any one SDK language so it serves every user as
+multi-language SDK support lands. It does three things:
+
+- **Lifecycle and inspection**: sign in, list phones, start/stop sessions, view
+  runs, manage API keys.
+- **Phone control**: observe the screen and drive it (find, tap, type, swipe,
+  key) over the phone's control channel, using the same vision primitives as the
+  SDK.
+- **A scripting surface**: deterministic `-o json` and stable exit codes on every
+  command, so an agent or shell script drives it without parsing prose.
 
 ## Install
 
+`go install` works today:
+
 ```bash
-# once published:
+go install github.com/axilioai/cli@main
+```
+
+This installs the `axilio` binary into `$(go env GOPATH)/bin`. Make sure that's
+on your `PATH`.
+
+Homebrew, a `curl | sh` installer, and versioned `@latest` builds ship with the
+first tagged release:
+
+```bash
+# coming with the first release
 brew install axilioai/tap/axilio
-# or grab a binary from the releases page
+curl -fsSL https://axilio.ai/install.sh | sh
+go install github.com/axilioai/cli@latest
 ```
 
 ## Quick start
 
 ```bash
-axilio login                 # stores your axl_ key in ~/.config/axilio/config.json (0600)
-axilio status                # verify credentials + balance
-axilio doctor                # one-shot setup check: auth, connectivity, account, environment
+axilio login                 # store your axl_ key (verified against the API)
+axilio doctor                # one-shot check: auth, connectivity, account, environment
 axilio phones list           # phones you can claim
-axilio sessions start        # acquire a phone (the lease persists)
-axilio sessions list
+axilio sessions start        # acquire a phone; the lease persists until you stop it
+axilio phone observe         # see the screen
 axilio sessions stop <id>    # release it
 ```
 
-Add `-o json` to any command for scripting; `--help` on any command; shell
-completions via `axilio completion <shell>`.
+## Authentication
 
-## Scripting & agents
+Today the CLI authenticates with an **API key** (an `axl_...` value from your
+Axilio dashboard).
 
-The CLI is built to be driven by scripts and coding agents, not just people:
+```bash
+axilio login                                   # prompts for the key, verifies, saves it
+echo "$AXILIO_API_KEY" | axilio login          # non-interactive (pipe the key in)
+axilio login --api-key axl_xxx                 # or pass it directly
+```
 
-- **`-o json`** — deterministic JSON on stdout for every command; human chrome
-  (notes, prompts, spinners) stays on stderr and is suppressed in JSON mode.
-- **`-q` / `--quiet`** — suppress the stderr chrome for non-interactive use.
-  Destructive commands (`sessions stop`, `runs cancel`, `api-keys delete`) never
-  prompt in `--quiet` or JSON mode; pass `--yes` to proceed.
-- **Stable exit codes** — branch on the exit code instead of parsing stderr:
+`axilio login` writes a language-agnostic config file that every Axilio SDK also
+reads, so one login makes the CLI and the SDKs work:
+
+```
+$XDG_CONFIG_HOME/axilio/config.json   (else ~/.config/axilio/config.json), mode 0600
+```
+
+Credentials resolve in this order (first wins): the `--api-key` flag, the
+`AXILIO_API_KEY` environment variable, then the config file. The API host
+resolves the same way via `--base-url` / `AXILIO_BASE_URL` / config, defaulting
+to `https://api.axilio.ai`.
+
+> Browser-based OAuth login (PKCE) is planned (AXI-1258 / AXI-1265). It will be
+> additive: the API key path keeps working.
+
+## Commands
+
+| Command | What it does |
+| --- | --- |
+| `login` / `logout` / `status` | Store, remove, and check credentials. |
+| `doctor` | One-shot setup check: auth, connectivity, account, environment. |
+| `phones list` | List phones you can claim from the shared pool. |
+| `sessions start` / `stop` / `list` / `current` | Acquire, release, and inspect phone leases. |
+| `phone observe` / `find` / `find-text` / `tap` / `long-press` / `swipe` / `type` / `key` / `screenshot` / `wait-for` | Drive the current phone session. |
+| `runs list` / `get` / `cancel` | Inspect and manage workflow runs. |
+| `api-keys list` / `create` / `delete` | Manage your organization's API keys. |
+| `completion <shell>` | Generate a shell-completion script. |
+
+### Global flags
+
+| Flag | Meaning |
+| --- | --- |
+| `-o, --output table\|json` | Output format (default `table`). |
+| `-q, --quiet` | Suppress stderr chrome (notes and prompts) for non-interactive use. |
+| `--no-color` | Disable colored output. |
+| `--api-key` | Override the API key for this call. |
+| `--base-url` | Override the API host for this call. |
+| `--org` | Organization slug (reserved for multi-org keys). |
+| `-v, --version` | Print the version. |
+
+Run `axilio <command> --help` for the flags on any command.
+
+## Scripting and agents
+
+The CLI's output is a contract, not just cosmetics.
+
+- **`-o json`** gives every command a stable JSON shape on stdout. Human chrome
+  (notes, prompts, spinners) goes to stderr and is suppressed in JSON mode, so a
+  pipe into `jq` stays clean.
+- **`-q, --quiet`** suppresses the stderr chrome entirely. Destructive commands
+  (`sessions stop`, `runs cancel`, `api-keys delete`) never prompt in `--quiet`
+  or JSON mode; pass `--yes` to proceed non-interactively.
+- **Stable exit codes** let you branch on the outcome without parsing stderr:
 
   | Code | Meaning | Examples |
-  |------|---------|----------|
+  | --- | --- | --- |
   | `0` | success | |
   | `1` | error | unclassified failure, executor-internal error |
   | `2` | usage | bad flag/arg, unknown command, invalid input |
@@ -49,24 +136,75 @@ The CLI is built to be driven by scripts and coding agents, not just people:
   | `7` | canceled | the operation was canceled |
 
   The codes map the phone driver's error taxonomy and the API's HTTP status onto
-  one stable table, so `axilio phone find "..."` returning `4` means "no match"
+  one table, so `axilio phone find "..."` returning `4` means "no match"
   regardless of transport.
 
-## Design
+## Examples
 
-- **Standalone Go CLI** (cobra + [fang](https://github.com/charmbracelet/fang) +
-  [pterm](https://github.com/pterm/pterm)), decoupled from any one SDK language so
-  it serves every user as multi-language SDK support lands.
-- **Data on stdout, chrome on stderr.** Tables and JSON go to stdout; notes,
-  prompts, and errors to stderr, and JSON mode suppresses the chrome so pipes into
-  `jq` stay clean.
-- **The CLI owns credentials.** `axilio login` writes a language-agnostic
-  `~/.config/axilio/config.json` that every axilio SDK reads, so one login makes
-  the CLI and the SDKs work.
+### Drive a phone
 
-## Status
+Phone verbs target the current session (see [Parallel sessions](#parallel-sessions)).
+The verbs are a 1:1 projection of the SDK's driver, so a session you explore here
+maps directly onto SDK code.
 
-Early scaffold. The API layer under `internal/api` is a temporary hand-written
-client for the endpoints the CLI needs today; it will be replaced by the
-Fern-generated Go SDK (`github.com/axilioai/platform-go`) generated from the same
-OpenAPI spec.
+```bash
+axilio sessions start --phone-type android
+
+axilio phone observe -o json                  # text + elements with coordinates
+axilio phone find "the search box" -o json    # locate a target semantically
+axilio phone tap --query "the search box"     # act on it
+axilio phone type "androiddev"
+axilio phone key enter
+axilio phone wait-for "Results" --timeout 15s
+axilio phone screenshot --out screen.png
+
+axilio sessions stop <id>
+```
+
+### Parallel sessions
+
+Each terminal or agent process can hold its own lease and drive its own phone at
+once, with no shared state. Pin a phone to a shell with `AXILIO_SESSION`:
+
+```bash
+# in terminal A
+eval "$(axilio sessions start --export)"      # sets AXILIO_SESSION for this shell
+axilio phone observe                          # drives A's phone
+
+# in terminal B (a second phone, concurrently)
+eval "$(axilio sessions start --export)"
+axilio phone observe                          # drives B's phone
+```
+
+`axilio sessions list` shows the leases this CLI holds (a `*` marks the one the
+phone verbs target in the current shell); `--remote` lists all active sessions on
+the server. Selection precedence: `--session <id>` flag, then `AXILIO_SESSION`,
+then the sole active lease, then the most-recently-started one.
+
+### Inspect runs and keys
+
+```bash
+axilio runs list
+axilio runs get <run-id>
+axilio runs cancel <run-id> --yes
+
+axilio api-keys list
+axilio api-keys create ci-key                 # the secret is shown once
+axilio api-keys delete <key-id> --yes
+```
+
+## Shell completions
+
+```bash
+axilio completion zsh   > "${fpath[1]}/_axilio"     # zsh
+axilio completion bash  > /etc/bash_completion.d/axilio
+axilio completion fish  > ~/.config/fish/completions/axilio.fish
+```
+
+Run `axilio completion --help` for per-shell instructions.
+
+## Help and support
+
+- `axilio --help` and `axilio <command> --help` for usage.
+- Docs: [https://docs.axilio.ai](https://docs.axilio.ai)
+- Issues: [https://github.com/axilioai/cli/issues](https://github.com/axilioai/cli/issues)
