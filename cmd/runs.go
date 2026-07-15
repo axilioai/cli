@@ -13,7 +13,7 @@ import (
 
 func runsCmd() *cobra.Command {
 	cmd := &cobra.Command{Use: "runs", Short: "Inspect and manage workflow runs."}
-	cmd.AddCommand(runsListCmd(), runsGetCmd(), runsCancelCmd())
+	cmd.AddCommand(runsListCmd(), runsStartCmd(), runsGetCmd(), runsCancelCmd())
 	return cmd
 }
 
@@ -56,6 +56,45 @@ func runsListCmd() *cobra.Command {
 	}
 	cmd.Flags().Int64Var(&limit, "limit", 20, "Maximum runs to return")
 	cmd.Flags().StringVar(&workflowID, "workflow", "", "Filter by workflow id")
+	return cmd
+}
+
+func runsStartCmd() *cobra.Command {
+	var (
+		count        int64
+		startTimeout int64
+	)
+	cmd := &cobra.Command{
+		Use:   "start <workflow-id>",
+		Short: "Start one or more runs of a workflow.",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(_ *cobra.Command, args []string) error {
+			cl, err := newClient()
+			if err != nil {
+				return err
+			}
+			req := &platformgo.RunCreateRequest{WorkflowID: args[0], Count: count}
+			if startTimeout > 0 {
+				req.StartTimeoutSeconds = &startTimeout
+			}
+			resp, err := cl.Runs.Create(context.Background(), req)
+			if err != nil {
+				return err
+			}
+			printer().Emit(resp, func() {
+				if len(resp.RunIDs) == 0 {
+					fmt.Println("No runs created.")
+					return
+				}
+				for _, id := range resp.RunIDs {
+					printer().Note("Started run %s", id)
+				}
+			})
+			return nil
+		},
+	}
+	cmd.Flags().Int64Var(&count, "count", 1, "Number of runs to start")
+	cmd.Flags().Int64Var(&startTimeout, "start-timeout", 0, "Seconds a queued run waits for a phone before auto-cancel (0 = server default)")
 	return cmd
 }
 

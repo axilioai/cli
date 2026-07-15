@@ -36,6 +36,13 @@ func fakeAPI(t *testing.T) *httptest.Server {
 			body = `{"runs":[
 				{"id":"r1","status":"completed","trigger":"manual","workflow_id":"w1","success":true}],
 				"total":1,"limit":20,"offset":0}`
+		case strings.Contains(p, "/runs/") && r.Method == http.MethodPost:
+			// run creation: POST /runs/{workflow_id}
+			body = `{"run_ids":["r1"]}`
+		case strings.Contains(p, "/workflows"):
+			body = `{"workflows":[
+				{"workflow":{"id":"w1","name":"demo","platform":"android","status":"active"}}],
+				"total":1,"limit":20,"offset":0}`
 		default:
 			http.Error(w, `{"error":"not found"}`, http.StatusNotFound)
 			return
@@ -102,6 +109,28 @@ func TestRunsListJSON(t *testing.T) {
 	}
 	if !strings.Contains(out, `"id": "r1"`) {
 		t.Fatalf("expected the fake run in output:\n%s", out)
+	}
+}
+
+func TestWorkflowsListJSON(t *testing.T) {
+	srv := fakeAPI(t)
+	out, err := run(t, srv, "-o", "json", "workflows", "list")
+	if err != nil {
+		t.Fatalf("workflows list: %v", err)
+	}
+	if !strings.Contains(out, `"id": "w1"`) {
+		t.Fatalf("expected the fake workflow in output:\n%s", out)
+	}
+}
+
+func TestRunsStartJSON(t *testing.T) {
+	srv := fakeAPI(t)
+	out, err := run(t, srv, "-o", "json", "runs", "start", "w1")
+	if err != nil {
+		t.Fatalf("runs start: %v", err)
+	}
+	if !strings.Contains(out, `"r1"`) {
+		t.Fatalf("expected the created run id in output:\n%s", out)
 	}
 }
 
