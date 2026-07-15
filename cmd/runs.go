@@ -63,6 +63,7 @@ func runsStartCmd() *cobra.Command {
 	var (
 		count        int64
 		startTimeout int64
+		phoneID      string
 	)
 	cmd := &cobra.Command{
 		Use:   "start <workflow-id>",
@@ -73,7 +74,20 @@ func runsStartCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			req := &platformgo.RunCreateRequest{WorkflowID: args[0], Count: count}
+			// The backend requires a per-run config for each run (`runs` is
+			// required, and it creates one run per entry). Send `count` empty
+			// configs, optionally pinning each to a dedicated phone.
+			runs := make([]*platformgo.RunConfig, count)
+			for i := range runs {
+				// `variables` is required on each run config; a single empty
+				// map means "run with no variables set".
+				rc := &platformgo.RunConfig{Variables: []map[string]any{{}}}
+				if phoneID != "" {
+					rc.PhoneID = &phoneID
+				}
+				runs[i] = rc
+			}
+			req := &platformgo.RunCreateRequest{WorkflowID: args[0], Count: count, Runs: runs}
 			if startTimeout > 0 {
 				req.StartTimeoutSeconds = &startTimeout
 			}
@@ -94,7 +108,8 @@ func runsStartCmd() *cobra.Command {
 		},
 	}
 	cmd.Flags().Int64Var(&count, "count", 1, "Number of runs to start")
-	cmd.Flags().Int64Var(&startTimeout, "start-timeout", 0, "Seconds a queued run waits for a phone before auto-cancel (0 = server default)")
+	cmd.Flags().StringVar(&phoneID, "phone-id", "", "Pin the run(s) to a specific dedicated phone")
+	cmd.Flags().Int64Var(&startTimeout, "start-timeout", 0, "Seconds a queued run waits for a phone before auto-cancel (min 60; 0 = server default)")
 	return cmd
 }
 

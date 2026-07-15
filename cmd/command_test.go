@@ -37,7 +37,21 @@ func fakeAPI(t *testing.T) *httptest.Server {
 				{"id":"r1","status":"completed","trigger":"manual","workflow_id":"w1","success":true}],
 				"total":1,"limit":20,"offset":0}`
 		case strings.Contains(p, "/runs/") && r.Method == http.MethodPost:
-			// run creation: POST /runs/{workflow_id}
+			// run creation: POST /runs/{workflow_id}. The backend requires a
+			// non-empty `runs` array (one config per run); reject its absence
+			// so this test stays faithful to the real contract.
+			var reqBody struct {
+				Runs []map[string]any `json:"runs"`
+			}
+			_ = json.NewDecoder(r.Body).Decode(&reqBody)
+			if len(reqBody.Runs) == 0 {
+				http.Error(w, `{"title":"Unprocessable Entity","status":422,"detail":"expected required property runs to be present"}`, http.StatusUnprocessableEntity)
+				return
+			}
+			if _, ok := reqBody.Runs[0]["variables"]; !ok {
+				http.Error(w, `{"title":"Unprocessable Entity","status":422,"detail":"expected required property variables to be present"}`, http.StatusUnprocessableEntity)
+				return
+			}
 			body = `{"run_ids":["r1"]}`
 		case strings.Contains(p, "/workflows"):
 			body = `{"workflows":[
