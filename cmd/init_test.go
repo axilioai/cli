@@ -26,7 +26,7 @@ func TestInitWritesSkillForEachAgent(t *testing.T) {
 			}
 			s := string(b)
 			// Both SDK sections reach every target: the agent picks the language at
-			// run time, so a target missing one can't honour the user's choice.
+			// run time, so a target missing one can't honor the user's choice.
 			// (That the symbols inside them are real is agentskill_test.go's job.)
 			for _, want := range []string{"<!-- lang:python -->", "<!-- lang:go -->"} {
 				if !strings.Contains(s, want) {

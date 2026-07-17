@@ -100,7 +100,7 @@ func writeSkillFile(path, content string, force bool) error {
 //
 // The stamp goes inside the block, not in the markers: the markers are matched
 // with strings.Index to find an existing section, so a version in them would stop
-// a newer CLI from recognising (and refreshing) a block an older one wrote.
+// a newer CLI from recognizing (and refreshing) a block an older one wrote.
 func writeAgentsMD(force bool) error {
 	const path = "AGENTS.md"
 	block := agentsMarkerBegin + "\n\n" + skillStamp("codex") + agentSkillBody + "\n" + agentsMarkerEnd + "\n"
