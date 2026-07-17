@@ -71,16 +71,23 @@ axilio phone long-press --query "the first message"
 axilio phone swipe --from-query "the photo" --to-query "the trash icon"
 ```
 
-Coordinates require an explicit `--raw`, and the CLI will reject bare coordinates and
-tell you this. The one place `--raw` is genuinely right is a target with no element to
-aim at — a scroll gesture, a point on a map, a freehand drawing:
+In the CLI, coordinates need an explicit `--raw` and bare coordinates are rejected. The
+one place `--raw` is genuinely right is a target with no element to aim at — a scroll
+gesture, a point on a map, a freehand drawing:
 
 ```bash
 axilio phone swipe --raw 540 1500 540 500   # scrolling: nothing to describe
 ```
 
-When you use `--raw`, leave a comment saying why the semantic path didn't fit. "It was
-easier" is not a reason.
+**The SDKs have no `--raw` equivalent, and that's deliberate**: `driver.tap(coords)` is a
+normal part of the API for developers who mean it. Nothing will stop you writing
+coordinates into the script — which is exactly why the rule matters more there, not
+less. The script runs unattended for months against a different phone each time, with
+nobody watching the moment it starts tapping the wrong thing. Use a semantic selector
+unless you genuinely can't.
+
+Either way, when you fall back to coordinates, leave a comment saying why the semantic
+path didn't fit. "It was easier" is not a reason.
 
 ## Deliverable: ask which language, then write the script
 
