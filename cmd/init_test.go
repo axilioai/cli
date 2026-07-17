@@ -24,9 +24,21 @@ func TestInitWritesSkillForEachAgent(t *testing.T) {
 			if err != nil {
 				t.Fatalf("%s not written: %v", c.path, err)
 			}
-			// Every target embeds the real SDK entry point so the agent writes valid code.
-			if !strings.Contains(string(b), `client.session("android")`) {
-				t.Fatalf("%s missing SDK reference", c.path)
+			s := string(b)
+			// Both SDK sections reach every target: the agent picks the language at
+			// run time, so a target missing one can't honour the user's choice.
+			// (That the symbols inside them are real is agentskill_test.go's job.)
+			for _, want := range []string{"<!-- lang:python -->", "<!-- lang:go -->"} {
+				if !strings.Contains(s, want) {
+					t.Fatalf("%s missing %s", c.path, want)
+				}
+			}
+			// The stamp is what makes a stale skill detectable on disk.
+			if !strings.Contains(s, "<!-- axilio skill ") {
+				t.Fatalf("%s missing the version stamp", c.path)
+			}
+			if !strings.Contains(s, "--agent "+c.agent+" --force") {
+				t.Fatalf("%s stamp does not name its own refresh command", c.path)
 			}
 		})
 	}

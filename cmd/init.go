@@ -3,6 +3,7 @@ package cmd
 import (
 	_ "embed"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -15,12 +16,24 @@ import (
 var agentSkillBody string
 
 // skillDescription is the one-line summary in each agent's frontmatter.
-const skillDescription = "Drive real Axilio phones from the axilio CLI (observe/find/tap/type), then write the equivalent Python SDK script."
+const skillDescription = "Drive real Axilio phones from the axilio CLI (observe/find/tap/type), then write the equivalent SDK script in Python or Go."
 
 const (
 	claudeFrontmatter = "---\nname: axilio-phone-control\ndescription: " + skillDescription + "\n---\n\n"
 	cursorFrontmatter = "---\ndescription: " + skillDescription + "\nalwaysApply: false\n---\n\n"
 )
+
+// skillStamp records which CLI version wrote a skill, and how to refresh it. The
+// written file is a snapshot: `axilio upgrade` updates the binary but never the
+// skills already on disk, so without a stamp a skill written months ago is
+// indistinguishable from a current one — and the surface it documents moves.
+func skillStamp(agent string) string {
+	return fmt.Sprintf(
+		"<!-- axilio skill %s — written by `axilio init --agent %s`.\n"+
+			"     Refresh after `axilio upgrade`: `axilio init --agent %s --force` -->\n\n",
+		Version, agent, agent,
+	)
+}
 
 // AGENTS.md is a shared file, so the codex path appends a marked block rather
 // than clobbering whatever the user already has.
@@ -36,7 +49,8 @@ func initCmd() *cobra.Command {
 		Use:   "init",
 		Short: "Drop an agent skill into this repo so a coding agent can drive phones via the CLI.",
 		Long: "Write an instruction file that teaches your coding agent to drive a phone " +
-			"through the axilio CLI and then hand back a runnable Python SDK script.\n\n" +
+			"through the axilio CLI and then hand back a runnable SDK script. The agent " +
+			"asks whether you want Python or Go.\n\n" +
 			"  --agent claude  ->  .claude/skills/axilio/SKILL.md\n" +
 			"  --agent codex   ->  AGENTS.md (appended, never clobbered)\n" +
 			"  --agent cursor  ->  .cursor/rules/axilio.mdc",
@@ -52,9 +66,9 @@ func initCmd() *cobra.Command {
 func runInit(agent string, force bool) error {
 	switch strings.ToLower(strings.TrimSpace(agent)) {
 	case "claude":
-		return writeSkillFile(filepath.Join(".claude", "skills", "axilio", "SKILL.md"), claudeFrontmatter+agentSkillBody, force)
+		return writeSkillFile(filepath.Join(".claude", "skills", "axilio", "SKILL.md"), claudeFrontmatter+skillStamp("claude")+agentSkillBody, force)
 	case "cursor":
-		return writeSkillFile(filepath.Join(".cursor", "rules", "axilio.mdc"), cursorFrontmatter+agentSkillBody, force)
+		return writeSkillFile(filepath.Join(".cursor", "rules", "axilio.mdc"), cursorFrontmatter+skillStamp("cursor")+agentSkillBody, force)
 	case "codex":
 		return writeAgentsMD(force)
 	default:
@@ -83,9 +97,13 @@ func writeSkillFile(path, content string, force bool) error {
 // writeAgentsMD appends a marker-delimited Axilio section to AGENTS.md, creating
 // it if absent. It never clobbers other content; a re-run refreshes only the
 // marked block (with --force) rather than duplicating it.
+//
+// The stamp goes inside the block, not in the markers: the markers are matched
+// with strings.Index to find an existing section, so a version in them would stop
+// a newer CLI from recognising (and refreshing) a block an older one wrote.
 func writeAgentsMD(force bool) error {
 	const path = "AGENTS.md"
-	block := agentsMarkerBegin + "\n\n" + agentSkillBody + "\n" + agentsMarkerEnd + "\n"
+	block := agentsMarkerBegin + "\n\n" + skillStamp("codex") + agentSkillBody + "\n" + agentsMarkerEnd + "\n"
 
 	existing, err := os.ReadFile(path)
 	if errors.Is(err, os.ErrNotExist) {

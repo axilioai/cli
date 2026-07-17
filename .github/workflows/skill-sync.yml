@@ -1,0 +1,64 @@
+name: Skill sync
+
+# The agent skill (cmd/agentskill.md) documents both SDK surfaces. An agent reads
+# it and writes code a customer runs unattended, so a symbol that no longer exists
+# doesn't produce a stale doc — it produces a broken deliverable.
+#
+# The Go half is guarded in-repo by cmd/agentskill_test.go (the CLI depends on
+# platform-go, so `go test` catches a rename at PR time). The Python half cannot be
+# guarded that way: the CLI has no dependency on platform-python, by design.
+#
+# Hence this job, and hence the schedule. platform-python publishes on its own
+# cadence, so the skill can rot with no CLI change to trigger CI — a PR-only gate
+# would never fire. The nightly run is the one that actually catches drift; the
+# PR trigger just gives fast feedback when the skill itself is edited.
+
+on:
+  pull_request:
+    paths:
+      - 'cmd/agentskill.md'
+      - 'scripts/check_python_skill.py'
+      - '.github/workflows/skill-sync.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'cmd/agentskill.md'
+      - 'scripts/check_python_skill.py'
+  schedule:
+    # 07:00 UTC daily — catches a platform-python release that moved the surface
+    # out from under a skill nobody has touched.
+    - cron: '0 7 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  python-surface:
+    name: Python skill surface vs published SDK
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      # The published SDK, not a pin: `pip install axilio` is exactly what the
+      # skill tells the user to run, so that is the surface to check against.
+      - name: install the published SDK
+        run: pip install --upgrade axilio
+      - name: check the skill's Python section
+        run: python scripts/check_python_skill.py
+
+  go-surface:
+    name: Go skill surface vs pinned SDK
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      # Same assertions CI runs, surfaced here too so a scheduled run reports on
+      # both languages in one place rather than only half the picture.
+      - name: check the skill's Go section
+        run: go test ./cmd/ -run TestSkill -v

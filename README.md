@@ -109,7 +109,7 @@ session.
 | `config` / `config set` / `config unset` | Show and edit CLI configuration (API host, paths, auth). |
 | `orgs list` / `orgs use` / `orgs clear` | List and switch the active organization (OAuth sessions). |
 | `upgrade` / `upgrade --check` | Update axilio to the latest release (Homebrew installs defer to `brew upgrade`). |
-| `init --agent claude\|codex\|cursor` | Drop an agent skill into the repo so a coding agent can drive phones via the CLI and emit SDK code. |
+| `init --agent claude\|codex\|cursor` | Drop an agent skill into the repo so a coding agent can drive phones via the CLI and emit SDK code (it asks whether you want Python or Go). Re-run with `--force` after `axilio upgrade` to refresh it. |
 | `phones list` | List phones you can start a session on right now (shared pool + your free dedicated phones). |
 | `phones mine` | List your org's dedicated phones, including ones currently in use (find a `phone_id` to pin). |
 | `sessions start` / `stop` / `list` / `current` | Acquire, release, and inspect phone leases. |
