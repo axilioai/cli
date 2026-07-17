@@ -10,3 +10,7 @@ coverage.txt
 .DS_Store
 .idea/
 .vscode/
+
+# Python bytecode from scripts/
+__pycache__/
+*.pyc
