@@ -113,7 +113,7 @@ session.
 | `phones list` | List phones you can start a session on right now (shared pool + your free dedicated phones). |
 | `phones mine` | List your org's dedicated phones, including ones currently in use (find a `phone_id` to pin). |
 | `sessions start` / `stop` / `list` / `current` | Acquire, release, and inspect phone leases. |
-| `phone observe` / `find` / `find-text` / `tap` / `long-press` / `swipe` / `type` / `key` / `screenshot` / `wait-for` | Drive the current phone session. |
+| `phone observe` / `find` / `find-text` / `tap` / `long-press` / `swipe` / `type` / `key` / `screenshot` / `wait-for` | Drive the current phone session. Target things by describing them (`--query`); coordinates need an explicit `--raw`. |
 | `runs list` / `get` / `cancel` | Inspect and manage workflow runs. |
 | `api-keys list` / `create` / `delete` | Manage your organization's API keys. |
 | `completion <shell>` | Generate a shell-completion script. |
@@ -179,6 +179,26 @@ axilio phone wait-for "Results" --timeout 15s
 axilio phone screenshot --out screen.png
 
 axilio sessions stop <id>
+```
+
+#### Describe targets, don't measure them
+
+Every action verb takes a semantic target — `tap --query`, `long-press --query`,
+`swipe --from-query/--to-query`. These route through the grounding model and
+re-locate the target on the live screen every run, so they keep working across
+screen sizes, layouts, scroll positions and app versions.
+
+Raw coordinates need an explicit `--raw`, because a coordinate is true only for
+the exact screen it was read from and fails silently on any other — it taps the
+wrong thing rather than erroring. Screenshots are not the problem and never were:
+look at the screen freely, just act with `--query` instead of measuring pixels.
+
+`--raw` is the right answer where there's no element to aim at — a scroll, a
+freehand gesture, a point on a map:
+
+```bash
+axilio phone swipe --from-query "the photo" --to-query "the trash icon"
+axilio phone swipe --raw 540 1500 540 500     # scrolling: nothing to describe
 ```
 
 ### Parallel sessions

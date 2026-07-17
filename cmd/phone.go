@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/axilioai/cli/internal/exit"
 	"github.com/axilioai/cli/internal/output"
 	"github.com/axilioai/cli/internal/session"
 	"github.com/axilioai/platform-go/drivers/mobile"
@@ -19,9 +20,20 @@ func phoneCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "phone",
 		Short: "Drive the current phone session: observe, find, tap, type, ...",
-		Long: "Drive a phone leased with `axilio sessions start`. The verbs are thin " +
-			"projections of the SDK's MobileDriver, so a session you explore here maps " +
-			"1:1 onto SDK code. Use -o json to parse observe/find results.",
+		Long: "Drive a phone leased with `axilio sessions start`.\n\n" +
+			"The loop:\n\n" +
+			"  axilio phone observe -o json               # what's on screen, with coordinates\n" +
+			"  axilio phone tap --query \"the search box\"   # act on it by describing it\n" +
+			"  axilio phone type \"androiddev\"\n\n" +
+			"Target things by describing them, not by coordinate. --query routes through the\n" +
+			"grounding model and re-locates the target on the live screen every run, so it keeps\n" +
+			"working across screen sizes, layouts, scroll positions and app versions. A\n" +
+			"coordinate is true only for the exact screen you read it from — and it fails\n" +
+			"silently, by tapping the wrong thing.\n\n" +
+			"Screenshots are welcome: look all you like. Just act with --query rather than\n" +
+			"reading coordinates off the image. Coordinates need an explicit --raw.\n\n" +
+			"The verbs are thin projections of the SDK's MobileDriver, so a session you explore\n" +
+			"here maps onto SDK code. Use -o json to parse observe/find results.",
 	}
 	cmd.PersistentFlags().StringVar(&flagPhoneSession, "session", "", "Target session id (defaults to the current session)")
 	cmd.AddCommand(
@@ -56,6 +68,58 @@ func visionOpts(engine, model string) []mobile.CallOption {
 		opts = append(opts, mobile.WithModel(model))
 	}
 	return opts
+}
+
+// Raw coordinates are a real capability with a narrow legitimate use, and the
+// default loop of any agent handed a screenshot — a vision model reasons in
+// pixels. Left alone, that loop hardcodes a coordinate that is only true for one
+// screen size, layout, scroll position and app version, and it bypasses the
+// grounding model that makes `--query` work at all.
+//
+// So coordinates are opt-in rather than removed: `--raw` makes the choice
+// deliberate, greppable in review, and impossible to reach by accident. The
+// usage error below is the teaching moment; rawCoordsWarning is the reminder for
+// anyone who opted in.
+//
+// The messages are flowing prose on purpose: the help renderer reflows them, so
+// indentation or line structure here collapses into a paragraph. They also carry
+// no trailing period — the renderer appends one.
+
+// rawCoordsUsage is for the verbs where a semantic target is almost always
+// available, so --raw is the exception that needs justifying.
+func rawCoordsUsage(verb, semantic, raw string) error {
+	return exit.Usagef(
+		"%s needs --raw to accept coordinates. Prefer `%s`, which describes the target and "+
+			"re-locates it on the live screen every run — so it keeps working across screen "+
+			"sizes, layouts, scroll positions and app versions, where a coordinate silently "+
+			"taps the wrong thing. If the target genuinely has no semantic handle (a point on "+
+			"a map, a freehand gesture), say so explicitly with `%s`",
+		verb, semantic, raw,
+	)
+}
+
+// rawSwipeUsage is separate because swipe is genuinely different: a scroll has no
+// element to aim at, so coordinates are frequently the right answer rather than a
+// concession. --raw is still required, so a reader can tell a drag from a scroll
+// without reconstructing the geometry in their head.
+func rawSwipeUsage() error {
+	return exit.Usagef(
+		"swipe needs either two semantic targets or an explicit --raw. To drag one thing onto " +
+			"another, describe both ends: `axilio phone swipe --from-query \"the photo\" " +
+			"--to-query \"the trash icon\"`. For a scroll or a freehand gesture there is no " +
+			"element to aim at, so coordinates are the right answer — just say so: " +
+			"`axilio phone swipe --raw 540 1500 540 500`",
+	)
+}
+
+// rawCoordsWarning fires only for verbs that have a semantic alternative. Swipe
+// deliberately stays quiet: a scroll gesture has no target element, so
+// coordinates are frequently the *correct* answer there, and a warning on every
+// swipe would train the reader to tune warnings out — costing us the one on tap,
+// where it matters.
+func rawCoordsWarning(semantic string) {
+	printer().Warn("Used raw coordinates — brittle. They are only valid for this screen "+
+		"size, layout and scroll position, and they skip the grounding model. Prefer: %s", semantic)
 }
 
 func elementKV(el mobile.Element) [][2]string {
@@ -162,11 +226,26 @@ func phoneFindTextCmd() *cobra.Command {
 
 func phoneTapCmd() *cobra.Command {
 	var query, engine, model string
+	var raw bool
 	cmd := &cobra.Command{
-		Use:   "tap [x y]",
-		Short: "Tap at coordinates, or at a natural-language target with --query.",
-		Args:  cobra.MaximumNArgs(2),
+		Use:   "tap --query <target> | --raw <x> <y>",
+		Short: "Tap a natural-language target with --query (preferred), or raw coordinates with --raw.",
+		Long: "Tap the phone.\n\n" +
+			"  axilio phone tap --query \"the search box\"   # preferred: located on the live screen\n" +
+			"  axilio phone tap --raw 540 1200             # only when there is no semantic handle\n\n" +
+			"--query routes through the grounding model and re-locates the target every run, so it " +
+			"keeps working across screen sizes, layouts, scroll positions and app versions. A " +
+			"coordinate read off a screenshot is true only for the screen you read it from.",
+		Args: cobra.MaximumNArgs(2),
 		RunE: func(_ *cobra.Command, args []string) error {
+			if query != "" && (raw || len(args) > 0) {
+				return exit.Usagef("pass either --query or --raw <x> <y>, not both")
+			}
+			if query == "" && !raw {
+				return rawCoordsUsage("tap",
+					`axilio phone tap --query "the search box"`,
+					`axilio phone tap --raw 540 1200`)
+			}
 			d, err := currentDriver()
 			if err != nil {
 				return err
@@ -190,11 +269,13 @@ func phoneTapCmd() *cobra.Command {
 			if err := d.Tap(c); err != nil {
 				return err
 			}
+			rawCoordsWarning(`axilio phone tap --query "..."`)
 			printer().Note("Tapped %d,%d", c.X, c.Y)
 			return nil
 		},
 	}
-	cmd.Flags().StringVar(&query, "query", "", "Natural-language target (routed through vision)")
+	cmd.Flags().StringVar(&query, "query", "", "Natural-language target (routed through the grounding model) — preferred")
+	cmd.Flags().BoolVar(&raw, "raw", false, "Accept raw x y coordinates (brittle; prefer --query)")
 	cmd.Flags().StringVar(&engine, "ocr-engine", "", "OCR engine for --query")
 	cmd.Flags().StringVar(&model, "model", "", "Vision model for --query")
 	return cmd
@@ -202,16 +283,41 @@ func phoneTapCmd() *cobra.Command {
 
 func phoneLongPressCmd() *cobra.Command {
 	var durationMs int
+	var query, engine, model string
+	var raw bool
 	cmd := &cobra.Command{
-		Use:   "long-press <x> <y>",
-		Short: "Press and hold at coordinates.",
-		Args:  cobra.ExactArgs(2),
+		Use:   "long-press --query <target> | --raw <x> <y>",
+		Short: "Press and hold a natural-language target with --query (preferred), or raw coordinates with --raw.",
+		Long: "Press and hold on the phone.\n\n" +
+			"  axilio phone long-press --query \"the first message\"   # preferred\n" +
+			"  axilio phone long-press --raw 540 1200                # only with no semantic handle\n\n" +
+			"--query routes through the grounding model and re-locates the target every run.",
+		Args: cobra.MaximumNArgs(2),
 		RunE: func(_ *cobra.Command, args []string) error {
+			if query != "" && (raw || len(args) > 0) {
+				return exit.Usagef("pass either --query or --raw <x> <y>, not both")
+			}
+			if query == "" && !raw {
+				return rawCoordsUsage("long-press",
+					`axilio phone long-press --query "the first message"`,
+					`axilio phone long-press --raw 540 1200`)
+			}
 			d, err := currentDriver()
 			if err != nil {
 				return err
 			}
 			defer d.Close()
+			if query != "" {
+				el, err := d.Find(query, visionOpts(engine, model)...)
+				if err != nil {
+					return err
+				}
+				if err := el.LongPress(durationMs); err != nil {
+					return err
+				}
+				printer().Note("Long-pressed %q at %d,%d for %dms", query, el.Center.X, el.Center.Y, durationMs)
+				return nil
+			}
 			c, err := coordsArg(args)
 			if err != nil {
 				return err
@@ -219,26 +325,71 @@ func phoneLongPressCmd() *cobra.Command {
 			if err := d.LongPress(c, durationMs); err != nil {
 				return err
 			}
+			rawCoordsWarning(`axilio phone long-press --query "..."`)
 			printer().Note("Long-pressed %d,%d for %dms", c.X, c.Y, durationMs)
 			return nil
 		},
 	}
+	cmd.Flags().StringVar(&query, "query", "", "Natural-language target (routed through the grounding model) — preferred")
+	cmd.Flags().BoolVar(&raw, "raw", false, "Accept raw x y coordinates (brittle; prefer --query)")
 	cmd.Flags().IntVar(&durationMs, "duration-ms", 800, "Hold duration in milliseconds")
+	cmd.Flags().StringVar(&engine, "ocr-engine", "", "OCR engine for --query")
+	cmd.Flags().StringVar(&model, "model", "", "Vision model for --query")
 	return cmd
 }
 
 func phoneSwipeCmd() *cobra.Command {
 	var durationMs int
+	var fromQuery, toQuery, engine, model string
+	var raw bool
 	cmd := &cobra.Command{
-		Use:   "swipe <x1> <y1> <x2> <y2>",
-		Short: "Swipe from one point to another.",
-		Args:  cobra.ExactArgs(4),
+		Use:   "swipe --from-query <a> --to-query <b> | --raw <x1> <y1> <x2> <y2>",
+		Short: "Swipe between two natural-language targets, or between raw coordinates with --raw.",
+		Long: "Swipe on the phone.\n\n" +
+			"  axilio phone swipe --from-query \"the photo\" --to-query \"the trash icon\"\n" +
+			"  axilio phone swipe --raw 540 1500 540 500     # a scroll gesture\n\n" +
+			"Dragging one thing onto another is a --from-query/--to-query swipe: both ends are\n" +
+			"re-located on the live screen, so it survives a layout change.\n\n" +
+			"Unlike tap and long-press, --raw here is a first-class answer, not a fallback: a\n" +
+			"scroll or a freehand gesture has no target element, so coordinates are simply what\n" +
+			"it is. --raw is still required, so a reader can tell the two apart at a glance.",
+		Args: cobra.MaximumNArgs(4),
 		RunE: func(_ *cobra.Command, args []string) error {
+			semantic := fromQuery != "" || toQuery != ""
+			if semantic && (raw || len(args) > 0) {
+				return exit.Usagef("pass either --from-query/--to-query or --raw <x1> <y1> <x2> <y2>, not both")
+			}
+			if semantic && (fromQuery == "" || toQuery == "") {
+				return exit.Usagef("a semantic swipe needs both --from-query and --to-query; " +
+					"for a scroll or freehand gesture use --raw <x1> <y1> <x2> <y2>")
+			}
+			if !semantic && !raw {
+				return rawSwipeUsage()
+			}
 			d, err := currentDriver()
 			if err != nil {
 				return err
 			}
 			defer d.Close()
+			if semantic {
+				opts := visionOpts(engine, model)
+				from, err := d.Find(fromQuery, opts...)
+				if err != nil {
+					return err
+				}
+				to, err := d.Find(toQuery, opts...)
+				if err != nil {
+					return err
+				}
+				if err := from.SwipeTo(*to, durationMs); err != nil {
+					return err
+				}
+				printer().Note("Swiped %q -> %q", fromQuery, toQuery)
+				return nil
+			}
+			if len(args) != 4 {
+				return exit.Usagef("--raw needs exactly four coordinates: <x1> <y1> <x2> <y2>")
+			}
 			nums, err := intArgs(args)
 			if err != nil {
 				return err
@@ -248,11 +399,17 @@ func phoneSwipeCmd() *cobra.Command {
 			if err := d.Swipe(start, end, durationMs); err != nil {
 				return err
 			}
+			// No warning here by design: see rawCoordsWarning.
 			printer().Note("Swiped %d,%d -> %d,%d", start.X, start.Y, end.X, end.Y)
 			return nil
 		},
 	}
+	cmd.Flags().StringVar(&fromQuery, "from-query", "", "Natural-language target to swipe from")
+	cmd.Flags().StringVar(&toQuery, "to-query", "", "Natural-language target to swipe to")
+	cmd.Flags().BoolVar(&raw, "raw", false, "Accept raw x1 y1 x2 y2 coordinates (correct for scroll gestures)")
 	cmd.Flags().IntVar(&durationMs, "duration-ms", 300, "Swipe duration in milliseconds")
+	cmd.Flags().StringVar(&engine, "ocr-engine", "", "OCR engine for the queries")
+	cmd.Flags().StringVar(&model, "model", "", "Vision model for the queries")
 	return cmd
 }
 
@@ -301,6 +458,13 @@ func phoneScreenshotCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "screenshot",
 		Short: "Capture the screen as a PNG file.",
+		Long: "Capture the screen as a PNG.\n\n" +
+			"Looking at the screen is a good idea — take as many as you need. Just act on what\n" +
+			"you see with `tap --query \"...\"` rather than reading coordinates off the image: a\n" +
+			"coordinate measured from this PNG is true only for this screen, and it will tap the\n" +
+			"wrong thing on the next one without telling you.\n\n" +
+			"For a structured view of the same screen — text and icons with their coordinates,\n" +
+			"as JSON — use `axilio phone observe -o json`.",
 		RunE: func(_ *cobra.Command, _ []string) error {
 			d, err := currentDriver()
 			if err != nil {

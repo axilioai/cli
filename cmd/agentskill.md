@@ -21,12 +21,15 @@ axilio sessions start --phone-type android    # lease a phone (becomes the curre
 
 axilio phone observe -o json                  # text + UI elements + coordinates on screen
 axilio phone find "the search box" -o json    # locate a target by natural-language query
-axilio phone tap --query "the search box"     # tap it
+axilio phone tap --query "the search box"     # tap it — describe it, don't measure it
 axilio phone type "androiddev"                # type into the focused field
 axilio phone key enter                        # press a key: enter, back, home, ...
 axilio phone find-text "Results" -o json      # locate visible text
 axilio phone wait-for "Results" --timeout 15s # wait for text to appear
-axilio phone screenshot --out screen.png      # capture the screen
+axilio phone screenshot --out screen.png      # look at the screen (fine — see the rule below)
+axilio phone long-press --query "the first message"
+axilio phone swipe --from-query "the photo" --to-query "the trash icon"
+axilio phone swipe --raw 540 1500 540 500     # a scroll: no element to aim at
 
 axilio sessions stop <session-id>             # release the phone
 ```
@@ -42,21 +45,49 @@ where they happened to be on your screen:
 
 ```bash
 axilio phone tap --query "the search box"   # ✅ do this
-axilio phone tap 540 1200                   # ❌ never this
+axilio phone tap --raw 540 1200             # ❌ not this
 ```
 
-A coordinate is only true for one screen size, one layout, one scroll position, one
-font scale, one app version. The script you hand back runs later, unattended, on a
-*different phone from the pool* than the one you explored with. Hardcoded coordinates
-don't fail loudly when any of that shifts — they silently tap the wrong thing, and the
-user finds out from the consequences.
+**Taking a screenshot is fine.** Look at the screen as much as you want. The rule is
+about the *action*: don't measure a coordinate off the image and tap it. Look with
+`screenshot` or `observe`, then act with `--query`.
 
-Semantic selectors (`find`, `find-text`) re-locate the target on the live screen every
-run, so they survive all of it.
+Why this matters more than it looks:
 
-The only acceptable use of raw coordinates is a target with genuinely no semantic
-handle — a point on a map, a freehand gesture, a canvas. When you must, leave a comment
-saying why the semantic path didn't work. "It was easier" is not a reason.
+- A coordinate is only true for one screen size, one layout, one scroll position, one
+  font scale, one app version. The script you hand back runs later, unattended, on a
+  *different phone from the pool* than the one you explored with. Hardcoded coordinates
+  don't fail loudly when any of that shifts — they silently tap the wrong thing, and
+  the user finds out from the consequences.
+- `--query` routes through Axilio's grounding model, which is trained for exactly this
+  and is markedly better at it than eyeballing pixels. Reading coordinates off a
+  screenshot doesn't just risk breaking later — it's less accurate right now.
+
+Every action verb takes a semantic target:
+
+```bash
+axilio phone tap --query "the search box"
+axilio phone long-press --query "the first message"
+axilio phone swipe --from-query "the photo" --to-query "the trash icon"
+```
+
+In the CLI, coordinates need an explicit `--raw` and bare coordinates are rejected. The
+one place `--raw` is genuinely right is a target with no element to aim at — a scroll
+gesture, a point on a map, a freehand drawing:
+
+```bash
+axilio phone swipe --raw 540 1500 540 500   # scrolling: nothing to describe
+```
+
+**The SDKs have no `--raw` equivalent, and that's deliberate**: `driver.tap(coords)` is a
+normal part of the API for developers who mean it. Nothing will stop you writing
+coordinates into the script — which is exactly why the rule matters more there, not
+less. The script runs unattended for months against a different phone each time, with
+nobody watching the moment it starts tapping the wrong thing. Use a semantic selector
+unless you genuinely can't.
+
+Either way, when you fall back to coordinates, leave a comment saying why the semantic
+path didn't fit. "It was easier" is not a reason.
 
 ## Deliverable: ask which language, then write the script
 

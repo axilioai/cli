@@ -55,6 +55,21 @@ func (p *Printer) Note(format string, a ...any) {
 	fmt.Fprintf(os.Stderr, format+"\n", a...)
 }
 
+// Warn prints a diagnostic to stderr. Unlike Note/Success/Step it deliberately
+// survives JSON mode, and that exception is the point: agents drive with
+// -o json, so anything gated on silent() is muted for exactly the audience a
+// warning is meant to reach.
+//
+// It does not break the output contract. The promise is that *stdout* stays
+// clean so a pipe into jq never sees stray text; stderr was always ours. Only
+// --quiet, which means "I want no chrome at all", silences this.
+func (p *Printer) Warn(format string, a ...any) {
+	if p.Quiet {
+		return
+	}
+	fmt.Fprintf(os.Stderr, "%s %s\n", pterm.Yellow("!"), fmt.Sprintf(format, a...))
+}
+
 // Success prints a green check-marked line to stderr (human chrome), suppressed
 // in JSON/quiet mode. For terminal confirmations like "Signed in".
 func (p *Printer) Success(format string, a ...any) {
