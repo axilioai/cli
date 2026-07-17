@@ -30,7 +30,7 @@ func TestWarnWritesNothingToStdout(t *testing.T) {
 	}
 }
 
-// --quiet means "no chrome at all" — an explicit request we honour.
+// --quiet means "no chrome at all" — an explicit request we honor.
 func TestWarnIsSilencedByQuiet(t *testing.T) {
 	p := New("json", true, true)
 	if got := captureStderr(t, func() { p.Warn("brittle") }); got != "" {
