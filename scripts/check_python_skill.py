@@ -123,6 +123,27 @@ def main() -> int:
         fail("Client.session() no longer exists; the Python section's `with` block is wrong")
         errors += 1
 
+    # 5. Key names. This is a different axis from the checks above: key_press("home")
+    # resolves fine as a *method* and fails at run time on the *argument* — the device's
+    # named-key table has one entry. The skill documented "back"/"home" as usable and no
+    # method-name check could have caught it, so the literals agents copy get checked
+    # against the SDK's Key constants (which the SDK keeps in lockstep with the device).
+    #
+    # Only literals inside key_press(...) calls are checked — prose naming "home" as a
+    # key that does NOT work is guidance, not an instruction to copy.
+    from axilio.drivers.mobile.keys import Key
+
+    valid_keys = {v for k, v in vars(Key).items() if not k.startswith("_") and isinstance(v, str)}
+    used_keys = sorted(set(re.findall(r'key_press\(\s*"([^"]+)"\s*\)', block)))
+    for name in used_keys:
+        if name not in valid_keys:
+            fail(
+                f"agentskill.md shows key_press({name!r}), but the SDK's Key constants are "
+                f"{sorted(valid_keys)} — the device's named-key table would reject it at run "
+                "time. Don't document a key until it exists on the device side."
+            )
+            errors += 1
+
     if errors:
         print(f"\n{errors} problem(s). The skill and the published SDK have drifted.", file=sys.stderr)
         print("Fix cmd/agentskill.md to match the SDK, or the SDK to match the skill.", file=sys.stderr)
@@ -130,7 +151,7 @@ def main() -> int:
 
     print(
         f"ok — {len(methods)} driver methods, {len(el_methods)} element actions, "
-        f"{len(exceptions)} exceptions all exist"
+        f"{len(exceptions)} exceptions, {len(used_keys)} key name(s) all exist"
     )
     return 0
 
