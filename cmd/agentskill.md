@@ -121,13 +121,18 @@ returns `None` instead — check it before use.
 | `driver.wait_for_text(text, timeout=10.0)` | `Element` | poll until the text appears |
 | `driver.wait_until_gone(text, timeout=10.0)` | `None` | poll until the text disappears |
 | `driver.type_text(text)` | `None` | type into the focused field |
-| `driver.key_press(key)` | `None` | `"enter"`, `"back"`, `"home"`, … |
+| `driver.key_press(key)` | `None` | `"enter"` — the only named key today (see below) |
 | `driver.tap(coords)` / `driver.long_press(coords)` / `driver.swipe(start, end)` | `None` | coordinate input — see the semantic-selector rule |
 | `driver.screenshot()` | `bytes` | PNG |
 
 `find(...)` / `find_text(...)` return an `Element` that actions chain off:
 `el.tap()`, `el.long_press()`, `el.type_into(text)`, `el.swipe_to(other)`. Prefer
 `el.type_into("text")` over a separate `el.tap()` + `driver.type_text()`.
+
+**Keys: `"enter"` is the only one.** The named-key table on the device is deliberately
+tiny, and anything else — `"home"`, `"back"`, volume, media — raises `InvalidArgumentError`
+at run time. Don't guess a key name. To go back or home, drive the on-screen UI with
+`find(...)` like a user would.
 <!-- /lang:python -->
 
 <!-- lang:go -->
@@ -227,13 +232,18 @@ For anything finer, `errors.As(err, &mobileErr)` and switch on `mobileErr.Code`.
 | `driver.WaitForText(text, timeout, exact, opts...)` | `(*Element, error)` | poll until the text appears |
 | `driver.WaitUntilGone(text, timeout, exact, opts...)` | `error` | poll until the text disappears |
 | `driver.TypeText(text)` | `error` | type into the focused field |
-| `driver.KeyPress(key)` | `error` | `mobile.KeyEnter`, `"back"`, `"home"`, … |
+| `driver.KeyPress(key)` | `error` | `mobile.KeyEnter` — the only named key today (see below) |
 | `driver.Tap(c)` / `driver.LongPress(c, ms)` / `driver.Swipe(start, end, ms)` | `error` | coordinate input — see the semantic-selector rule |
 | `driver.Screenshot()` | `([]byte, error)` | PNG |
 
 `Find(...)` / `FindText(...)` return an `*Element` that actions chain off:
 `el.Tap()`, `el.LongPress(ms)`, `el.TypeInto(text)`, `el.SwipeTo(other, ms)`. Prefer
 `el.TypeInto("text")` over a separate `el.Tap()` + `driver.TypeText()`.
+
+**Keys: `mobile.KeyEnter` is the only one.** The named-key table on the device is
+deliberately tiny, and anything else — `"home"`, `"back"`, volume, media — is rejected at
+run time. Don't guess a key name; the package exports exactly the keys that work. To go
+back or home, drive the on-screen UI with `Find(...)` like a user would.
 <!-- /lang:go -->
 
 ## Rules
