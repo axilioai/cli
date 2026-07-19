@@ -20,12 +20,17 @@ const (
 
 // Tokens is a stored OAuth session. Host records which API base the tokens
 // authenticate against, so a session for one host is never reused against
-// another (e.g. staging tokens against prod).
+// another (e.g. staging tokens against prod). The Org fields record which org
+// the session was authorized into (AXI-1349); empty when the backend predates
+// the organization field in the token response.
 type Tokens struct {
 	AccessToken  string    `json:"access_token"`
 	RefreshToken string    `json:"refresh_token"`
 	Expiry       time.Time `json:"expiry"`
 	Host         string    `json:"host"`
+	OrgID        string    `json:"org_id,omitempty"`
+	OrgSlug      string    `json:"org_slug,omitempty"`
+	OrgName      string    `json:"org_name,omitempty"`
 }
 
 // filePath is the fallback token file, used when the OS keychain is

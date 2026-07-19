@@ -84,6 +84,9 @@ func loginWithBrowser(ctx context.Context) error {
 		return err
 	}
 	p.Success("Signed in to %s", apiHost)
+	if org := sessionOrgLabel(tokens); org != "" {
+		p.Note("  Org      %s", org)
+	}
 	cl := client.NewClient(option.WithHTTPHeader(cliHeader(tokens.AccessToken)), option.WithBaseURL(sdkBaseURL(host)))
 	if bal, err := cl.Billing.GetBalance(ctx); err != nil {
 		p.Note("  (could not fetch balance: %v)", err)
@@ -91,6 +94,20 @@ func loginWithBrowser(ctx context.Context) error {
 		p.Note("  Balance  %s", bal.BalanceDisplay)
 	}
 	return nil
+}
+
+// sessionOrgLabel renders the org an OAuth session was authorized into as
+// "slug (Name)", degrading to whichever part is present. Empty when the
+// backend didn't include the organization in the token response (pre-AXI-1348).
+func sessionOrgLabel(t oauth.Tokens) string {
+	switch {
+	case t.OrgSlug != "" && t.OrgName != "":
+		return fmt.Sprintf("%s (%s)", t.OrgSlug, t.OrgName)
+	case t.OrgSlug != "":
+		return t.OrgSlug
+	default:
+		return t.OrgName
+	}
 }
 
 func logoutCmd() *cobra.Command {
