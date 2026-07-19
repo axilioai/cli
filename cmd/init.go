@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"bufio"
+	"context"
 	_ "embed"
 	"errors"
 	"fmt"
@@ -9,7 +11,10 @@ import (
 	"strings"
 
 	"github.com/axilioai/cli/internal/exit"
+	"github.com/axilioai/cli/internal/oauth"
+	"github.com/axilioai/cli/internal/util"
 	"github.com/spf13/cobra"
+	"golang.org/x/term"
 )
 
 //go:embed agentskill.md
@@ -51,29 +56,173 @@ func initCmd() *cobra.Command {
 		Long: "Write an instruction file that teaches your coding agent to drive a phone " +
 			"through the axilio CLI and then hand back a runnable SDK script. The agent " +
 			"asks whether you want Python or Go.\n\n" +
+			"Bare `axilio init` detects which agents this repo uses (.claude/, AGENTS.md, " +
+			".cursor/) and writes a skill for each; on a terminal with nothing detected it " +
+			"asks. --agent picks one explicitly:\n\n" +
 			"  --agent claude  ->  .claude/skills/axilio/SKILL.md\n" +
 			"  --agent codex   ->  AGENTS.md (appended, never clobbered)\n" +
-			"  --agent cursor  ->  .cursor/rules/axilio.mdc",
-		RunE: func(_ *cobra.Command, _ []string) error {
-			return runInit(agent, force)
+			"  --agent cursor  ->  .cursor/rules/axilio.mdc\n\n" +
+			"It finishes with a sign-in check: browser login is the one step an agent " +
+			"can't do itself, so init surfaces it while a human is likely at the keyboard.",
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			return runInit(cmd.Context(), agent, force)
 		},
 	}
-	cmd.Flags().StringVar(&agent, "agent", "", "Target agent: claude | codex | cursor")
+	cmd.Flags().StringVar(&agent, "agent", "", "Target agent: claude | codex | cursor (default: auto-detect)")
 	cmd.Flags().BoolVar(&force, "force", false, "Overwrite/refresh an existing skill")
 	return cmd
 }
 
-func runInit(agent string, force bool) error {
-	switch strings.ToLower(strings.TrimSpace(agent)) {
+func runInit(ctx context.Context, agent string, force bool) error {
+	targets, explicit, err := initTargets(agent)
+	if err != nil {
+		return err
+	}
+	for _, t := range targets {
+		// Auto-detected targets that already carry the skill are skipped with a
+		// note; only an explicit --agent hard-errors, since then the user named
+		// exactly one file and silence about it would be a lie.
+		if !explicit && !force && skillPresent(t) {
+			printer().Note("  %s already has the skill; refresh with `axilio init --agent %s --force`.", skillTargetPath(t), t)
+			continue
+		}
+		if err := writeAgentTarget(t, force); err != nil {
+			return err
+		}
+	}
+	initNextSteps(ctx)
+	return nil
+}
+
+func writeAgentTarget(agent string, force bool) error {
+	switch agent {
 	case "claude":
 		return writeSkillFile(filepath.Join(".claude", "skills", "axilio", "SKILL.md"), claudeFrontmatter+skillStamp("claude")+agentSkillBody, force)
 	case "cursor":
 		return writeSkillFile(filepath.Join(".cursor", "rules", "axilio.mdc"), cursorFrontmatter+skillStamp("cursor")+agentSkillBody, force)
-	case "codex":
-		return writeAgentsMD(force)
 	default:
-		return exit.Usagef("choose an agent with --agent: claude, codex, or cursor")
+		return writeAgentsMD(force)
 	}
+}
+
+// skillTargetPath is where each agent's skill lands, for messages and existence
+// checks.
+func skillTargetPath(agent string) string {
+	switch agent {
+	case "claude":
+		return filepath.Join(".claude", "skills", "axilio", "SKILL.md")
+	case "cursor":
+		return filepath.Join(".cursor", "rules", "axilio.mdc")
+	default:
+		return "AGENTS.md"
+	}
+}
+
+// skillPresent reports whether the target already carries the skill. For codex
+// that means the marked block inside AGENTS.md, not the file itself — AGENTS.md
+// is shared, and one without our block still wants the append.
+func skillPresent(agent string) bool {
+	if agent == "codex" {
+		b, err := os.ReadFile("AGENTS.md")
+		return err == nil && strings.Contains(string(b), agentsMarkerBegin)
+	}
+	_, err := os.Stat(skillTargetPath(agent))
+	return err == nil
+}
+
+// initTargets resolves which agents to write for: the --agent flag wins, then
+// repo markers, then (on a terminal) an interactive choice. explicit reports
+// whether the user named the agent, which sharpens the already-exists handling.
+func initTargets(agent string) (targets []string, explicit bool, err error) {
+	a := strings.ToLower(strings.TrimSpace(agent))
+	if a != "" {
+		if a != "claude" && a != "codex" && a != "cursor" {
+			return nil, true, exit.Usagef("choose an agent with --agent: claude, codex, or cursor")
+		}
+		return []string{a}, true, nil
+	}
+	var detected []string
+	if st, err := os.Stat(".claude"); err == nil && st.IsDir() {
+		detected = append(detected, "claude")
+	}
+	if _, err := os.Stat("AGENTS.md"); err == nil {
+		detected = append(detected, "codex")
+	}
+	if st, err := os.Stat(".cursor"); err == nil && st.IsDir() {
+		detected = append(detected, "cursor")
+	}
+	if len(detected) > 0 {
+		return detected, false, nil
+	}
+	if choice, ok := promptAgentChoice(); ok {
+		return choice, false, nil
+	}
+	return nil, false, exit.Usagef("no agent markers found (.claude/, AGENTS.md, .cursor/); choose one with --agent: claude, codex, or cursor")
+}
+
+// promptAgentChoice asks which agent to set up when the repo carries no markers.
+// Only on a real terminal outside quiet/JSON mode — the non-interactive contract
+// is a usage error, never a hang on stdin.
+func promptAgentChoice() ([]string, bool) {
+	if flagQuiet || flagOutput == "json" || !term.IsTerminal(int(os.Stdin.Fd())) {
+		return nil, false
+	}
+	fmt.Fprintln(os.Stderr, "Which agent runs in this repo?")
+	fmt.Fprintln(os.Stderr, "  1) claude  (.claude/skills/)")
+	fmt.Fprintln(os.Stderr, "  2) codex   (AGENTS.md)")
+	fmt.Fprintln(os.Stderr, "  3) cursor  (.cursor/rules/)")
+	fmt.Fprintln(os.Stderr, "  4) all three")
+	fmt.Fprint(os.Stderr, "Choose [1-4]: ")
+	line, _ := bufio.NewReader(os.Stdin).ReadString('\n')
+	switch strings.ToLower(strings.TrimSpace(line)) {
+	case "1", "claude":
+		return []string{"claude"}, true
+	case "2", "codex":
+		return []string{"codex"}, true
+	case "3", "cursor":
+		return []string{"cursor"}, true
+	case "4", "all":
+		return []string{"claude", "codex", "cursor"}, true
+	}
+	return nil, false
+}
+
+// agentFirstPrompt is the copy-pasteable first thing to say to an agent once
+// the skill is in place — a concrete task plus the durable deliverable.
+const agentFirstPrompt = `Use the axilio CLI to take a phone, open the browser, search for something — then hand me the SDK script.`
+
+// initNextSteps closes the loop after the skill lands: confirm sign-in (browser
+// login is the one step an agent can't do itself, so surface it while a human
+// is likely at the keyboard), then hand over the first prompt for the agent.
+func initNextSteps(ctx context.Context) {
+	p := printer()
+	key, host := resolvedCreds()
+	apiHost := util.FirstNonEmpty(host, defaultAPIHost)
+	switch {
+	case key != "":
+		p.Success("Signed in to %s (API key)", apiHost)
+	case oauthSignedIn(ctx, apiHost):
+		tok, _ := oauth.Load()
+		if org := sessionOrgLabel(tok); org != "" {
+			p.Success("Signed in to %s (org %s)", apiHost, org)
+		} else {
+			p.Success("Signed in to %s", apiHost)
+		}
+	case term.IsTerminal(int(os.Stdin.Fd())) && p.Confirm("You're not signed in — open the browser to log in now?"):
+		if err := loginWithBrowser(ctx); err != nil {
+			p.Note("Login didn't complete (%v); run `axilio login` when ready.", err)
+		}
+	default:
+		p.Note("Not signed in. A human must run `axilio login` (browser), or set AXILIO_API_KEY.")
+	}
+	p.Note("\nNow tell your agent:\n  %q", agentFirstPrompt)
+}
+
+// oauthSignedIn reports whether a usable OAuth session exists for apiHost,
+// refreshing (and pruning a dead session) as a side effect when needed.
+func oauthSignedIn(ctx context.Context, apiHost string) bool {
+	_, err := oauth.ValidAccessToken(ctx, apiHost)
+	return err == nil
 }
 
 // writeSkillFile writes a dedicated, axilio-owned file (safe to overwrite with
@@ -142,7 +291,5 @@ func writeAgentsMD(force bool) error {
 }
 
 func reportInit(path string) {
-	p := printer()
-	p.Success("Wrote the Axilio agent skill to %s", path)
-	p.Note("  Now tell your agent: \"drive my phone with the axilio CLI and hand me the SDK script.\"")
+	printer().Success("Wrote the Axilio agent skill to %s", path)
 }

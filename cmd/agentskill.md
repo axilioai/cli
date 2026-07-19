@@ -10,6 +10,11 @@ the durable deliverable the user keeps and runs later without you.
   all-green. Install with `brew install axilioai/tap/axilio` or
   `curl -fsSL https://axilio.ai/install.sh | sh`; sign in with `axilio login`
   (browser) or by setting `AXILIO_API_KEY`.
+- Any command exiting with code 3 means the CLI is not signed in (or the
+  credential died). Browser sign-in needs a human: **stop and ask them to run
+  `axilio login`**, then continue where you left off. Do not retry the failing
+  command in a loop and do not attempt the browser flow yourself. In headless
+  or CI setups, `AXILIO_API_KEY` is the human-free alternative.
 
 ## Loop: explore and drive via the CLI
 

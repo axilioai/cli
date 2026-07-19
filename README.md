@@ -58,6 +58,32 @@ Update any install with `axilio upgrade`.
 
 ## Quick start
 
+Two ways in, depending on who's driving.
+
+### Give it to your agent (recommended)
+
+```bash
+axilio login   # you sign in once (browser) — the one step your agent can't do
+axilio init    # writes a skill for your agent (auto-detects claude / codex / cursor)
+```
+
+Then tell your agent:
+
+> Use the axilio CLI to take a phone, open the browser, search for something —
+> then hand me the SDK script.
+
+The agent explores and drives the phone live through the CLI, and the SDK
+script it hands back is the durable thing you keep and run without it.
+
+> **If you are a coding agent reading this:** run `axilio init`, then read the
+> skill file it writes and follow it. If any `axilio` command exits with code 3,
+> stop and ask your human to run `axilio login` — browser sign-in needs them.
+
+Own dedicated phones? Point the session at one: `axilio phones mine` for the
+`phone_id`, then `axilio sessions start --phone-id <id>`.
+
+### Drive it yourself
+
 ```bash
 axilio login                 # sign in (browser OAuth, or --api-key)
 axilio doctor                # one-shot check: auth, connectivity, account, environment
@@ -109,7 +135,7 @@ session.
 | `config` / `config set` / `config unset` | Show and edit CLI configuration (API host, paths, auth). |
 | `orgs list` / `orgs use` / `orgs clear` | List and switch the active organization (OAuth sessions). |
 | `upgrade` / `upgrade --check` | Update axilio to the latest release (Homebrew installs defer to `brew upgrade`). |
-| `init --agent claude\|codex\|cursor` | Drop an agent skill into the repo so a coding agent can drive phones via the CLI and emit SDK code (it asks whether you want Python or Go). Re-run with `--force` after `axilio upgrade` to refresh it. |
+| `init` | Drop an agent skill into the repo so a coding agent can drive phones via the CLI and emit SDK code. Bare `init` auto-detects the agent(s) from repo markers and checks you're signed in; `--agent claude\|codex\|cursor` picks one. Re-run with `--force` after `axilio upgrade` to refresh. |
 | `phones list` | List phones you can start a session on right now (shared pool + your free dedicated phones). |
 | `phones mine` | List your org's dedicated phones, including ones currently in use (find a `phone_id` to pin). |
 | `sessions start` / `stop` / `list` / `current` | Acquire, release, and inspect phone leases. |
