@@ -28,13 +28,16 @@ func TestStoreRoundTrip(t *testing.T) {
 	if HasSession() {
 		t.Fatal("expected no session initially")
 	}
-	want := Tokens{AccessToken: "a", RefreshToken: "r", Host: "https://h", Expiry: time.Now().Add(time.Hour)}
+	want := Tokens{AccessToken: "a", RefreshToken: "r", Host: "https://h", Expiry: time.Now().Add(time.Hour), OrgID: "org_1", OrgSlug: "acme", OrgName: "Acme"}
 	if err := Save(want); err != nil {
 		t.Fatalf("save: %v", err)
 	}
 	got, ok := Load()
 	if !ok || got.AccessToken != "a" || got.RefreshToken != "r" || got.Host != "https://h" {
 		t.Fatalf("load mismatch: %+v ok=%v", got, ok)
+	}
+	if got.OrgID != "org_1" || got.OrgSlug != "acme" || got.OrgName != "Acme" {
+		t.Fatalf("org fields did not round-trip: %+v", got)
 	}
 	if !HasSession() {
 		t.Fatal("expected a session after save")
@@ -58,7 +61,7 @@ func tokenServer(t *testing.T, wantGrant string) *httptest.Server {
 			_, _ = io.WriteString(w, `{"error":"unsupported_grant_type"}`)
 			return
 		}
-		_, _ = io.WriteString(w, `{"access_token":"ACCESS","refresh_token":"REFRESH2","token_type":"Bearer","expires_in":3600}`)
+		_, _ = io.WriteString(w, `{"access_token":"ACCESS","refresh_token":"REFRESH2","token_type":"Bearer","expires_in":3600,"organization":{"id":"org_1","slug":"acme","name":"Acme"}}`)
 	}))
 }
 
@@ -74,6 +77,9 @@ func TestExchange(t *testing.T) {
 	}
 	if tok.AccessToken != "ACCESS" || tok.RefreshToken != "REFRESH2" || tok.Host != srv.URL {
 		t.Fatalf("unexpected tokens: %+v", tok)
+	}
+	if tok.OrgID != "org_1" || tok.OrgSlug != "acme" || tok.OrgName != "Acme" {
+		t.Fatalf("organization not mapped from the token response: %+v", tok)
 	}
 	if !tok.Expiry.After(time.Now().Add(59 * time.Minute)) {
 		t.Fatalf("expiry not set from expires_in: %v", tok.Expiry)
@@ -97,8 +103,36 @@ func TestValidAccessTokenRefreshesWhenExpired(t *testing.T) {
 	if tok != "ACCESS" {
 		t.Fatalf("expected refreshed access token, got %q", tok)
 	}
-	if got, _ := Load(); got.RefreshToken != "REFRESH2" {
+	got, _ := Load()
+	if got.RefreshToken != "REFRESH2" {
 		t.Fatalf("refresh token was not rotated in the store: %q", got.RefreshToken)
+	}
+	if got.OrgSlug != "acme" {
+		t.Fatalf("refreshed session lost the org from the token response: %+v", got)
+	}
+}
+
+// A refresh against a backend that omits the organization (pre-AXI-1348) must
+// not erase the org identity recorded at login.
+func TestValidAccessTokenRefreshPreservesOrg(t *testing.T) {
+	keyring.MockInit()
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = io.WriteString(w, `{"access_token":"ACCESS","refresh_token":"REFRESH2","token_type":"Bearer","expires_in":3600}`)
+	}))
+	defer srv.Close()
+
+	seed := Tokens{AccessToken: "old", RefreshToken: "r1", Host: srv.URL, Expiry: time.Now().Add(-time.Minute), OrgID: "org_1", OrgSlug: "acme", OrgName: "Acme"}
+	if err := Save(seed); err != nil {
+		t.Fatalf("seed: %v", err)
+	}
+	if _, err := ValidAccessToken(context.Background(), srv.URL); err != nil {
+		t.Fatalf("ValidAccessToken: %v", err)
+	}
+	got, _ := Load()
+	if got.OrgID != "org_1" || got.OrgSlug != "acme" || got.OrgName != "Acme" {
+		t.Fatalf("org identity was erased by the refresh: %+v", got)
 	}
 }
 

@@ -28,11 +28,19 @@ const (
 // ErrNoSession means no usable OAuth session is stored for the target host.
 var ErrNoSession = errors.New("oauth: no session; run `axilio login`")
 
-// tokenResponse is the token endpoint's success body.
+// tokenResponse is the token endpoint's success body. Organization names the
+// org the session was bound to (AXI-1348); absent on older backends.
 type tokenResponse struct {
-	AccessToken  string `json:"access_token"`
-	RefreshToken string `json:"refresh_token"`
-	ExpiresIn    int    `json:"expires_in"`
+	AccessToken  string    `json:"access_token"`
+	RefreshToken string    `json:"refresh_token"`
+	ExpiresIn    int       `json:"expires_in"`
+	Organization *tokenOrg `json:"organization"`
+}
+
+type tokenOrg struct {
+	ID   string `json:"id"`
+	Slug string `json:"slug"`
+	Name string `json:"name"`
 }
 
 type oauthError struct {
@@ -138,6 +146,11 @@ func ValidAccessToken(ctx context.Context, apiBase string) (string, error) {
 		Clear()
 		return "", fmt.Errorf("session expired; run `axilio login`: %w", err)
 	}
+	// Keep the session's org identity when the token endpoint omits it (an
+	// older backend), so a refresh never erases what login recorded.
+	if nt.OrgID == "" && nt.OrgSlug == "" && nt.OrgName == "" {
+		nt.OrgID, nt.OrgSlug, nt.OrgName = t.OrgID, t.OrgSlug, t.OrgName
+	}
 	_ = Save(nt)
 	return nt.AccessToken, nil
 }
@@ -208,12 +221,18 @@ func exchange(ctx context.Context, apiBase string, form map[string]string) (Toke
 	if tr.AccessToken == "" || tr.RefreshToken == "" {
 		return Tokens{}, errors.New("token endpoint returned an incomplete response")
 	}
-	return Tokens{
+	t := Tokens{
 		AccessToken:  tr.AccessToken,
 		RefreshToken: tr.RefreshToken,
 		Expiry:       time.Now().Add(time.Duration(tr.ExpiresIn) * time.Second),
 		Host:         apiBase,
-	}, nil
+	}
+	if tr.Organization != nil {
+		t.OrgID = tr.Organization.ID
+		t.OrgSlug = tr.Organization.Slug
+		t.OrgName = tr.Organization.Name
+	}
+	return t, nil
 }
 
 const callbackHTML = `<!doctype html><html><head><meta charset="utf-8"><title>Axilio CLI</title>
