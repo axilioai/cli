@@ -28,6 +28,7 @@ func phoneCmd() *cobra.Command {
 		phoneObserveCmd(), phoneFindCmd(), phoneFindTextCmd(),
 		phoneTapCmd(), phoneLongPressCmd(), phoneSwipeCmd(),
 		phoneTypeCmd(), phoneKeyCmd(), phoneScreenshotCmd(), phoneWaitForCmd(),
+		phoneUploadCmd(),
 	)
 	return cmd
 }
