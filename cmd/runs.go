@@ -30,7 +30,7 @@ func runsListCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			req := &platformgo.RunListRequest{Limit: limit}
+			req := &platformgo.RunListRequest{Limit: &limit}
 			if workflowID != "" {
 				req.WorkflowID = &workflowID
 			}
@@ -87,7 +87,9 @@ func runsStartCmd() *cobra.Command {
 				}
 				runs[i] = rc
 			}
-			req := &platformgo.RunCreateRequest{WorkflowID: args[0], Count: count, Runs: runs}
+			// count drives len(runs); the backend creates one run per RunConfig,
+			// so the removed Count field is now implicit in the Runs slice.
+			req := &platformgo.RunCreateRequest{WorkflowID: args[0], Runs: runs}
 			if startTimeout > 0 {
 				req.StartTimeoutSeconds = &startTimeout
 			}
