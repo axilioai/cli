@@ -1,7 +1,8 @@
 # goreleaser config for the axilio CLI (schema v2).
 # Local check:   goreleaser check
 # Dry-run build: goreleaser release --snapshot --clean
-# Real release:  git tag v0.1.0 && git push origin v0.1.0  (Release workflow runs this)
+# Real release:  bump VERSION in your PR; merging runs the "Publish CLI"
+#                workflow (tag + goreleaser). See .github/workflows/publish.yml.
 version: 2
 
 project_name: axilio
