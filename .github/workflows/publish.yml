@@ -1,0 +1,136 @@
+name: Publish CLI
+
+# The one workflow that ships the CLI to users — the CLI's equivalent of the
+# monorepo's deploy orchestrator. There is no staging/prod deployment for a
+# client binary: "production" is the latest GitHub Release, because that is
+# what install.sh and the Homebrew tap resolve (environment selection is a
+# runtime concern — every released binary can point at prod or staging via
+# --base-url/config).
+#
+# Publishing = converging VERSION -> tag -> release:
+#
+#   1. Fires when a push to main moves the VERSION file (i.e. a feature PR
+#      carried a version bump — the bump is reviewed as part of the diff, and
+#      the merge is the publish action). CI quality + cross-compile gates run
+#      on the PR via ci.yml before any of this.
+#   2. `tag` reads + validates VERSION and pushes the annotated vX.Y.Z tag at
+#      the merge commit. Idempotent: an existing tag is left alone, so a
+#      docs-only PR can touch VERSION without re-tagging.
+#   3. `release` runs goreleaser AT THE TAG (cross-platform binaries, the
+#      GitHub Release, the Homebrew formula). Skipped when a GitHub Release
+#      for the tag already exists, so re-runs and no-op merges are safe.
+#
+# Each step converges independently, which makes failure recovery a plain
+# re-run: tag exists + release missing (a goreleaser flake) -> re-run publishes
+# without re-tagging. workflow_dispatch is the manual entry for exactly that.
+#
+# Everything happens inside this one workflow run — no tag-push event chaining.
+# That is deliberate: tags pushed with the default GITHUB_TOKEN never trigger
+# other workflows (GitHub's recursion guard), which is why the previous
+# design (a separate tag-triggered Release workflow) could not be driven by
+# automation without a bot PAT.
+#
+# The pattern is the CLI-shaped version of platform-python/platform-go's
+# VERSION + tag-on-merge release flow; the CLI is the last link of that SDK
+# release chain (see bump-sdk.yml), so nothing dispatches downstream.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - VERSION
+  # Manual entry: re-run a failed publish, or publish the current VERSION if
+  # a merge somehow skipped it. Converges to the same end state.
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  tag:
+    name: Tag vX.Y.Z from VERSION
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.ver.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Read version from VERSION
+        id: ver
+        run: |
+          VERSION="$(tr -d '[:space:]' < VERSION)"
+          if [[ -z "$VERSION" ]]; then
+            echo "::error::VERSION file is empty"; exit 1
+          fi
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+([-.+][0-9A-Za-z.-]+)?$ ]]; then
+            echo "::error::VERSION '$VERSION' is not a SemVer version"; exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Read version: $VERSION"
+
+      - name: Push tag (idempotent)
+        env:
+          VERSION: ${{ steps.ver.outputs.version }}
+        run: |
+          TAG="v${VERSION}"
+          if git ls-remote --tags origin "refs/tags/${TAG}" | grep -q "refs/tags/${TAG}$"; then
+            echo "tag ${TAG} already exists on origin; leaving it alone"
+            exit 0
+          fi
+          git config user.name "axilio-bot"
+          git config user.email "bot@axilio.ai"
+          git tag -a "${TAG}" -m "axilio CLI ${VERSION}"
+          git push origin "${TAG}"
+          echo "pushed ${TAG} at $(git rev-parse HEAD)"
+
+  release:
+    name: goreleaser at the tag
+    needs: tag
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Skip if this version is already released
+        id: gate
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ needs.tag.outputs.version }}
+        run: |
+          TAG="v${VERSION}"
+          if gh release view "${TAG}" --json tagName >/dev/null 2>&1; then
+            echo "release ${TAG} already exists; nothing to publish"
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Check out the tag
+        # goreleaser derives the version from the tag on HEAD, and a manual
+        # dispatch may run after main has moved past the tagged commit — so
+        # always build exactly what was tagged, not whatever HEAD is.
+        if: steps.gate.outputs.publish == 'true'
+        env:
+          VERSION: ${{ needs.tag.outputs.version }}
+        run: |
+          git fetch --tags origin
+          git checkout "v${VERSION}"
+
+      - uses: actions/setup-go@v5
+        if: steps.gate.outputs.publish == 'true'
+        with:
+          go-version-file: go.mod
+
+      - uses: goreleaser/goreleaser-action@v6
+        if: steps.gate.outputs.publish == 'true'
+        with:
+          version: '~> v2'
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Optional: set to publish the Homebrew formula to axilioai/homebrew-tap.
+          # When unset, goreleaser skips the brew step (skip_upload: auto).
+          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
