@@ -1,6 +1,9 @@
 package cmd
 
-import "time"
+import (
+	"fmt"
+	"time"
+)
 
 // ts renders a timestamp in a compact, human, local-time form for tables.
 func ts(t time.Time) string {
@@ -32,4 +35,19 @@ func enumv[T ~string](e *T) string {
 		return ""
 	}
 	return string(*e)
+}
+
+// humanBytes renders a byte count the way a storage quota should read. The
+// library's limits are stated in MiB and GiB, so the units are binary.
+func humanBytes(n int64) string {
+	const unit = 1024
+	if n < unit {
+		return fmt.Sprintf("%d B", n)
+	}
+	div, exp := int64(unit), 0
+	for m := n / unit; m >= unit; m /= unit {
+		div *= unit
+		exp++
+	}
+	return fmt.Sprintf("%.1f %ciB", float64(n)/float64(div), "KMGTP"[exp])
 }
