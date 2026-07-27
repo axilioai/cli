@@ -1,11 +1,12 @@
 package cmd
 
 import (
-	"context"
 	"path/filepath"
 	"time"
 
+	"github.com/axilioai/cli/internal/exit"
 	"github.com/axilioai/cli/internal/session"
+	platformgo "github.com/axilioai/platform-go"
 	files "github.com/axilioai/platform-go/drivers/files"
 	"github.com/spf13/cobra"
 )
@@ -36,7 +37,7 @@ func phoneSendCmd() *cobra.Command {
 			"phone downloads over its own cellular link. With --wait, blocks until the " +
 			"phone reports the file delivered (or failed) instead of returning at dispatch.",
 		Args: cobra.ExactArgs(1),
-		RunE: func(_ *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, args []string) error {
 			s, err := session.Resolve(flagPhoneSession)
 			if err != nil {
 				return err
@@ -47,6 +48,12 @@ func phoneSendCmd() *cobra.Command {
 			}
 			opts := []files.Option{}
 			if collection != "" {
+				// Validate through the generated enum rather than casting an
+				// arbitrary string: a typo becomes a clear message here instead
+				// of a 422 from the API after the bytes have already moved.
+				if _, err := platformgo.NewFileDeliveryCreateRequestCollectionFromString(collection); err != nil {
+					return exit.Usagef("unsupported --collection value; use DCIM, Pictures, or Movies")
+				}
 				opts = append(opts, files.WithCollection(collection))
 			}
 			if wait {
@@ -54,7 +61,7 @@ func phoneSendCmd() *cobra.Command {
 			}
 			p := printer()
 			p.Step("Sending %s to phone %s", filepath.Base(args[0]), s.PhoneID)
-			d, err := files.Send(context.Background(), cl, s.PhoneID, args[0], opts...)
+			d, err := files.Send(cmd.Context(), cl, s.PhoneID, args[0], opts...)
 			if err != nil {
 				return err
 			}
