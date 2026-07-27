@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"context"
 	"fmt"
 	"path/filepath"
 	"time"
@@ -43,7 +42,7 @@ func uploadsAddCmd() *cobra.Command {
 			"file in the library. Use `axilio uploads push` to send it to a phone, or " +
 			"`axilio phone send` to do both in one step.",
 		Args: cobra.ExactArgs(1),
-		RunE: func(_ *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, args []string) error {
 			cl, err := newClient()
 			if err != nil {
 				return err
@@ -57,7 +56,7 @@ func uploadsAddCmd() *cobra.Command {
 			}
 			p := printer()
 			p.Step("Uploading %s", filepath.Base(args[0]))
-			f, err := files.Upload(context.Background(), cl, args[0], opts...)
+			f, err := files.Upload(cmd.Context(), cl, args[0], opts...)
 			if err != nil {
 				return err
 			}
@@ -88,7 +87,7 @@ func uploadsListCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "List the files in your organization's library.",
-		RunE: func(_ *cobra.Command, _ []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			cl, err := newClient()
 			if err != nil {
 				return err
@@ -102,19 +101,19 @@ func uploadsListCmd() *cobra.Command {
 			if sortBy != "" {
 				s, err := platformgo.NewUploadsListRequestSortFromString(sortBy)
 				if err != nil {
-					return exit.Usagef("--sort must be one of: created_at, filename, size_bytes")
+					return exit.Usagef("unsupported --sort value; use created_at, filename, or size_bytes")
 				}
 				req.Sort = &s
 			}
 			if order != "" {
 				o, err := platformgo.NewUploadsListRequestOrderFromString(order)
 				if err != nil {
-					return exit.Usagef("--order must be asc or desc")
+					return exit.Usagef("unsupported --order value; use asc or desc")
 				}
 				req.Order = &o
 			}
 
-			resp, err := files.List(context.Background(), cl, req)
+			resp, err := files.List(cmd.Context(), cl, req)
 			if err != nil {
 				return err
 			}
@@ -167,13 +166,19 @@ func uploadsPushCmd() *cobra.Command {
 			"`axilio phone send` this uploads nothing, so the same file can be " +
 			"pushed to many phones without re-uploading it or consuming more quota.",
 		Args: cobra.ExactArgs(1),
-		RunE: func(_ *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, args []string) error {
 			cl, err := newClient()
 			if err != nil {
 				return err
 			}
 			opts := []files.Option{}
 			if collection != "" {
+				// Validate through the generated enum rather than casting an
+				// arbitrary string: a typo becomes a clear message here instead
+				// of a 422 from the API after the bytes have already moved.
+				if _, err := platformgo.NewFileDeliveryCreateRequestCollectionFromString(collection); err != nil {
+					return exit.Usagef("unsupported --collection value; use DCIM, Pictures, or Movies")
+				}
 				opts = append(opts, files.WithCollection(collection))
 			}
 			if wait {
@@ -181,7 +186,7 @@ func uploadsPushCmd() *cobra.Command {
 			}
 			p := printer()
 			p.Step("Pushing %s to phone %s", args[0], phoneID)
-			d, err := files.Push(context.Background(), cl, phoneID, args[0], opts...)
+			d, err := files.Push(cmd.Context(), cl, phoneID, args[0], opts...)
 			if err != nil {
 				return err
 			}
@@ -204,29 +209,43 @@ func uploadsDeleteCmd() *cobra.Command {
 		Aliases: []string{"rm"},
 		Short:   "Delete a file from the library and free its quota.",
 		Args:    cobra.ExactArgs(1),
-		RunE: func(_ *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, args []string) error {
 			cl, err := newClient()
 			if err != nil {
 				return err
 			}
 			id := args[0]
+			p := printer()
 			// Deliberately precise about scope: copies already delivered to
 			// phones are not recalled today. When delete recall ships this
 			// prompt is the copy that has to change with it.
 			prompt := fmt.Sprintf(
 				"Delete upload %s? Copies already delivered to phones are not removed.", id)
-			if !yes && !printer().Confirm(prompt) {
+			if !yes && !p.Confirm(prompt) {
 				return exit.Usagef("aborted (pass --yes to delete non-interactively)")
 			}
-			if err := files.Delete(context.Background(), cl, id); err != nil {
+			if err := files.Delete(cmd.Context(), cl, id); err != nil {
 				return err
 			}
-			printer().Note("Deleted %s", id)
+			// Emit rather than Note, so `--output json` produces a result a
+			// script can read. Note writes nothing in JSON mode, which made
+			// deletion the one verb with no machine-readable outcome.
+			p.Emit(deletedUpload{ID: id, Deleted: true}, func() {
+				p.Note("Deleted %s", id)
+			})
 			return nil
 		},
 	}
 	cmd.Flags().BoolVarP(&yes, "yes", "y", false, "Skip the confirmation prompt")
 	return cmd
+}
+
+// deletedUpload is the JSON shape of a successful delete. Small on purpose:
+// the API returns only a confirmation message, so inventing richer output
+// would be inventing facts.
+type deletedUpload struct {
+	ID      string `json:"id"`
+	Deleted bool   `json:"deleted"`
 }
 
 // printDelivery renders a delivery the same way for `uploads push` and
