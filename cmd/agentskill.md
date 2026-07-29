@@ -18,8 +18,9 @@ the durable deliverable the user keeps and runs later without you.
 
 ## Loop: explore and drive via the CLI
 
-Pass `-o json` for machine-readable output. Work one step at a time and `observe`
-after actions to confirm the screen changed.
+Pass `-o json` when a command returns structured data. Action-only commands do not
+all emit a JSON success body yet. Work one step at a time and `observe` after
+actions to confirm the screen changed.
 
 ```bash
 axilio sessions start --phone-type android    # lease a phone (becomes the current session)
@@ -28,17 +29,26 @@ axilio phone observe -o json                  # text + UI elements + coordinates
 axilio phone find "the search box" -o json    # locate a target by natural-language query
 axilio phone tap --query "the search box"     # tap it
 axilio phone type "androiddev"                # type into the focused field
-axilio phone key enter                        # press a key: enter, back, home, ...
+axilio phone key enter                        # press enter (the only named key)
 axilio phone find-text "Results" -o json      # locate visible text
 axilio phone wait-for "Results" --timeout 15s # wait for text to appear
 axilio phone screenshot --out screen.png      # capture the screen
+axilio phone send ./photo.jpg --wait          # upload + push media to this phone
+axilio uploads list -o json                   # inspect retained uploads and quota
 
 axilio sessions stop <session-id>             # release the phone
 ```
 
 Full verb list and flags: `axilio phone --help`. To drive several phones at once,
 `eval "$(axilio sessions start --export)"` pins a phone to the current shell via
-`AXILIO_SESSION`, so each terminal drives its own.
+`AXILIO_SESSION`, so each terminal drives its own. Phone commands select a session
+in this order: `--session`, `AXILIO_SESSION`, the sole active lease, the saved
+current-session pointer, then an ambiguity error.
+
+`phone send` keeps the uploaded file in the organization library. Use
+`axilio uploads list` to discover it, `uploads push <id> --phone-id <id>` to
+reuse it, and `uploads delete <id> --yes` to free quota. Deleting an upload does
+not recall copies already delivered to phones.
 
 ## Rule: always use semantic selectors, never raw coordinates
 
