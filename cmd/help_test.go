@@ -1,0 +1,357 @@
+package cmd
+
+import (
+	"bytes"
+	"context"
+	"os"
+	"path/filepath"
+	"regexp"
+	"slices"
+	"strings"
+	"testing"
+
+	"github.com/charmbracelet/fang"
+	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
+)
+
+const (
+	applicationCommandCount = 50
+	applicationFlagCount    = 54
+)
+
+func TestApplicationHelpMetadata(t *testing.T) {
+	root := Root()
+	commands := applicationCommands(root)
+	if got := len(commands); got != applicationCommandCount {
+		t.Fatalf("application command count = %d, want %d", got, applicationCommandCount)
+	}
+
+	for _, command := range commands {
+		if strings.TrimSpace(command.Short) == "" {
+			t.Errorf("%s has no Short help", command.CommandPath())
+		}
+		if strings.TrimSpace(command.Long) == "" {
+			t.Errorf("%s has no Long help", command.CommandPath())
+		}
+		if strings.TrimSpace(command.Example) == "" {
+			t.Errorf("%s has no Example help", command.CommandPath())
+		}
+		for _, line := range strings.Split(command.Example, "\n") {
+			if len([]rune(strings.TrimSpace(line))) > 88 {
+				t.Errorf("%s has an example wider than 88 characters: %q",
+					command.CommandPath(), strings.TrimSpace(line))
+			}
+		}
+	}
+}
+
+func TestApplicationFlagUsage(t *testing.T) {
+	root := Root()
+	var flags []string
+	for _, command := range applicationCommands(root) {
+		visitApplicationFlags(command, func(flag *pflag.Flag) {
+			flags = append(flags, command.CommandPath()+" --"+flag.Name)
+			usage := strings.TrimSpace(flag.Usage)
+			switch {
+			case len(usage) < 12:
+				t.Errorf("%s has weak usage %q", flags[len(flags)-1], usage)
+			case strings.EqualFold(usage, flag.Name):
+				t.Errorf("%s merely repeats the flag name", flags[len(flags)-1])
+			case strings.Contains(strings.ToLower(usage), "todo"),
+				strings.Contains(strings.ToLower(usage), "tbd"):
+				t.Errorf("%s has placeholder usage %q", flags[len(flags)-1], usage)
+			}
+		})
+	}
+	if got := len(flags); got != applicationFlagCount {
+		t.Fatalf("application flag count = %d, want %d\n%s",
+			got, applicationFlagCount, strings.Join(flags, "\n"))
+	}
+}
+
+func TestRenderedHelpSnapshots(t *testing.T) {
+	t.Setenv("NO_COLOR", "1")
+	t.Setenv("__FANG_TEST_WIDTH", "120")
+
+	for _, tc := range []struct {
+		name string
+		args []string
+		file string
+	}{
+		{name: "root", args: []string{"--help"}, file: "root.txt"},
+		{name: "phone tap", args: []string{"phone", "tap", "--help"}, file: "phone-tap.txt"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			got := renderHelp(t, tc.args...)
+			assertGolden(t, filepath.Join("testdata", "help", tc.file), got)
+		})
+	}
+}
+
+func TestRenderedHelpContracts(t *testing.T) {
+	t.Setenv("NO_COLOR", "1")
+	t.Setenv("__FANG_TEST_WIDTH", "120")
+
+	tests := []struct {
+		name string
+		args []string
+		want []string
+	}{
+		{
+			name: "login",
+			args: []string{"login", "--help"},
+			want: []string{"browser OAuth", "--api-key axl_xxx", "printf '%s\\n'"},
+		},
+		{
+			name: "config",
+			args: []string{"config", "--help"},
+			want: []string{"base-url", "does not detect a stored OAuth session", "config unset"},
+		},
+		{
+			name: "organizations",
+			args: []string{"orgs", "--help"},
+			want: []string{"OAuth", "API keys are bound to one org", "AXILIO_ORG", "orgs clear"},
+		},
+		{
+			name: "init",
+			args: []string{"init", "--help"},
+			want: []string{".claude/skills/axilio/SKILL.md", "AGENTS.md", ".cursor/rules/axilio.mdc", "--force"},
+		},
+		{
+			name: "upgrade",
+			args: []string{"upgrade", "--help"},
+			want: []string{"checksum-verified", "Homebrew", "returns before checking", "brew upgrade axilio"},
+		},
+		{
+			name: "phones",
+			args: []string{"phones", "--help"},
+			want: []string{"shared", "dedicated", "phones mine", "sessions start --phone-id"},
+		},
+		{
+			name: "sessions",
+			args: []string{"sessions", "--help"},
+			want: []string{"local lease file", "AXILIO_SESSION", "current-session pointer", "sessions list --remote"},
+		},
+		{
+			name: "phone",
+			args: []string{"phone", "--help"},
+			want: []string{"observe", "find-text", "long-press", "screenshot", "wait-for", "send"},
+		},
+		{
+			name: "workflows",
+			args: []string{"workflows", "--help"},
+			want: []string{"workflows list", "runs start", "sessions start --workflow"},
+		},
+		{
+			name: "runs",
+			args: []string{"runs", "--help"},
+			want: []string{"workflows list", "runs start", "runs get", "cancel"},
+		},
+		{
+			name: "api keys",
+			args: []string{"api-keys", "--help"},
+			want: []string{"organization", "shown once", "api-keys delete"},
+		},
+		{
+			name: "uploads",
+			args: []string{"uploads", "--help"},
+			want: []string{"add", "list", "push", "delete", "phone send"},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := renderHelp(t, tc.args...)
+			contract := contractText(got)
+			for _, want := range tc.want {
+				if !strings.Contains(contract, want) {
+					t.Errorf("rendered help missing %q\n%s", want, got)
+				}
+			}
+		})
+	}
+}
+
+func TestPhoneTapRenderedContract(t *testing.T) {
+	t.Setenv("NO_COLOR", "1")
+	t.Setenv("__FANG_TEST_WIDTH", "120")
+
+	got := renderHelp(t, "phone", "tap", "--help")
+	contract := contractText(got)
+	for _, want := range []string{
+		`axilio phone tap --query "the search box"`,
+		"axilio phone tap 540 1200",
+		"vision locates the described element and taps its returned center",
+		"--ocr-engine and --model apply only to this query-targeting path",
+		"frame-space pixels",
+		"top-left",
+		"--query takes precedence",
+		"supplied coordinates are ignored",
+		"Session selection is --session, AXILIO_SESSION, the sole active lease",
+	} {
+		if !strings.Contains(contract, want) {
+			t.Errorf("phone tap help missing %q\n%s", want, got)
+		}
+	}
+}
+
+func TestGeneratedCompletionHelp(t *testing.T) {
+	t.Setenv("NO_COLOR", "1")
+	t.Setenv("__FANG_TEST_WIDTH", "120")
+
+	rootHelp := renderHelp(t, "completion", "--help")
+	for _, shell := range []string{"bash", "zsh", "fish", "powershell"} {
+		if !strings.Contains(rootHelp, shell) {
+			t.Errorf("completion help missing %q\n%s", shell, rootHelp)
+		}
+		help := renderHelp(t, "completion", shell, "--help")
+		if !strings.Contains(help, "--no-descriptions") {
+			t.Errorf("completion %s help missing --no-descriptions\n%s", shell, help)
+		}
+	}
+}
+
+func TestDocumentationHelpParity(t *testing.T) {
+	readme := readTestFile(t, filepath.Join("..", "README.md"))
+	for _, command := range []string{
+		"`phone send`",
+		"`runs start`",
+		"`workflows list`",
+		"`uploads add`",
+		"`uploads list`",
+		"`uploads push`",
+		"`uploads delete`",
+	} {
+		if !strings.Contains(readme, command) {
+			t.Errorf("README command index missing %s", command)
+		}
+	}
+	for _, completion := range []string{
+		"completion bash",
+		"completion zsh",
+		"completion fish",
+		"completion powershell",
+		"--no-descriptions",
+	} {
+		if !strings.Contains(readme, completion) {
+			t.Errorf("README completion docs missing %q", completion)
+		}
+	}
+	if strings.Contains(readme, "gives every command a stable JSON shape") {
+		t.Error("README still claims universal JSON success output")
+	}
+
+	skill := readTestFile(t, "agentskill.md")
+	if !strings.Contains(skill, "axilio phone key enter") {
+		t.Error("agent skill must show the supported enter key")
+	}
+	for _, contradiction := range []string{"enter, back, home", "back, home, recents"} {
+		if strings.Contains(strings.ToLower(skill), contradiction) {
+			t.Errorf("agent skill advertises unsupported named keys: %q", contradiction)
+		}
+	}
+	for _, command := range []string{
+		"axilio sessions start --export",
+		"axilio phone tap --query",
+		"axilio phone send",
+		"axilio uploads list",
+	} {
+		if !strings.Contains(skill, command) {
+			t.Errorf("agent skill missing %q", command)
+		}
+	}
+}
+
+func applicationCommands(root *cobra.Command) []*cobra.Command {
+	var commands []*cobra.Command
+	var walk func(*cobra.Command)
+	walk = func(command *cobra.Command) {
+		if command.Name() == "completion" || command.Name() == "help" || command.Name() == "man" {
+			return
+		}
+		commands = append(commands, command)
+		for _, child := range command.Commands() {
+			walk(child)
+		}
+	}
+	walk(root)
+	slices.SortFunc(commands, func(a, b *cobra.Command) int {
+		return strings.Compare(a.CommandPath(), b.CommandPath())
+	})
+	return commands
+}
+
+func visitApplicationFlags(command *cobra.Command, visit func(*pflag.Flag)) {
+	seen := map[string]bool{}
+	for _, set := range []*pflag.FlagSet{command.LocalNonPersistentFlags(), command.PersistentFlags()} {
+		set.VisitAll(func(flag *pflag.Flag) {
+			if flag.Name == "help" || flag.Name == "version" || seen[flag.Name] {
+				return
+			}
+			seen[flag.Name] = true
+			visit(flag)
+		})
+	}
+}
+
+func renderHelp(t *testing.T, args ...string) string {
+	t.Helper()
+	root := Root()
+	var stdout, stderr bytes.Buffer
+	root.SetOut(&stdout)
+	root.SetErr(&stderr)
+	root.SetArgs(args)
+	if err := fang.Execute(context.Background(), root, fang.WithoutVersion()); err != nil {
+		t.Fatalf("render help %q: %v\nstderr:\n%s", strings.Join(args, " "), err, stderr.String())
+	}
+	if stderr.Len() != 0 {
+		t.Fatalf("render help %q wrote stderr:\n%s", strings.Join(args, " "), stderr.String())
+	}
+	return normalizeHelp(stdout.String())
+}
+
+var ansiPattern = regexp.MustCompile(`\x1b\[[0-9;:?]*[ -/]*[@-~]`)
+
+func normalizeHelp(value string) string {
+	value = ansiPattern.ReplaceAllString(value, "")
+	value = strings.ReplaceAll(value, "\r\n", "\n")
+	lines := strings.Split(value, "\n")
+	for i := range lines {
+		lines[i] = strings.TrimRight(lines[i], " \t")
+	}
+	return strings.TrimSpace(strings.Join(lines, "\n")) + "\n"
+}
+
+var wrappedHyphenPattern = regexp.MustCompile(`-\n[ \t]+`)
+
+func contractText(value string) string {
+	value = wrappedHyphenPattern.ReplaceAllString(value, "-")
+	return strings.Join(strings.Fields(value), " ")
+}
+
+func assertGolden(t *testing.T, path, got string) {
+	t.Helper()
+	if os.Getenv("UPDATE_GOLDEN") == "1" {
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, []byte(got), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	want := readTestFile(t, path)
+	if got != want {
+		t.Fatalf("rendered help differs from %s; run UPDATE_GOLDEN=1 go test ./cmd\n--- want\n%s\n--- got\n%s",
+			path, want, got)
+	}
+}
+
+func readTestFile(t *testing.T, path string) string {
+	t.Helper()
+	value, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(value)
+}
