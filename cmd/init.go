@@ -62,14 +62,22 @@ func initCmd() *cobra.Command {
 			"  --agent claude  ->  .claude/skills/axilio/SKILL.md\n" +
 			"  --agent codex   ->  AGENTS.md (appended, never clobbered)\n" +
 			"  --agent cursor  ->  .cursor/rules/axilio.mdc\n\n" +
+			"Auto-detected targets that already contain the skill are skipped. An " +
+			"explicit target that already exists is an error unless --force is set; " +
+			"for AGENTS.md, --force replaces only the marked Axilio block. Without " +
+			"markers, interactive mode asks which agent to configure, while JSON, " +
+			"quiet, or redirected use requires --agent.\n\n" +
 			"It finishes with a sign-in check: browser login is the one step an agent " +
 			"can't do itself, so init surfaces it while a human is likely at the keyboard.",
+		Example: `  axilio init
+  axilio init --agent codex
+  axilio init --agent claude --force`,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			return runInit(cmd.Context(), agent, force)
 		},
 	}
-	cmd.Flags().StringVar(&agent, "agent", "", "Target agent: claude | codex | cursor (default: auto-detect)")
-	cmd.Flags().BoolVar(&force, "force", false, "Overwrite/refresh an existing skill")
+	cmd.Flags().StringVar(&agent, "agent", "", "Target claude, codex, or cursor; omit to detect repository markers")
+	cmd.Flags().BoolVar(&force, "force", false, "Refresh an existing skill; only the marked Axilio AGENTS.md block is replaced")
 	return cmd
 }
 

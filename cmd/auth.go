@@ -21,10 +21,14 @@ func loginCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "login",
 		Short: "Sign in: browser OAuth by default, or store an API key.",
-		Long: "Sign in to Axilio. With no arguments on a terminal, opens your browser " +
-			"to authorize the CLI (OAuth); the token is stored in your OS keychain. " +
-			"Pass --api-key, or pipe a key on stdin, to store an axl_ API key instead " +
-			"(which the SDKs also read from ~/.config/axilio/config.json).",
+		Long: "Sign in to Axilio. With no arguments on a terminal, open a browser " +
+			"OAuth flow and store the session in the OS keychain, with a protected " +
+			"file fallback. Pass --api-key, or pipe a key on stdin, to verify an " +
+			"axl_ API key against the API and persist it in the shared Axilio config " +
+			"file. A --base-url supplied with API-key login is saved with the key.",
+		Example: `  axilio login
+  axilio login --api-key axl_xxx
+  printf '%s\n' "$AXILIO_API_KEY" | axilio login`,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			key := flagAPIKey
 			// A key piped on stdin (echo $KEY | axilio login) selects the key path.
@@ -114,6 +118,12 @@ func logoutCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "logout",
 		Short: "Remove stored credentials (API key and OAuth session).",
+		Long: "Sign out locally and, when present, revoke the OAuth refresh-token " +
+			"family server-side. The saved API key, OAuth session, and active " +
+			"organization are removed. A saved base URL, environment credentials, " +
+			"and local phone-session lease files are not removed.",
+		Example: `  axilio logout
+  axilio status`,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			cfg := config.Load()
 			hadKey := cfg.APIKey != ""
@@ -149,6 +159,12 @@ func statusCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "status",
 		Short: "Check your credentials and reach the API.",
+		Long: "Make an authenticated API request and report status, effective API " +
+			"host, active organization selector, and account balance. A valid API " +
+			"key or OAuth session is required. Use -o json for the structured " +
+			"status, api_host, active_org, and balance fields.",
+		Example: `  axilio status
+  axilio status -o json`,
 		RunE: func(_ *cobra.Command, _ []string) error {
 			cl, err := newClient()
 			if err != nil {
