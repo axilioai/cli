@@ -1,9 +1,15 @@
 #!/usr/bin/env python3
-"""Check the Python half of cmd/agentskill.md against the real published SDK.
+"""Check the Python half of the hosted agent skill against the real published SDK.
 
 The skill is a prompt: an agent reads it and writes SDK code a customer runs
 unattended. Every symbol it names has to exist, or we ship instructions for
 writing code that raises AttributeError on the customer's machine.
+
+The skill itself is no longer a file in this repo (AXI-1527): it's hosted at
+the backend's /skill route, the same place `axilio init` and the dashboard's
+"Get Agent Prompt" button fetch it from. This script checks the copy that is
+actually live, which is stricter than checking a local file could ever be —
+nothing here can drift from what a user actually receives.
 
 The Go half is checked in-repo by cmd/agentskill_test.go, because the CLI depends
 on platform-go. The Python half can't be: the CLI has no dependency on
@@ -19,11 +25,12 @@ this one. See .github/workflows/skill-sync.yml.
 
 from __future__ import annotations
 
-import pathlib
+import os
 import re
 import sys
+import urllib.request
 
-SKILL = pathlib.Path(__file__).resolve().parent.parent / "cmd" / "agentskill.md"
+SKILL_URL = os.environ.get("AXILIO_SKILL_URL", "https://api.axilio.ai/api/v1/skill")
 
 # Floors guard against a vacuous pass: if a regex silently stops matching, the
 # check would "succeed" while verifying nothing.
@@ -36,10 +43,19 @@ def fail(msg: str) -> None:
     print(f"FAIL: {msg}", file=sys.stderr)
 
 
+def fetch_skill() -> str:
+    try:
+        with urllib.request.urlopen(SKILL_URL, timeout=15) as resp:  # noqa: S310
+            return resp.read().decode("utf-8")
+    except Exception as e:
+        print(f"FAIL: could not fetch the agent skill from {SKILL_URL}: {e}", file=sys.stderr)
+        sys.exit(1)
+
+
 def python_block(text: str) -> str:
     m = re.search(r"<!-- lang:python -->(.*?)<!-- /lang:python -->", text, re.S)
     if not m:
-        print("FAIL: agentskill.md has no <!-- lang:python --> block", file=sys.stderr)
+        print(f"FAIL: the hosted skill ({SKILL_URL}) has no <!-- lang:python --> block", file=sys.stderr)
         sys.exit(1)
     return m.group(1)
 
@@ -51,7 +67,7 @@ def documented(block: str, receiver: str) -> list[str]:
 
 
 def main() -> int:
-    text = SKILL.read_text()
+    text = fetch_skill()
     block = python_block(text)
     errors = 0
 
@@ -70,7 +86,7 @@ def main() -> int:
         installed = version("axilio")
     except Exception:
         installed = "(unknown)"
-    print(f"checking cmd/agentskill.md against axilio {installed}")
+    print(f"checking the hosted skill ({SKILL_URL}) against axilio {installed}")
 
     # 1. driver.<method>()
     methods = documented(block, "driver")
@@ -83,7 +99,7 @@ def main() -> int:
     for name in methods:
         if not hasattr(MobileDriver, name):
             fail(
-                f"agentskill.md documents driver.{name}(), which does not exist on "
+                f"the hosted skill documents driver.{name}(), which does not exist on "
                 "MobileDriver — the skill would teach an agent to write code that "
                 "raises AttributeError"
             )
@@ -99,7 +115,7 @@ def main() -> int:
         errors += 1
     for name in el_methods:
         if not hasattr(Element, name):
-            fail(f"agentskill.md documents el.{name}(), which does not exist on Element")
+            fail(f"the hosted skill documents el.{name}(), which does not exist on Element")
             errors += 1
 
     # 3. mobile.<Exception> — the error-handling guidance
@@ -113,7 +129,7 @@ def main() -> int:
     for name in exceptions:
         if not hasattr(mobile, name):
             fail(
-                f"agentskill.md documents mobile.{name}, which does not exist — an agent "
+                f"the hosted skill documents mobile.{name}, which does not exist — an agent "
                 "following the skill would write an except clause that itself raises"
             )
             errors += 1
@@ -138,7 +154,7 @@ def main() -> int:
     for name in used_keys:
         if name not in valid_keys:
             fail(
-                f"agentskill.md shows key_press({name!r}), but the SDK's Key constants are "
+                f"the hosted skill shows key_press({name!r}), but the SDK's Key constants are "
                 f"{sorted(valid_keys)} — the device's named-key table would reject it at run "
                 "time. Don't document a key until it exists on the device side."
             )
@@ -146,7 +162,7 @@ def main() -> int:
 
     if errors:
         print(f"\n{errors} problem(s). The skill and the published SDK have drifted.", file=sys.stderr)
-        print("Fix cmd/agentskill.md to match the SDK, or the SDK to match the skill.", file=sys.stderr)
+        print("Fix the hosted skill to match the SDK, or the SDK to match the skill.", file=sys.stderr)
         return 1
 
     print(
