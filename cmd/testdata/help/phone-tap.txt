@@ -1,8 +1,10 @@
-Tap the selected phone. Prefer --query: vision locates the described element and taps its returned center. --ocr-
-  engine and --model apply only to this query-targeting path. The coordinate form takes x and y as frame-space pixels
-  with (0,0) at the screen's top-left; use observe to discover current coordinates.
+Perform a tap action on the selected phone.
 
-  Coordinates may be supplied with --query. Then --query takes precedence and the supplied coordinates are ignored.
+  The coordinate form takes x and y as frame-space pixels, with (0,0) at the screen's top-left.
+
+  Use --query to find an element by natural-language description and tap its center. If --query and coordinates are both
+  provided, --query takes precedence.
+
   Session selection is --session, AXILIO_SESSION, the sole active lease, the saved current-session pointer, then an
   ambiguity error.
 
@@ -16,16 +18,22 @@ Tap the selected phone. Prefer --query: vision locates the described element and
     axilio phone tap 540 1200
     axilio phone tap --session sess_123 --query "continue"
 
-  FLAGS
+  TAP FLAGS
 
-    --api-key     Api key for API-backed commands; overrides AXILIO_API_KEY and the saved key
-    --base-url    Api host for API-backed commands; overrides AXILIO_BASE_URL and saved base-url
     -h --help     Help for tap
     --model       Vision model for --query only; omitted lets the server select
-    --no-color    Disable ANSI color in human-oriented output
     --ocr-engine  Ocr engine for --query only: free or premium; omitted uses free
-    --org         Oauth organization slug or id; overrides AXILIO_ORG and the saved active org
-    -o --output   Result format: table or json; JSON requires a structured command result (table)
     --query       Recommended natural-language target; vision finds it and taps its center
-    -q --quiet    Suppress stderr notes and prompts; destructive commands still require --yes
-    --session     Session ID; overrides AXILIO_SESSION, sole-lease, and current-pointer selection
+
+  PHONE FLAGS
+
+    --session  Session ID; overrides AXILIO_SESSION, sole-lease, and current-pointer selection
+
+  GLOBAL FLAGS
+
+    --api-key    Api key for API-backed commands; overrides AXILIO_API_KEY and the saved key
+    --base-url   Api host for API-backed commands; overrides AXILIO_BASE_URL and saved base-url
+    --no-color   Disable ANSI color in human-oriented output
+    --org        Oauth organization slug or id; overrides AXILIO_ORG and the saved active org
+    -o --output  Result format: table or json; JSON requires a structured command result (table)
+    -q --quiet   Suppress stderr notes and prompts; destructive commands still require --yes

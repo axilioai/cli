@@ -200,13 +200,12 @@ func phoneTapCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "tap [x y]",
 		Short: "Tap at coordinates, or at a natural-language target with --query.",
-		Long: "Tap the selected phone. Prefer --query: vision locates the described " +
-			"element and taps its returned center. --ocr-engine and --model apply " +
-			"only to this query-targeting path. The coordinate form takes x and y " +
-			"as frame-space pixels with (0,0) at the screen's top-left; use observe " +
-			"to discover current coordinates.\n\n" +
-			"Coordinates may be supplied with --query. Then --query takes precedence " +
-			"and the supplied coordinates are ignored. " +
+		Long: "Perform a tap action on the selected phone.\n\n" +
+			"The coordinate form takes x and y as frame-space pixels, with (0,0) " +
+			"at the screen's top-left.\n\n" +
+			"Use --query to find an element by natural-language description and tap " +
+			"its center. If --query and coordinates are both provided, --query takes " +
+			"precedence.\n\n" +
 			"Session selection is --session, AXILIO_SESSION, the sole active lease, " +
 			"the saved current-session pointer, then an ambiguity error.",
 		Example: `  axilio phone tap --query "the search box"
@@ -244,6 +243,7 @@ func phoneTapCmd() *cobra.Command {
 	cmd.Flags().StringVar(&query, "query", "", "Recommended natural-language target; vision finds it and taps its center")
 	cmd.Flags().StringVar(&engine, "ocr-engine", "", "OCR engine for --query only: free or premium; omitted uses free")
 	cmd.Flags().StringVar(&model, "model", "", "Vision model for --query only; omitted lets the server select")
+	groupFlagsByOwner(cmd)
 	return cmd
 }
 

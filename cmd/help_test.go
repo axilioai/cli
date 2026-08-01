@@ -182,16 +182,35 @@ func TestPhoneTapRenderedContract(t *testing.T) {
 	for _, want := range []string{
 		`axilio phone tap --query "the search box"`,
 		"axilio phone tap 540 1200",
-		"vision locates the described element and taps its returned center",
-		"--ocr-engine and --model apply only to this query-targeting path",
+		"Perform a tap action on the selected phone",
+		"Use --query to find an element by natural-language description and tap its center",
 		"frame-space pixels",
 		"top-left",
 		"--query takes precedence",
-		"supplied coordinates are ignored",
 		"Session selection is --session, AXILIO_SESSION, the sole active lease",
+		"TAP FLAGS",
+		"PHONE FLAGS",
+		"GLOBAL FLAGS",
 	} {
 		if !strings.Contains(contract, want) {
 			t.Errorf("phone tap help missing %q\n%s", want, got)
+		}
+	}
+
+	tapFlags := sectionBetween(t, got, "TAP FLAGS", "PHONE FLAGS")
+	for _, flag := range []string{"--help", "--model", "--ocr-engine", "--query"} {
+		if !strings.Contains(tapFlags, flag) {
+			t.Errorf("TAP FLAGS missing %s\n%s", flag, got)
+		}
+	}
+	phoneFlags := sectionBetween(t, got, "PHONE FLAGS", "GLOBAL FLAGS")
+	if !strings.Contains(phoneFlags, "--session") {
+		t.Errorf("PHONE FLAGS missing --session\n%s", got)
+	}
+	globalFlags := sectionBetween(t, got, "GLOBAL FLAGS", "")
+	for _, flag := range []string{"--api-key", "--base-url", "--no-color", "--org", "--output", "--quiet"} {
+		if !strings.Contains(globalFlags, flag) {
+			t.Errorf("GLOBAL FLAGS missing %s\n%s", flag, got)
 		}
 	}
 }
@@ -328,6 +347,23 @@ var wrappedHyphenPattern = regexp.MustCompile(`-\n[ \t]+`)
 func contractText(value string) string {
 	value = wrappedHyphenPattern.ReplaceAllString(value, "-")
 	return strings.Join(strings.Fields(value), " ")
+}
+
+func sectionBetween(t *testing.T, value, start, end string) string {
+	t.Helper()
+	startAt := strings.Index(value, start)
+	if startAt < 0 {
+		t.Fatalf("rendered help missing section %q\n%s", start, value)
+	}
+	value = value[startAt+len(start):]
+	if end == "" {
+		return value
+	}
+	endAt := strings.Index(value, end)
+	if endAt < 0 {
+		t.Fatalf("rendered help missing section %q after %q\n%s", end, start, value)
+	}
+	return value[:endAt]
 }
 
 func assertGolden(t *testing.T, path, got string) {
