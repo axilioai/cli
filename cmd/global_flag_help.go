@@ -150,7 +150,7 @@ func buildGlobalFlagHelp() map[string]commandGlobalFlagHelp {
 			apiKey:  "Show this as the effective API key source; does not save the key",
 			baseURL: "Show this as the effective API host; does not save the host",
 			noColor: "Disable ANSI color in the human-readable configuration table",
-			org:     "Show this as the effective active org; does not save the selection",
+			org:     "No actual effect. Ephemerally changes the displayed org only, does not save the selection. Use axilio orgs use [org_name] instead to persist changes to active org setting.",
 			output:  "Render the configuration summary as table or json",
 			quiet:   "Suppress stderr update notices; the configuration summary remains on stdout",
 		},

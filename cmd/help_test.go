@@ -155,7 +155,13 @@ func TestRenderedHelpContracts(t *testing.T) {
 		{
 			name: "config",
 			args: []string{"config", "--help"},
-			want: []string{"base-url", "does not detect a stored OAuth session", "config unset"},
+			want: []string{
+				"base-url",
+				"does not detect a stored OAuth session",
+				"config unset",
+				"No actual effect. Ephemerally changes the displayed org only",
+				"axilio orgs use [org_name]",
+			},
 		},
 		{
 			name: "organizations",
