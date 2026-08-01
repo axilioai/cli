@@ -147,8 +147,8 @@ func buildGlobalFlagHelp() map[string]commandGlobalFlagHelp {
 			quiet:   "Suppress logout warnings and the signed-out result",
 		},
 		"config": {
-			apiKey:  "Show this as the effective API key source; does not save the key",
-			baseURL: "Show this as the effective API host; does not save the host",
+			apiKey:  "No actual effect. Ephemerally shows this as the effective API key source; does not persist the new key. Use axilio login --api-key [api_key] to verify and persist a new key.",
+			baseURL: "No actual effect. Ephemerally shows this as the effective API host; does not save the new host. See above to change base-url using `axilio config set base-url`.",
 			noColor: "Disable ANSI color in the human-readable configuration table",
 			org:     "No actual effect. Ephemerally changes the displayed org only, does not save the selection. Use axilio orgs use [org_name] instead to persist changes to active org setting.",
 			output:  "Render the configuration summary as table or json",
