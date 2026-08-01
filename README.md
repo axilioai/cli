@@ -136,13 +136,21 @@ also reads, so one login makes the CLI and the SDKs work:
 $XDG_CONFIG_HOME/axilio/config.json   (else ~/.config/axilio/config.json), mode 0600
 ```
 
-Credentials resolve in this order: `--api-key`, `AXILIO_API_KEY`, the saved
-config API key, then the saved OAuth session. The API host resolves from
-`--base-url`, `AXILIO_BASE_URL`, saved `base-url`, then
-`https://api.axilio.ai`. For OAuth, the organization resolves from `--org`,
-`AXILIO_ORG`, the saved active organization, then the OAuth session default.
-API keys are already bound to one organization. `axilio logout` clears the
-saved key, OAuth session, and active organization.
+Precedence rules:
+
+- Credentials resolve in this order: `--api-key`, `AXILIO_API_KEY`, the saved
+  config API key, then the saved OAuth session.
+- The organization resolves from `--org`, `AXILIO_ORG`, the saved active
+  organization, then the OAuth session default. Note that each API key is scoped
+  to the organization that created it and cannot switch organizations with
+  `--org`.
+- API host resolves from `--base-url`, `AXILIO_BASE_URL`, saved `base-url`,
+  then `https://api.axilio.ai`.
+- Phone command session selection precedence is `--session`, `AXILIO_SESSION`,
+  the sole active lease, the saved current-session pointer, then an ambiguity
+  error.
+
+`axilio logout` clears the saved key, OAuth session, and active organization.
 
 ## Commands
 

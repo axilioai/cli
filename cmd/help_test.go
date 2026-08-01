@@ -102,6 +102,19 @@ func TestRenderedHelpContracts(t *testing.T) {
 		want []string
 	}{
 		{
+			name: "root",
+			args: []string{"--help"},
+			want: []string{
+				"Precedence rules:",
+				"Credentials resolve in this order: --api-key, AXILIO_API_KEY",
+				"each API key is scoped to the organization that created it",
+				"cannot switch organizations with --org",
+				"API host resolves from --base-url, AXILIO_BASE_URL",
+				"Phone command session selection precedence is --session, AXILIO_SESSION",
+				"Table output for human readability is the default",
+			},
+		},
+		{
 			name: "login",
 			args: []string{"login", "--help"},
 			want: []string{"browser OAuth", "--api-key axl_xxx", "printf '%s\\n'"},
