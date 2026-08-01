@@ -172,7 +172,7 @@ func TestRenderedHelpContracts(t *testing.T) {
 		{
 			name: "organizations",
 			args: []string{"orgs", "--help"},
-			want: []string{"OAuth", "API keys are bound to one org", "AXILIO_ORG", "orgs clear"},
+			want: []string{"Swap between the organizations", "OAuth", "API keys are bound to one org", "AXILIO_ORG", "orgs clear"},
 		},
 		{
 			name: "init",
