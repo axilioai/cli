@@ -19,7 +19,7 @@ func sessionsCmd() *cobra.Command {
 		Short: "Acquire, list, select, and release phone sessions.",
 		Long: "Manage the phone leases used by `axilio phone`. Starting a session " +
 			"stores a local lease file and a current-session pointer until the " +
-			"session is stopped. Local selection resolves from --session, " +
+			"session is stopped. Session selection precedence is --session, " +
 			"AXILIO_SESSION, the sole active lease, the current-session pointer, " +
 			"then an ambiguity error. `sessions list --remote` instead asks the API " +
 			"for all active server sessions.",
@@ -104,8 +104,8 @@ func sessionsCurrentCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "current",
 		Short: "Show which session the phone verbs target in this shell.",
-		Long: "Resolve and show the session selected for phone commands. Selection " +
-			"order is --session on a phone command, AXILIO_SESSION, the sole active " +
+		Long: "Resolve and show the session selected for phone commands. Phone command " +
+			"session selection precedence is --session, AXILIO_SESSION, the sole active " +
 			"local lease, the saved current-session pointer, then an ambiguity " +
 			"error. This command has no --session flag, so it starts at " +
 			"AXILIO_SESSION. If no session resolves, the current implementation " +

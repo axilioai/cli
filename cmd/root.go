@@ -88,8 +88,8 @@ func Root() *cobra.Command {
 the resources that support them.
 
 Start with login, acquire a session, observe its phone, then act on what is
-visible. Sessions persist locally until stopped. Phone commands select a session
-in this order: --session, AXILIO_SESSION, the sole active lease, the saved
+visible. Sessions persist locally until stopped. Phone command session selection
+precedence is --session, AXILIO_SESSION, the sole active lease, the saved
 current-session pointer, then an ambiguity error.
 
 The main command families are:
@@ -148,6 +148,7 @@ API-backed commands; they do not select a local phone session.`,
 	// word); cobra adds the --version flag when root.Version is set.
 	root.Version = versionString()
 	root.SetVersionTemplate("{{.Name}} {{.Version}}\n")
+	groupCommandHelpFlags(root)
 	return root
 }
 

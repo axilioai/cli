@@ -19,13 +19,15 @@ func phoneCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "phone",
 		Short: "Observe and control the selected session's phone.",
-		Long: "Drive a phone leased with `axilio sessions start`. A reliable loop is " +
+		Long: "Drive a phone leased with `axilio sessions start`.\n\n" +
+			"A reliable loop is " +
 			"observe the screen, find or semantically target an element, act, then " +
-			"observe again to verify. Available verbs are observe, find, find-text, " +
+			"observe again to verify.\n\n" +
+			"Available verbs are observe, find, find-text, " +
 			"tap, long-press, swipe, type, key, screenshot, wait-for, and send. " +
 			"Vision commands can return structured JSON; action-only commands do not " +
 			"all emit a JSON success body.\n\n" +
-			"Session selection order is --session, AXILIO_SESSION, the sole active " +
+			"Session selection precedence is --session, AXILIO_SESSION, the sole active " +
 			"local lease, the saved current-session pointer, then an ambiguity error. " +
 			"The verbs mirror the SDK MobileDriver so an explored interaction maps " +
 			"directly onto SDK code.",
@@ -243,7 +245,6 @@ func phoneTapCmd() *cobra.Command {
 	cmd.Flags().StringVar(&query, "query", "", "Recommended natural-language target; vision finds it and taps its center")
 	cmd.Flags().StringVar(&engine, "ocr-engine", "", "OCR engine for --query only: free or premium; omitted uses free")
 	cmd.Flags().StringVar(&model, "model", "", "Vision model for --query only; omitted lets the server select")
-	groupFlagsByOwner(cmd)
 	return cmd
 }
 

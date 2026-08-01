@@ -16,6 +16,40 @@ type helpFlagGroup struct {
 	names map[string]bool
 }
 
+// groupCommandHelpFlags applies ownership-based flag sections to every
+// non-root command, including Cobra's generated help and completion commands.
+func groupCommandHelpFlags(root *cobra.Command) {
+	root.InitDefaultHelpCmd()
+	root.InitDefaultCompletionCmd()
+
+	var walk func(*cobra.Command)
+	walk = func(command *cobra.Command) {
+		for _, child := range command.Commands() {
+			paragraphizeHelpDescription(child)
+			groupFlagsByOwner(child)
+			walk(child)
+		}
+	}
+	walk(root)
+}
+
+// paragraphizeHelpDescription gives multi-sentence help the same scan-friendly
+// rhythm as phone tap: an opening action sentence, then behavioral details.
+func paragraphizeHelpDescription(command *cobra.Command) {
+	if command.Long == "" || strings.Contains(command.Long, "\n\n") {
+		return
+	}
+	sentenceEnd := strings.Index(command.Long, ". ")
+	if newlineEnd := strings.Index(command.Long, ".\n"); newlineEnd >= 0 &&
+		(sentenceEnd < 0 || newlineEnd < sentenceEnd) {
+		sentenceEnd = newlineEnd
+	}
+	if sentenceEnd >= 0 {
+		details := strings.TrimLeft(command.Long[sentenceEnd+1:], " \n")
+		command.Long = command.Long[:sentenceEnd+1] + "\n\n" + details
+	}
+}
+
 // groupFlagsByOwner retains the configured help renderer while separating
 // flags according to the command that defines them. Cobra exposes flag
 // ownership, but Fang renders the merged flag set as one section.

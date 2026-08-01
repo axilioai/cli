@@ -232,7 +232,7 @@ axilio phone observe                          # drives B's phone
 
 `axilio sessions list` shows the leases this CLI holds (a `*` marks the one the
 phone verbs target in the current shell); `--remote` lists all active sessions
-on the server. Phone commands select a session in this order: `--session`,
+on the server. Phone command session selection precedence is `--session`,
 `AXILIO_SESSION`, the sole active lease, the saved current-session pointer, then
 an ambiguity error.
 

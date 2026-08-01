@@ -37,6 +37,9 @@ func TestApplicationHelpMetadata(t *testing.T) {
 		if strings.TrimSpace(command.Example) == "" {
 			t.Errorf("%s has no Example help", command.CommandPath())
 		}
+		if strings.Contains(command.Long, ". ") && !strings.Contains(command.Long, "\n\n") {
+			t.Errorf("%s has multi-sentence help without a paragraph break", command.CommandPath())
+		}
 		for _, line := range strings.Split(command.Example, "\n") {
 			if len([]rune(strings.TrimSpace(line))) > 88 {
 				t.Errorf("%s has an example wider than 88 characters: %q",
@@ -232,6 +235,54 @@ func TestPhoneTapRenderedHelpPreservesColor(t *testing.T) {
 	}
 }
 
+func TestRenderedHelpUsesFlagOwnershipSections(t *testing.T) {
+	t.Setenv("NO_COLOR", "1")
+	t.Setenv("__FANG_TEST_WIDTH", "120")
+
+	root := Root()
+	var commands []*cobra.Command
+	var walk func(*cobra.Command)
+	walk = func(command *cobra.Command) {
+		for _, child := range command.Commands() {
+			if child.Hidden {
+				continue
+			}
+			commands = append(commands, child)
+			walk(child)
+		}
+	}
+	walk(root)
+
+	for _, command := range commands {
+		command := command
+		t.Run(command.CommandPath(), func(t *testing.T) {
+			args := strings.Fields(command.CommandPath())[1:]
+			args = append(args, "--help")
+			rendered := renderHelp(t, args...)
+			if splitFlag := wrappedFlagNamePattern.FindString(rendered); splitFlag != "" {
+				t.Errorf("rendered help splits a flag name across lines: %q\n%s", splitFlag, rendered)
+			}
+			got := contractText(rendered)
+			for _, section := range []string{
+				strings.ToUpper(command.Name()) + " FLAGS",
+				"GLOBAL FLAGS",
+			} {
+				if !strings.Contains(got, section) {
+					t.Errorf("rendered help missing %q\n%s", section, got)
+				}
+			}
+			for parent := command.Parent(); parent != nil && parent != root; parent = parent.Parent() {
+				if parent.PersistentFlags().HasAvailableFlags() {
+					section := strings.ToUpper(parent.Name()) + " FLAGS"
+					if !strings.Contains(got, section) {
+						t.Errorf("rendered help missing inherited %q\n%s", section, got)
+					}
+				}
+			}
+		})
+	}
+}
+
 func TestHelpCaptureWriterPreservesFileDescriptor(t *testing.T) {
 	const fd = uintptr(42)
 	var buffer bytes.Buffer
@@ -388,6 +439,7 @@ func normalizeHelp(value string) string {
 }
 
 var wrappedHyphenPattern = regexp.MustCompile(`-\n[ \t]+`)
+var wrappedFlagNamePattern = regexp.MustCompile(`--(?:[a-z0-9-]*-)?[ \t]*\n[ \t]+[a-z0-9]`)
 
 func contractText(value string) string {
 	value = wrappedHyphenPattern.ReplaceAllString(value, "-")

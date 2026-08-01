@@ -86,13 +86,15 @@ func runsStartCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "start <workflow-id>",
 		Short: "Start one or more runs of a workflow.",
-		Long: "Create runs for a workflow ID discovered with `workflows list`. " +
+		Long: "Create runs for a workflow ID discovered with `workflows list`.\n\n" +
 			"--count creates that many run configurations; v0.5.0 does not validate " +
-			"its range locally, so use a positive count. --phone-id pins every " +
-			"created run to a specific dedicated phone. --start-timeout is the number " +
+			"its range locally, so use a positive count.\n\n" +
+			"--phone-id pins every created run to a specific dedicated phone.\n\n" +
+			"--start-timeout is the number " +
 			"of seconds a queued run may wait for a phone before auto-cancel; zero " +
 			"omits the value and uses the server default, and nonzero values are sent " +
-			"without client-side range validation. Successful output contains the " +
+			"without client-side range validation.\n\n" +
+			"Successful output contains the " +
 			"created run IDs.",
 		Example: `  axilio runs start wf_123
   axilio runs start wf_123 --count 3
