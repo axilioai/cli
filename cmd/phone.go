@@ -206,8 +206,8 @@ func phoneTapCmd() *cobra.Command {
 			"Use --query to find an element by natural-language description and tap " +
 			"its center. If --query and coordinates are both provided, --query takes " +
 			"precedence.\n\n" +
-			"Session selection is --session, AXILIO_SESSION, the sole active lease, " +
-			"the saved current-session pointer, then an ambiguity error.",
+			"Session selection precedence is --session, AXILIO_SESSION, the sole " +
+			"active lease, the saved current-session pointer, then an ambiguity error.",
 		Example: `  axilio phone tap --query "the search box"
   axilio phone tap 540 1200
   axilio phone tap --session sess_123 --query "continue"`,

@@ -187,7 +187,7 @@ func TestPhoneTapRenderedContract(t *testing.T) {
 		"frame-space pixels",
 		"top-left",
 		"--query takes precedence",
-		"Session selection is --session, AXILIO_SESSION, the sole active lease",
+		"Session selection precedence is --session, AXILIO_SESSION, the sole active lease",
 		"TAP FLAGS",
 		"PHONE FLAGS",
 		"GLOBAL FLAGS",
