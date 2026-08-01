@@ -24,9 +24,8 @@ multi-language SDK support lands. It does three things:
 - **Phone control**: observe the screen and drive it (find, tap, type, swipe,
   key) over the phone's control channel, using the same vision primitives as the
   SDK.
-- **A scripting surface**: structured `-o json` for commands that return data,
-  quiet non-interactive operation, and stable exit codes. Some action-only
-  commands currently succeed without a JSON result body.
+- **A scripting surface**: every successful command emits valid JSON under
+  `-o json`, quiet non-interactive operation, and stable exit codes.
 
 ## Install
 
@@ -154,7 +153,7 @@ saved key, OAuth session, and active organization.
 
 | Flag | Meaning |
 | --- | --- |
-| `-o, --output table\|json` | Result format. JSON requires a structured command result (default `table`). |
+| `-o, --output table\|json` | Result format. Every successful command emits valid JSON in json mode (default `table`). |
 | `-q, --quiet` | Suppress stderr notes and prompts; destructive commands still require `--yes`. |
 | `--no-color` | Disable ANSI color in human-oriented output. |
 | `--api-key` | API key for API-backed commands; overrides `AXILIO_API_KEY` and the saved key. |
@@ -168,11 +167,13 @@ Run `axilio <command> --help` for the flags on any command.
 
 The CLI's output is a contract, not just cosmetics.
 
-- **`-o json`** writes structured command results to stdout. Human chrome
-  (notes, prompts, spinners) uses stderr and is suppressed in JSON mode, so
-  data-returning commands pipe cleanly into `jq`. Action-only commands do not
-  all emit a JSON success body yet; do not assume a successful empty stdout is
-  a parseable JSON result.
+- **`-o json`** writes a structured result to stdout for every successful
+  command — data verbs emit the API response, action verbs emit a small
+  acknowledgment (e.g. `{"action":"tap","x":540,"y":1200}`), and deletions
+  emit `{"id":...,"deleted":true}` — so any success pipes cleanly into `jq`.
+  Human chrome (notes, prompts, spinners) uses stderr and is suppressed in
+  JSON mode. The one exception is `sessions start --export`, whose output is
+  an eval-able `export` line by contract.
 - **`-q, --quiet`** suppresses the stderr chrome entirely. Destructive commands
   (`sessions stop`, `runs cancel`, `api-keys delete`) never prompt in `--quiet`
   or JSON mode; pass `--yes` to proceed non-interactively.

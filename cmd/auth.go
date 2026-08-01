@@ -65,9 +65,15 @@ func loginWithAPIKey(ctx context.Context, key string) error {
 		return err
 	}
 	p := printer()
-	p.Success("Signed in to %s", util.FirstNonEmpty(host, defaultAPIHost))
-	p.Note("  Balance  %s", bal.BalanceDisplay)
-	p.Note("  Saved to %s", config.Path())
+	apiHost := util.FirstNonEmpty(host, defaultAPIHost)
+	p.Emit(
+		map[string]string{"status": "signed_in", "method": "api-key", "api_host": apiHost},
+		func() {
+			p.Success("Signed in to %s", apiHost)
+			p.Note("  Balance  %s", bal.BalanceDisplay)
+			p.Note("  Saved to %s", config.Path())
+		},
+	)
 	return nil
 }
 
@@ -87,16 +93,24 @@ func loginWithBrowser(ctx context.Context) error {
 	if err := oauth.Save(tokens); err != nil {
 		return err
 	}
-	p.Success("Signed in to %s", apiHost)
-	if org := sessionOrgLabel(tokens); org != "" {
-		p.Note("  Org      %s", org)
-	}
-	cl := client.NewClient(option.WithHTTPHeader(cliHeader(tokens.AccessToken)), option.WithBaseURL(sdkBaseURL(host)))
-	if bal, err := cl.Billing.GetBalance(ctx); err != nil {
-		p.Note("  (could not fetch balance: %v)", err)
-	} else {
-		p.Note("  Balance  %s", bal.BalanceDisplay)
-	}
+	org := sessionOrgLabel(tokens)
+	p.Emit(
+		map[string]string{"status": "signed_in", "method": "oauth", "api_host": apiHost, "org": org},
+		func() {
+			p.Success("Signed in to %s", apiHost)
+			if org != "" {
+				p.Note("  Org      %s", org)
+			}
+			// Balance is informational chrome, so the fetch lives inside the
+			// closure and is skipped entirely in JSON mode.
+			cl := client.NewClient(option.WithHTTPHeader(cliHeader(tokens.AccessToken)), option.WithBaseURL(sdkBaseURL(host)))
+			if bal, err := cl.Billing.GetBalance(ctx); err != nil {
+				p.Note("  (could not fetch balance: %v)", err)
+			} else {
+				p.Note("  Balance  %s", bal.BalanceDisplay)
+			}
+		},
+	)
 	return nil
 }
 
@@ -145,11 +159,16 @@ func logoutCmd() *cobra.Command {
 					return err
 				}
 			}
+			p := printer()
 			if !hadKey && !hadOAuth {
-				printer().Note("Already signed out.")
+				p.Emit(map[string]string{"status": "already_signed_out"}, func() {
+					p.Note("Already signed out.")
+				})
 				return nil
 			}
-			printer().Success("Signed out.")
+			p.Emit(map[string]string{"status": "signed_out"}, func() {
+				p.Success("Signed out.")
+			})
 			return nil
 		},
 	}

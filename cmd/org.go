@@ -126,7 +126,11 @@ func orgUseCmd() *cobra.Command {
 			if err := config.Save(cfg); err != nil {
 				return err
 			}
-			printer().Note("Active organization set to %s (%s).", match.Slug, match.Name)
+			p := printer()
+			p.Emit(
+				map[string]string{"active_org": match.Slug, "org_id": match.ID, "org_name": match.Name},
+				func() { p.Note("Active organization set to %s (%s).", match.Slug, match.Name) },
+			)
 			return nil
 		},
 	}
@@ -143,15 +147,20 @@ func orgClearCmd() *cobra.Command {
   axilio orgs list`,
 		RunE: func(_ *cobra.Command, _ []string) error {
 			cfg := config.Load()
+			p := printer()
 			if cfg.ActiveOrg == "" {
-				printer().Note("No active organization set.")
+				p.Emit(map[string]any{"active_org": "", "cleared": false}, func() {
+					p.Note("No active organization set.")
+				})
 				return nil
 			}
 			cfg.ActiveOrg = ""
 			if err := config.Save(cfg); err != nil {
 				return err
 			}
-			printer().Note("Cleared the active organization; using your session default.")
+			p.Emit(map[string]any{"active_org": "", "cleared": true}, func() {
+				p.Note("Cleared the active organization; using your session default.")
+			})
 			return nil
 		},
 	}

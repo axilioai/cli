@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/axilioai/cli/internal/exit"
+	"github.com/zalando/go-keyring"
 )
 
 // fakeAPI is an httptest server that routes on path substring and returns canned
@@ -25,6 +26,10 @@ func fakeAPI(t *testing.T) *httptest.Server {
 		switch {
 		case strings.Contains(p, "/billing/balance"):
 			body = `{"balance_display":"$5.00","balance_microdollars":5000000}`
+		case strings.Contains(p, "/phones/sessions/active"):
+			body = `{"sessions":[]}`
+		case strings.Contains(p, "/phones/deallocate"):
+			body = `{"success":true}`
 		case strings.Contains(p, "/phones/available"):
 			body = `{"android_count":1,"iphone_count":0,"phones":[
 				{"phone_id":"p1","phone_type":"android","model_name":"Pixel 8","status":"active"}]}`
@@ -36,6 +41,9 @@ func fakeAPI(t *testing.T) *httptest.Server {
 			body = `{"runs":[
 				{"id":"r1","status":"completed","trigger":"manual","workflow_id":"w1","success":true}],
 				"total":1,"limit":20,"offset":0}`
+		case strings.Contains(p, "/runs/") && r.Method == http.MethodPatch:
+			// run cancel: PATCH /runs/{run_id}.
+			body = `{"success":true}`
 		case strings.Contains(p, "/runs/") && r.Method == http.MethodPost:
 			// run creation: POST /runs/{workflow_id}. The backend requires a
 			// non-empty `runs` array (one config per run); reject its absence
@@ -166,6 +174,7 @@ func TestAuthFailureExitCode(t *testing.T) {
 
 // No credentials at all must classify as Auth, without touching the network.
 func TestNoCredentialsExitCode(t *testing.T) {
+	keyring.MockInit() // a developer's real OAuth session must not leak in
 	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
 	t.Setenv("AXILIO_API_KEY", "")
 	t.Setenv("AXILIO_BASE_URL", "")

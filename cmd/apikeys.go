@@ -122,7 +122,10 @@ func apiKeysDeleteCmd() *cobra.Command {
 			if _, err := cl.APIKeys.Delete(context.Background(), &platformgo.APIKeysDeleteRequest{KeyID: id}); err != nil {
 				return err
 			}
-			printer().Note("Deleted %s", id)
+			p := printer()
+			p.Emit(map[string]any{"id": id, "deleted": true}, func() {
+				p.Note("Deleted %s", id)
+			})
 			return nil
 		},
 	}

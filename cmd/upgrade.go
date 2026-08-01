@@ -35,13 +35,17 @@ func runUpgrade(ctx context.Context, check bool) error {
 	// Homebrew owns its binary; replacing it out from under brew breaks
 	// `brew upgrade`/`uninstall` bookkeeping.
 	if update.IsHomebrew() {
-		p.Note("This axilio was installed with Homebrew. Upgrade with:\n  brew upgrade axilio")
+		p.Emit(map[string]string{"status": "homebrew-managed", "current": Version}, func() {
+			p.Note("This axilio was installed with Homebrew. Upgrade with:\n  brew upgrade axilio")
+		})
 		return nil
 	}
 	// A dev / source / `go install` build has no release binary to swap in; the
 	// toolchain manages it.
 	if !update.IsReleaseVersion(Version) {
-		p.Note("This is a development build (%s). Install a release with:\n  go install github.com/axilioai/cli@latest", versionString())
+		p.Emit(map[string]string{"status": "dev-build", "current": Version}, func() {
+			p.Note("This is a development build (%s). Install a release with:\n  go install github.com/axilioai/cli@latest", versionString())
+		})
 		return nil
 	}
 
@@ -50,15 +54,21 @@ func runUpgrade(ctx context.Context, check bool) error {
 		return err
 	}
 	if rel == nil || rel.Tag == "" {
-		p.Note("No releases have been published yet.")
+		p.Emit(map[string]string{"status": "no-releases", "current": Version}, func() {
+			p.Note("No releases have been published yet.")
+		})
 		return nil
 	}
 	if !update.Newer(rel.Tag, Version) {
-		p.Note("axilio is up to date (%s).", Version)
+		p.Emit(map[string]string{"status": "up-to-date", "current": Version, "latest": rel.Tag}, func() {
+			p.Note("axilio is up to date (%s).", Version)
+		})
 		return nil
 	}
 	if check {
-		p.Note("A newer release is available: %s -> %s. Run `axilio upgrade` to install.", Version, rel.Tag)
+		p.Emit(map[string]string{"status": "update-available", "current": Version, "latest": rel.Tag}, func() {
+			p.Note("A newer release is available: %s -> %s. Run `axilio upgrade` to install.", Version, rel.Tag)
+		})
 		return nil
 	}
 
@@ -66,6 +76,8 @@ func runUpgrade(ctx context.Context, check bool) error {
 	if err := update.Apply(ctx, rel); err != nil {
 		return err
 	}
-	p.Note("Upgraded to %s.", rel.Tag)
+	p.Emit(map[string]string{"status": "upgraded", "current": Version, "latest": rel.Tag}, func() {
+		p.Note("Upgraded to %s.", rel.Tag)
+	})
 	return nil
 }

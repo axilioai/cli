@@ -220,6 +220,7 @@ func phoneTapCmd() *cobra.Command {
 				return err
 			}
 			defer d.Close()
+			p := printer()
 			if query != "" {
 				el, err := d.Find(query, visionOpts(engine, model)...)
 				if err != nil {
@@ -228,7 +229,9 @@ func phoneTapCmd() *cobra.Command {
 				if err := el.Tap(); err != nil {
 					return err
 				}
-				printer().Note("Tapped %q at %d,%d", query, el.Center.X, el.Center.Y)
+				p.Emit(map[string]any{"action": "tap", "query": query, "x": el.Center.X, "y": el.Center.Y}, func() {
+					p.Note("Tapped %q at %d,%d", query, el.Center.X, el.Center.Y)
+				})
 				return nil
 			}
 			c, err := coordsArg(args)
@@ -238,7 +241,9 @@ func phoneTapCmd() *cobra.Command {
 			if err := d.Tap(c); err != nil {
 				return err
 			}
-			printer().Note("Tapped %d,%d", c.X, c.Y)
+			p.Emit(map[string]any{"action": "tap", "x": c.X, "y": c.Y}, func() {
+				p.Note("Tapped %d,%d", c.X, c.Y)
+			})
 			return nil
 		},
 	}
@@ -273,7 +278,10 @@ func phoneLongPressCmd() *cobra.Command {
 			if err := d.LongPress(c, durationMs); err != nil {
 				return err
 			}
-			printer().Note("Long-pressed %d,%d for %dms", c.X, c.Y, durationMs)
+			p := printer()
+			p.Emit(map[string]any{"action": "long_press", "x": c.X, "y": c.Y, "duration_ms": durationMs}, func() {
+				p.Note("Long-pressed %d,%d for %dms", c.X, c.Y, durationMs)
+			})
 			return nil
 		},
 	}
@@ -307,7 +315,11 @@ func phoneSwipeCmd() *cobra.Command {
 			if err := d.Swipe(start, end, durationMs); err != nil {
 				return err
 			}
-			printer().Note("Swiped %d,%d -> %d,%d", start.X, start.Y, end.X, end.Y)
+			p := printer()
+			p.Emit(
+				map[string]any{"action": "swipe", "x1": start.X, "y1": start.Y, "x2": end.X, "y2": end.Y, "duration_ms": durationMs},
+				func() { p.Note("Swiped %d,%d -> %d,%d", start.X, start.Y, end.X, end.Y) },
+			)
 			return nil
 		},
 	}
@@ -335,7 +347,10 @@ func phoneTypeCmd() *cobra.Command {
 			if err := d.TypeText(args[0]); err != nil {
 				return err
 			}
-			printer().Note("Typed %q", args[0])
+			p := printer()
+			p.Emit(map[string]any{"action": "type", "text": args[0]}, func() {
+				p.Note("Typed %q", args[0])
+			})
 			return nil
 		},
 	}
@@ -359,7 +374,10 @@ func phoneKeyCmd() *cobra.Command {
 			if err := d.KeyPress(args[0]); err != nil {
 				return err
 			}
-			printer().Note("Pressed %s", args[0])
+			p := printer()
+			p.Emit(map[string]any{"action": "key", "key": args[0]}, func() {
+				p.Note("Pressed %s", args[0])
+			})
 			return nil
 		},
 	}
@@ -389,7 +407,10 @@ func phoneScreenshotCmd() *cobra.Command {
 			if err := os.WriteFile(out, png, 0o644); err != nil {
 				return err
 			}
-			printer().Note("Wrote %s (%d bytes)", out, len(png))
+			p := printer()
+			p.Emit(map[string]any{"action": "screenshot", "path": out, "bytes": len(png)}, func() {
+				p.Note("Wrote %s (%d bytes)", out, len(png))
+			})
 			return nil
 		},
 	}
@@ -425,7 +446,10 @@ func phoneWaitForCmd() *cobra.Command {
 				if err := d.WaitUntilGone(args[0], timeout, exact); err != nil {
 					return err
 				}
-				printer().Note("%q gone", args[0])
+				p := printer()
+				p.Emit(map[string]any{"action": "wait_for", "text": args[0], "gone": true}, func() {
+					p.Note("%q gone", args[0])
+				})
 				return nil
 			}
 			el, err := d.WaitForText(args[0], timeout, exact)
