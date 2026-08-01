@@ -345,8 +345,11 @@ func TestDocumentationHelpParity(t *testing.T) {
 			t.Errorf("README completion docs missing %q", completion)
 		}
 	}
-	if strings.Contains(readme, "gives every command a stable JSON shape") {
-		t.Error("README still claims universal JSON success output")
+	// AXI-1507 made universal JSON success output true: every successful
+	// command emits valid JSON under -o json (json_output_test.go holds the
+	// line), so the README is required to say so rather than forbidden to.
+	if !strings.Contains(readme, "emits valid JSON") {
+		t.Error("README no longer documents universal JSON success output (AXI-1507)")
 	}
 
 	// The skill is no longer a file in this repo (AXI-1527): it's hosted at
