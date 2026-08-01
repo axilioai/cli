@@ -38,6 +38,10 @@ func orgCmd() *cobra.Command {
 			"`orgs list` shows them, `orgs use <slug>` sets the active org for future " +
 			"commands, and `--org` / `AXILIO_ORG` override it for a single call. API " +
 			"keys are bound to one org, so this applies to `axilio login` (OAuth) sessions.",
+		Example: `  axilio orgs list
+  axilio orgs use example-org
+  axilio --org another-org workflows list
+  axilio orgs clear`,
 		// Bare `axilio orgs` lists the organizations you belong to.
 		RunE: func(_ *cobra.Command, _ []string) error { return runOrgList() },
 	}
@@ -49,7 +53,14 @@ func orgListCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "list",
 		Short: "List the organizations you belong to.",
-		RunE:  func(_ *cobra.Command, _ []string) error { return runOrgList() },
+		Long: "List organizations available to the saved OAuth session. The table " +
+			"includes slug, name, and ID; `*` marks the effective active " +
+			"organization when one is selected. Organization selection resolves " +
+			"from --org, AXILIO_ORG, `orgs use`, then the OAuth session default. " +
+			"API-key logins cannot switch organizations.",
+		Example: `  axilio orgs list
+  axilio orgs list -o json`,
+		RunE: func(_ *cobra.Command, _ []string) error { return runOrgList() },
 	}
 }
 
@@ -87,7 +98,13 @@ func orgUseCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "use <slug-or-id>",
 		Short: "Set the active organization for future commands.",
-		Args:  cobra.ExactArgs(1),
+		Long: "Verify a slug or ID against organizations available to the saved OAuth " +
+			"session, then store its slug as the active organization. --org and " +
+			"AXILIO_ORG override this stored selection. API keys remain bound to " +
+			"their own organization and cannot use this command.",
+		Example: `  axilio orgs list
+  axilio orgs use example-org`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
 			sel := args[0]
 			orgs, err := fetchMyOrgs(context.Background())
@@ -123,6 +140,11 @@ func orgClearCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "clear",
 		Short: "Clear the active organization (revert to your session default).",
+		Long: "Remove the stored active organization. OAuth-backed requests then use " +
+			"the organization from AXILIO_ORG or the OAuth session default unless " +
+			"--org is supplied for the call. This does not alter API-key scope.",
+		Example: `  axilio orgs clear
+  axilio orgs list`,
 		RunE: func(_ *cobra.Command, _ []string) error {
 			cfg := config.Load()
 			p := printer()

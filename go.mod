@@ -9,6 +9,7 @@ require (
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c
 	github.com/pterm/pterm v0.12.83
 	github.com/spf13/cobra v1.10.2
+	github.com/spf13/pflag v1.0.9
 	github.com/zalando/go-keyring v0.2.8
 	golang.org/x/mod v0.38.0
 	golang.org/x/term v0.40.0
@@ -46,7 +47,6 @@ require (
 	github.com/muesli/mango-pflag v0.1.0 // indirect
 	github.com/muesli/roff v0.1.0 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
-	github.com/spf13/pflag v1.0.9 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
 	golang.org/x/crypto v0.0.0-20211209193657-4570a0811e8b // indirect
 	golang.org/x/sync v0.19.0 // indirect

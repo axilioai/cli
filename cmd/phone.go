@@ -18,12 +18,25 @@ var flagPhoneSession string
 func phoneCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "phone",
-		Short: "Drive the current phone session: observe, find, tap, type, ...",
-		Long: "Drive a phone leased with `axilio sessions start`. The verbs are thin " +
-			"projections of the SDK's MobileDriver, so a session you explore here maps " +
-			"1:1 onto SDK code. Use -o json to parse observe/find results.",
+		Short: "Observe and control the selected session's phone.",
+		Long: "Drive a phone leased with `axilio sessions start`.\n\n" +
+			"A reliable loop is " +
+			"observe the screen, find or semantically target an element, act, then " +
+			"observe again to verify.\n\n" +
+			"Available verbs are observe, find, find-text, " +
+			"tap, long-press, swipe, type, key, screenshot, wait-for, and send. " +
+			"Vision commands can return structured JSON; action-only commands do not " +
+			"all emit a JSON success body.\n\n" +
+			"Session selection precedence is --session, AXILIO_SESSION, the sole active " +
+			"local lease, the saved current-session pointer, then an ambiguity error. " +
+			"The verbs mirror the SDK MobileDriver so an explored interaction maps " +
+			"directly onto SDK code.",
+		Example: `  axilio phone observe
+  axilio phone tap --query "the search box"
+  axilio phone type "Axilio"
+  axilio phone observe`,
 	}
-	cmd.PersistentFlags().StringVar(&flagPhoneSession, "session", "", "Target session id (defaults to the current session)")
+	cmd.PersistentFlags().StringVar(&flagPhoneSession, "session", "", "Session ID; overrides AXILIO_SESSION, sole-lease, and current-pointer selection")
 	cmd.AddCommand(
 		phoneObserveCmd(), phoneFindCmd(), phoneFindTextCmd(),
 		phoneTapCmd(), phoneLongPressCmd(), phoneSwipeCmd(),
@@ -74,6 +87,14 @@ func phoneObserveCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "observe",
 		Short: "Capture the screen: text + icon elements with coordinates.",
+		Long: "Capture and analyze the selected phone's current screen. OCR uses the " +
+			"free engine when --ocr-engine is omitted. Table output lists recognized " +
+			"text with center coordinates and confidence, then summarizes icons and " +
+			"screen dimensions. JSON returns the complete screen object, including " +
+			"texts, icons, dimensions, screen hash, and capture time.",
+		Example: `  axilio phone observe
+  axilio phone observe --ocr-engine premium
+  axilio phone observe -o json`,
 		RunE: func(_ *cobra.Command, _ []string) error {
 			d, err := currentDriver()
 			if err != nil {
@@ -96,7 +117,7 @@ func phoneObserveCmd() *cobra.Command {
 			return nil
 		},
 	}
-	cmd.Flags().StringVar(&engine, "ocr-engine", "", "OCR engine (free|premium)")
+	cmd.Flags().StringVar(&engine, "ocr-engine", "", "OCR engine: free or premium; omitted uses free")
 	return cmd
 }
 
@@ -106,7 +127,15 @@ func phoneFindCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "find <query>",
 		Short: "Locate an element by natural-language query (vision).",
-		Args:  cobra.ExactArgs(1),
+		Long: "Locate one visible element from a natural-language description and " +
+			"return its text, center, bounding box, confidence, and source. The OCR " +
+			"engine defaults to free, the vision model is selected by the server, " +
+			"and the effective deadline is 10 seconds when --timeout is omitted. A " +
+			"missing target is an error; use `find-text` for a successful empty result.",
+		Example: `  axilio phone find "the search box"
+  axilio phone find "settings icon" --ocr-engine premium
+  axilio phone find "continue button" --timeout 15s -o json`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
 			d, err := currentDriver()
 			if err != nil {
@@ -125,9 +154,9 @@ func phoneFindCmd() *cobra.Command {
 			return nil
 		},
 	}
-	cmd.Flags().StringVar(&engine, "ocr-engine", "", "OCR engine (free|premium)")
-	cmd.Flags().StringVar(&model, "model", "", "Vision model override")
-	cmd.Flags().DurationVar(&timeout, "timeout", 0, "Deadline, e.g. 15s")
+	cmd.Flags().StringVar(&engine, "ocr-engine", "", "OCR engine: free or premium; omitted uses free")
+	cmd.Flags().StringVar(&model, "model", "", "Vision model override; omitted lets the server select the model")
+	cmd.Flags().DurationVar(&timeout, "timeout", 0, "Vision deadline such as 15s; omitted uses 10s")
 	return cmd
 }
 
@@ -135,8 +164,15 @@ func phoneFindTextCmd() *cobra.Command {
 	var exact bool
 	cmd := &cobra.Command{
 		Use:   "find-text <text>",
-		Short: "First OCR element matching text (nil if none).",
-		Args:  cobra.ExactArgs(1),
+		Short: "Return the first OCR text match, or an empty successful result.",
+		Long: "Search OCR text without semantic vision. By default, match a " +
+			"case-insensitive substring and return the first element. --exact uses " +
+			"a case-sensitive exact match. No match is successful: table output " +
+			"prints `No match.` and JSON output is null rather than a not-found error.",
+		Example: `  axilio phone find-text "sign in"
+  axilio phone find-text "Sign in" --exact
+  axilio phone find-text "settings" -o json`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
 			d, err := currentDriver()
 			if err != nil {
@@ -157,7 +193,7 @@ func phoneFindTextCmd() *cobra.Command {
 			return nil
 		},
 	}
-	cmd.Flags().BoolVar(&exact, "exact", false, "Exact match instead of case-insensitive substring")
+	cmd.Flags().BoolVar(&exact, "exact", false, "Require a case-sensitive exact match instead of case-insensitive substring")
 	return cmd
 }
 
@@ -166,7 +202,18 @@ func phoneTapCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "tap [x y]",
 		Short: "Tap at coordinates, or at a natural-language target with --query.",
-		Args:  cobra.MaximumNArgs(2),
+		Long: "Perform a tap action on the selected phone.\n\n" +
+			"The coordinate form takes x and y as frame-space pixels, with (0,0) " +
+			"at the screen's top-left.\n\n" +
+			"Use --query to find an element by natural-language description and tap " +
+			"its center. If --query and coordinates are both provided, --query takes " +
+			"precedence.\n\n" +
+			"Session selection precedence is --session, AXILIO_SESSION, the sole " +
+			"active lease, the saved current-session pointer, then an ambiguity error.",
+		Example: `  axilio phone tap --query "the search box"
+  axilio phone tap 540 1200
+  axilio phone tap --session sess_123 --query "continue"`,
+		Args: cobra.MaximumNArgs(2),
 		RunE: func(_ *cobra.Command, args []string) error {
 			d, err := currentDriver()
 			if err != nil {
@@ -200,9 +247,9 @@ func phoneTapCmd() *cobra.Command {
 			return nil
 		},
 	}
-	cmd.Flags().StringVar(&query, "query", "", "Natural-language target (routed through vision)")
-	cmd.Flags().StringVar(&engine, "ocr-engine", "", "OCR engine for --query")
-	cmd.Flags().StringVar(&model, "model", "", "Vision model for --query")
+	cmd.Flags().StringVar(&query, "query", "", "Recommended natural-language target; vision finds it and taps its center")
+	cmd.Flags().StringVar(&engine, "ocr-engine", "", "OCR engine for --query only: free or premium; omitted uses free")
+	cmd.Flags().StringVar(&model, "model", "", "Vision model for --query only; omitted lets the server select")
 	return cmd
 }
 
@@ -211,7 +258,13 @@ func phoneLongPressCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "long-press <x> <y>",
 		Short: "Press and hold at coordinates.",
-		Args:  cobra.ExactArgs(2),
+		Long: "Press and hold at frame-space pixel coordinates, with (0,0) at the " +
+			"screen's top-left. This command is coordinate-only; use observe or find " +
+			"to inspect the current frame before choosing a point. The default hold " +
+			"duration is 800 milliseconds.",
+		Example: `  axilio phone long-press 540 1200
+  axilio phone long-press 540 1200 --duration-ms 1200`,
+		Args: cobra.ExactArgs(2),
 		RunE: func(_ *cobra.Command, args []string) error {
 			d, err := currentDriver()
 			if err != nil {
@@ -232,7 +285,7 @@ func phoneLongPressCmd() *cobra.Command {
 			return nil
 		},
 	}
-	cmd.Flags().IntVar(&durationMs, "duration-ms", 800, "Hold duration in milliseconds")
+	cmd.Flags().IntVar(&durationMs, "duration-ms", 800, "How long to hold the coordinate, in milliseconds")
 	return cmd
 }
 
@@ -241,7 +294,12 @@ func phoneSwipeCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "swipe <x1> <y1> <x2> <y2>",
 		Short: "Swipe from one point to another.",
-		Args:  cobra.ExactArgs(4),
+		Long: "Swipe between two frame-space pixel coordinates, with (0,0) at the " +
+			"screen's top-left. This command is coordinate-only; use observe to " +
+			"inspect the current frame. The default gesture duration is 300 milliseconds.",
+		Example: `  axilio phone swipe 540 1600 540 500
+  axilio phone swipe 200 800 900 800 --duration-ms 500`,
+		Args: cobra.ExactArgs(4),
 		RunE: func(_ *cobra.Command, args []string) error {
 			d, err := currentDriver()
 			if err != nil {
@@ -265,7 +323,7 @@ func phoneSwipeCmd() *cobra.Command {
 			return nil
 		},
 	}
-	cmd.Flags().IntVar(&durationMs, "duration-ms", 300, "Swipe duration in milliseconds")
+	cmd.Flags().IntVar(&durationMs, "duration-ms", 300, "How long the swipe gesture takes, in milliseconds")
 	return cmd
 }
 
@@ -273,7 +331,13 @@ func phoneTypeCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "type <text>",
 		Short: "Type a string of text.",
-		Args:  cobra.ExactArgs(1),
+		Long: "Type one shell argument into the focused field on the selected phone. " +
+			"Quote spaces and shell metacharacters so the text remains one argument. " +
+			"Input is limited to characters typeable with the US keyboard layout.",
+		Example: `  axilio phone type "hello world"
+  axilio phone type 'user@example.com'
+  axilio phone type "don't split this text"`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
 			d, err := currentDriver()
 			if err != nil {
@@ -295,8 +359,12 @@ func phoneTypeCmd() *cobra.Command {
 func phoneKeyCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "key <name>",
-		Short: "Press a named key, e.g. `enter`.",
-		Args:  cobra.ExactArgs(1),
+		Short: "Press the supported named key: enter.",
+		Long: "Press a named key on the selected phone. The only named key currently " +
+			"supported by the CLI and pinned mobile driver is `enter`; back, home, " +
+			"and other key names are not available.",
+		Example: `  axilio phone key enter`,
+		Args:    cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
 			d, err := currentDriver()
 			if err != nil {
@@ -320,6 +388,12 @@ func phoneScreenshotCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "screenshot",
 		Short: "Capture the screen as a PNG file.",
+		Long: "Capture the selected phone's screen as PNG bytes and write them to " +
+			"--out. The default destination is screenshot.png in the current " +
+			"directory. An existing file at the destination is overwritten. On " +
+			"success the human result reports the path and byte count.",
+		Example: `  axilio phone screenshot
+  axilio phone screenshot --out artifacts/login.png`,
 		RunE: func(_ *cobra.Command, _ []string) error {
 			d, err := currentDriver()
 			if err != nil {
@@ -340,7 +414,7 @@ func phoneScreenshotCmd() *cobra.Command {
 			return nil
 		},
 	}
-	cmd.Flags().StringVar(&out, "out", "screenshot.png", "Output PNG path")
+	cmd.Flags().StringVar(&out, "out", "screenshot.png", "PNG path to create or overwrite")
 	return cmd
 }
 
@@ -353,7 +427,15 @@ func phoneWaitForCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "wait-for <text>",
 		Short: "Poll until text appears (or disappears with --gone).",
-		Args:  cobra.ExactArgs(1),
+		Long: "Poll OCR until text appears, or until it disappears with --gone. The " +
+			"default match is a case-insensitive substring; --exact requires a " +
+			"case-sensitive exact match. The default timeout is 10 seconds. A timeout " +
+			"returns the CLI timeout exit code (5). Waiting for presence returns the " +
+			"matching element; waiting for absence is action-only.",
+		Example: `  axilio phone wait-for "Results"
+  axilio phone wait-for "Loading" --gone
+  axilio phone wait-for "Ready" --exact --timeout 30s`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
 			d, err := currentDriver()
 			if err != nil {
@@ -378,9 +460,9 @@ func phoneWaitForCmd() *cobra.Command {
 			return nil
 		},
 	}
-	cmd.Flags().DurationVar(&timeout, "timeout", 10*time.Second, "How long to poll")
-	cmd.Flags().BoolVar(&exact, "exact", false, "Exact match instead of substring")
-	cmd.Flags().BoolVar(&gone, "gone", false, "Wait until the text disappears instead")
+	cmd.Flags().DurationVar(&timeout, "timeout", 10*time.Second, "Maximum OCR polling time before exit code 5")
+	cmd.Flags().BoolVar(&exact, "exact", false, "Require a case-sensitive exact match instead of substring")
+	cmd.Flags().BoolVar(&gone, "gone", false, "Wait for the text to disappear instead of appear")
 	return cmd
 }
 

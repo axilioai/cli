@@ -14,13 +14,18 @@ func upgradeCmd() *cobra.Command {
 		Short: "Update axilio to the latest release.",
 		Long: "Download the latest release from GitHub and replace this binary in place " +
 			"(the download is checksum-verified). Homebrew installs defer to `brew upgrade`, " +
-			"and development / `go install` builds are left to the Go toolchain. Pass " +
-			"`--check` to see whether a newer release exists without installing it.",
+			"and development or `go install` builds are left to the Go toolchain. On a " +
+			"standalone release, --check reports whether a newer release exists without " +
+			"installing it. A Homebrew invocation currently prints `brew upgrade axilio` " +
+			"guidance and returns before checking, even when --check is supplied.",
+		Example: `  axilio upgrade --check
+  axilio upgrade
+  brew upgrade axilio`,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			return runUpgrade(cmd.Context(), check)
 		},
 	}
-	cmd.Flags().BoolVar(&check, "check", false, "Only report whether a newer release is available; do not install")
+	cmd.Flags().BoolVar(&check, "check", false, "Check a standalone release without installing; Homebrew currently prints upgrade guidance")
 	return cmd
 }
 

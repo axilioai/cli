@@ -82,8 +82,39 @@ var (
 // Root builds the root command with its global flags and subcommands.
 func Root() *cobra.Command {
 	root := &cobra.Command{
-		Use:           "axilio",
-		Short:         "Acquire and drive Axilio phones from the command line.",
+		Use:   "axilio",
+		Short: "Acquire and drive Axilio phones from the command line.",
+		Long: `Acquire Axilio phones, drive live sessions, run workflows, and manage
+the resources that support them.
+
+Start with login, acquire a session, observe its phone, then act on what is
+visible. Sessions persist locally until stopped. Phone command session selection
+precedence is --session, AXILIO_SESSION, the sole active lease, the saved
+current-session pointer, then an ambiguity error.
+
+The main command families are:
+  phones / sessions   discover phones and manage interactive leases
+  phone               observe and control the selected session's phone
+  workflows / runs    discover workflows and create or inspect runs
+  uploads             store media and deliver it to phones
+  api-keys            manage organization-scoped API keys
+
+Credentials resolve in this order: --api-key, AXILIO_API_KEY, the saved config
+API key, then the saved OAuth session. The API host resolves from --base-url,
+AXILIO_BASE_URL, saved base-url, then https://api.axilio.ai. For OAuth, the
+organization resolves from --org, AXILIO_ORG, the saved active organization,
+then the OAuth session default. API keys are already bound to one organization.
+
+Table output is the human default. JSON is emitted on stdout by commands that
+return structured results, but action-only commands do not all have a JSON
+success body yet. Notes, prompts, and progress use stderr and are suppressed in
+JSON or quiet mode. Quiet and JSON modes do not confirm destructive actions;
+pass --yes where offered. API-key, base-URL, and organization flags affect
+API-backed commands; they do not select a local phone session.`,
+		Example: `  axilio login
+  eval "$(axilio sessions start --export)"
+  axilio phone observe
+  axilio phone tap --query "the search box"`,
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		PersistentPreRunE: func(_ *cobra.Command, _ []string) error {
@@ -104,12 +135,12 @@ func Root() *cobra.Command {
 		},
 	}
 	pf := root.PersistentFlags()
-	pf.StringVarP(&flagOutput, "output", "o", "table", "Output format: table or json")
-	pf.BoolVar(&flagNoColor, "no-color", false, "Disable colored output")
-	pf.BoolVarP(&flagQuiet, "quiet", "q", false, "Suppress stderr chrome (notes/prompts) for non-interactive use")
-	pf.StringVar(&flagAPIKey, "api-key", "", "Override the API key for this call")
-	pf.StringVar(&flagBaseURL, "base-url", "", "Override the API host")
-	pf.StringVar(&flagOrg, "org", "", "Organization slug or id to act as for this call (OAuth sessions only; overrides `org use`)")
+	pf.StringVarP(&flagOutput, "output", "o", "table", "Result format: table or json; JSON requires a structured command result")
+	pf.BoolVar(&flagNoColor, "no-color", false, "Disable ANSI color in human-oriented output")
+	pf.BoolVarP(&flagQuiet, "quiet", "q", false, "Suppress stderr notes and prompts; destructive commands still require --yes")
+	pf.StringVar(&flagAPIKey, "api-key", "", "API key for API-backed commands; overrides AXILIO_API_KEY and the saved key")
+	pf.StringVar(&flagBaseURL, "base-url", "", "API host for API-backed commands; overrides AXILIO_BASE_URL and saved base-url")
+	pf.StringVar(&flagOrg, "org", "", "OAuth organization slug or id; overrides AXILIO_ORG and the saved active org")
 
 	root.AddCommand(loginCmd(), logoutCmd(), statusCmd(), doctorCmd(), configCmd(), orgCmd(), upgradeCmd(), initCmd(), sessionsCmd(), phonesCmd(), phoneCmd(), workflowsCmd(), runsCmd(), apiKeysCmd(), uploadsCmd())
 
@@ -117,6 +148,7 @@ func Root() *cobra.Command {
 	// word); cobra adds the --version flag when root.Version is set.
 	root.Version = versionString()
 	root.SetVersionTemplate("{{.Name}} {{.Version}}\n")
+	groupCommandHelpFlags(root)
 	return root
 }
 
