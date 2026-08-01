@@ -215,6 +215,43 @@ func TestPhoneTapRenderedContract(t *testing.T) {
 	}
 }
 
+func TestPhoneTapRenderedHelpPreservesColor(t *testing.T) {
+	t.Setenv("NO_COLOR", "")
+	t.Setenv("CLICOLOR_FORCE", "1")
+	t.Setenv("__FANG_TEST_WIDTH", "120")
+
+	got := renderHelpRaw(t, "phone", "tap", "--help")
+	if !ansiPattern.MatchString(got) {
+		t.Fatalf("phone tap help lost ANSI styling\n%s", got)
+	}
+	plain := normalizeHelp(got)
+	for _, section := range []string{"TAP FLAGS", "PHONE FLAGS", "GLOBAL FLAGS"} {
+		if !strings.Contains(plain, section) {
+			t.Errorf("colored help missing %q\n%s", section, plain)
+		}
+	}
+}
+
+func TestHelpCaptureWriterPreservesFileDescriptor(t *testing.T) {
+	const fd = uintptr(42)
+	var buffer bytes.Buffer
+	writer := helpCaptureWriter(&buffer, descriptorWriter{Buffer: &bytes.Buffer{}, fd: fd})
+	file, ok := writer.(interface{ Fd() uintptr })
+	if !ok {
+		t.Fatal("terminal help capture does not expose a file descriptor")
+	}
+	if got := file.Fd(); got != fd {
+		t.Fatalf("terminal help capture fd = %d, want %d", got, fd)
+	}
+}
+
+type descriptorWriter struct {
+	*bytes.Buffer
+	fd uintptr
+}
+
+func (writer descriptorWriter) Fd() uintptr { return writer.fd }
+
 func TestGeneratedCompletionHelp(t *testing.T) {
 	t.Setenv("NO_COLOR", "1")
 	t.Setenv("__FANG_TEST_WIDTH", "120")
@@ -316,6 +353,11 @@ func visitApplicationFlags(command *cobra.Command, visit func(*pflag.Flag)) {
 
 func renderHelp(t *testing.T, args ...string) string {
 	t.Helper()
+	return normalizeHelp(renderHelpRaw(t, args...))
+}
+
+func renderHelpRaw(t *testing.T, args ...string) string {
+	t.Helper()
 	root := Root()
 	var stdout, stderr bytes.Buffer
 	root.SetOut(&stdout)
@@ -327,7 +369,7 @@ func renderHelp(t *testing.T, args ...string) string {
 	if stderr.Len() != 0 {
 		t.Fatalf("render help %q wrote stderr:\n%s", strings.Join(args, " "), stderr.String())
 	}
-	return normalizeHelp(stdout.String())
+	return stdout.String()
 }
 
 var ansiPattern = regexp.MustCompile(`\x1b\[[0-9;:?]*[ -/]*[@-~]`)

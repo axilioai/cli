@@ -3,6 +3,7 @@ package cmd
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"regexp"
 	"strings"
 
@@ -44,7 +45,7 @@ func groupFlagsByOwner(command *cobra.Command) {
 			}
 		}()
 
-		full := captureHelp(cmd, args, renderer)
+		full := captureHelp(cmd, args, renderer, output)
 		preamble, _, ok := splitFlagSection(full)
 		if !ok {
 			_, _ = fmt.Fprint(output, full)
@@ -57,7 +58,7 @@ func groupFlagsByOwner(command *cobra.Command) {
 			for _, flag := range flags {
 				flag.Hidden = originalHidden[flag] || !group.names[flag.Name]
 			}
-			_, section, found := splitFlagSection(captureHelp(cmd, args, renderer))
+			_, section, found := splitFlagSection(captureHelp(cmd, args, renderer, output))
 			if !found {
 				continue
 			}
@@ -126,12 +127,37 @@ func captureHelp(
 	cmd *cobra.Command,
 	args []string,
 	renderer func(*cobra.Command, []string),
+	output io.Writer,
 ) string {
-	var output bytes.Buffer
-	cmd.SetOut(&output)
+	var buffer bytes.Buffer
+	cmd.SetOut(helpCaptureWriter(&buffer, output))
 	renderer(cmd, args)
-	return output.String()
+	cmd.SetOut(output)
+	return buffer.String()
 }
+
+// helpCaptureWriter makes an in-memory capture look like the destination TTY
+// so the renderer keeps the same color profile it would use without grouping.
+func helpCaptureWriter(buffer *bytes.Buffer, output io.Writer) io.Writer {
+	if file, ok := output.(interface{ Fd() uintptr }); ok {
+		return &terminalHelpCapture{Buffer: buffer, fd: file.Fd()}
+	}
+	return buffer
+}
+
+type terminalHelpCapture struct {
+	*bytes.Buffer
+	fd uintptr
+}
+
+var _ interface {
+	io.ReadWriteCloser
+	Fd() uintptr
+} = (*terminalHelpCapture)(nil)
+
+func (capture *terminalHelpCapture) Fd() uintptr { return capture.fd }
+
+func (capture *terminalHelpCapture) Close() error { return nil }
 
 func splitFlagSection(rendered string) (preamble, flags string, ok bool) {
 	lineStart := 0
