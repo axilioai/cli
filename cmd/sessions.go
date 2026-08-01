@@ -86,7 +86,10 @@ func sessionsCurrentCmd() *cobra.Command {
 		RunE: func(_ *cobra.Command, _ []string) error {
 			s, err := session.Resolve("")
 			if err != nil {
-				printer().Note("%s", err)
+				// "No current session" is an answer, not a failure: exit 0, and
+				// in JSON mode say so with a literal null rather than silence.
+				p := printer()
+				p.Emit(nil, func() { p.Note("%s", err) })
 				return nil
 			}
 			printer().Emit(s, func() {
@@ -197,7 +200,10 @@ func sessionsStopCmd() *cobra.Command {
 			}
 			// Drop the lease from the registry (clears the current pointer if it was it).
 			_ = session.Remove(id)
-			printer().Note("Released %s.", phoneID)
+			p := printer()
+			p.Emit(map[string]any{"phone_id": phoneID, "released": true}, func() {
+				p.Note("Released %s.", phoneID)
+			})
 			return nil
 		},
 	}

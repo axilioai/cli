@@ -96,7 +96,10 @@ func configSetCmd() *cobra.Command {
 			if err := config.Save(cfg); err != nil {
 				return err
 			}
-			printer().Note("Set %s = %s in %s", key, val, config.Path())
+			p := printer()
+			p.Emit(map[string]string{"key": key, "value": val, "config_path": config.Path()}, func() {
+				p.Note("Set %s = %s in %s", key, val, config.Path())
+			})
 			return nil
 		},
 	}
@@ -119,7 +122,10 @@ func configUnsetCmd() *cobra.Command {
 			if err := config.Save(cfg); err != nil {
 				return err
 			}
-			printer().Note("Unset %s in %s", key, config.Path())
+			p := printer()
+			p.Emit(map[string]any{"key": key, "unset": true, "config_path": config.Path()}, func() {
+				p.Note("Unset %s in %s", key, config.Path())
+			})
 			return nil
 		},
 	}

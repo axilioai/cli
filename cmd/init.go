@@ -114,18 +114,25 @@ func runInit(ctx context.Context, agent string, force bool) error {
 	if err != nil {
 		return fmt.Errorf("fetching the agent skill: %w", err)
 	}
+	written := []string{}
+	skipped := []string{}
 	for _, t := range targets {
 		// Auto-detected targets that already carry the skill are skipped with a
 		// note; only an explicit --agent hard-errors, since then the user named
 		// exactly one file and silence about it would be a lie.
 		if !explicit && !force && skillPresent(t) {
 			printer().Note("  %s already has the skill; refresh with `axilio init --agent %s --force`.", skillTargetPath(t), t)
+			skipped = append(skipped, skillTargetPath(t))
 			continue
 		}
 		if err := writeAgentTarget(t, body, force); err != nil {
 			return err
 		}
+		written = append(written, skillTargetPath(t))
 	}
+	// The human chrome (per-file Success lines, sign-in check) already went to
+	// stderr; the JSON result carries what was written and what was left alone.
+	printer().Emit(map[string]any{"written": written, "skipped": skipped}, func() {})
 	initNextSteps(ctx)
 	return nil
 }
