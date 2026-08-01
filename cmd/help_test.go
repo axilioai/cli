@@ -73,6 +73,39 @@ func TestApplicationFlagUsage(t *testing.T) {
 	}
 }
 
+func TestCommandGlobalFlagHelpCoverage(t *testing.T) {
+	root := Root()
+	var commands []*cobra.Command
+	var walk func(*cobra.Command)
+	walk = func(command *cobra.Command) {
+		for _, child := range command.Commands() {
+			if child.Hidden {
+				continue
+			}
+			commands = append(commands, child)
+			walk(child)
+		}
+	}
+	walk(root)
+
+	globalFlags := []string{"api-key", "base-url", "no-color", "org", "output", "quiet"}
+	for _, command := range commands {
+		for _, name := range globalFlags {
+			usage, ok := commandGlobalFlagUsage(command, name)
+			if !ok || strings.TrimSpace(usage) == "" {
+				t.Errorf("%s has no command-specific --%s help", command.CommandPath(), name)
+			}
+		}
+	}
+
+	for _, name := range []string{"api-key", "org"} {
+		usage, ok := commandGlobalFlagUsage(findCommand(t, root, "init"), name)
+		if !ok || !strings.HasPrefix(usage, "No effect on init command.") {
+			t.Errorf("init --%s usage = %q, want required no-effect prefix", name, usage)
+		}
+	}
+}
+
 func TestRenderedHelpSnapshots(t *testing.T) {
 	t.Setenv("NO_COLOR", "1")
 	t.Setenv("__FANG_TEST_WIDTH", "120")
@@ -132,7 +165,15 @@ func TestRenderedHelpContracts(t *testing.T) {
 		{
 			name: "init",
 			args: []string{"init", "--help"},
-			want: []string{".claude/skills/axilio/SKILL.md", "AGENTS.md", ".cursor/rules/axilio.mdc", "--force"},
+			want: []string{
+				".claude/skills/axilio/SKILL.md",
+				"AGENTS.md",
+				".cursor/rules/axilio.mdc",
+				"--force",
+				"--api-key No effect on init command.",
+				"--org No effect on init command.",
+				"Host for the skill download and sign-in check",
+			},
 		},
 		{
 			name: "upgrade",
@@ -292,8 +333,27 @@ func TestRenderedHelpUsesFlagOwnershipSections(t *testing.T) {
 					}
 				}
 			}
+			for _, name := range []string{"api-key", "base-url", "no-color", "org", "output", "quiet"} {
+				usage, ok := commandGlobalFlagUsage(command, name)
+				if !ok {
+					t.Errorf("no expected --%s help registered", name)
+					continue
+				}
+				if !strings.Contains(strings.ToLower(got), strings.ToLower(contractText(usage))) {
+					t.Errorf("rendered help missing command-specific --%s usage %q\n%s", name, usage, rendered)
+				}
+			}
 		})
 	}
+}
+
+func findCommand(t *testing.T, root *cobra.Command, path string) *cobra.Command {
+	t.Helper()
+	command, _, err := root.Find(strings.Fields(path))
+	if err != nil || command == nil {
+		t.Fatalf("find command %q: %v", path, err)
+	}
+	return command
 }
 
 func TestHelpCaptureWriterPreservesFileDescriptor(t *testing.T) {

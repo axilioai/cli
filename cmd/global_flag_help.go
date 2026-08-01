@@ -1,0 +1,343 @@
+package cmd
+
+import (
+	"fmt"
+	"strings"
+
+	"github.com/spf13/cobra"
+)
+
+// commandGlobalFlagHelp describes what each inherited root flag actually does
+// when a particular command runs. Root flags are shared pflag objects, so the
+// help renderer applies these descriptions temporarily and restores them after
+// rendering. Runtime parsing and behavior remain unchanged.
+type commandGlobalFlagHelp struct {
+	apiKey  string
+	baseURL string
+	noColor string
+	org     string
+	output  string
+	quiet   string
+}
+
+func (help commandGlobalFlagHelp) usage(name string) (string, bool) {
+	switch name {
+	case "api-key":
+		return help.apiKey, help.apiKey != ""
+	case "base-url":
+		return help.baseURL, help.baseURL != ""
+	case "no-color":
+		return help.noColor, help.noColor != ""
+	case "org":
+		return help.org, help.org != ""
+	case "output":
+		return help.output, help.output != ""
+	case "quiet":
+		return help.quiet, help.quiet != ""
+	default:
+		return "", false
+	}
+}
+
+func commandGlobalFlagUsage(command *cobra.Command, name string) (string, bool) {
+	help, ok := globalFlagHelpByCommand[commandHelpKey(command)]
+	if !ok {
+		return "", false
+	}
+	return help.usage(name)
+}
+
+func commandHelpKey(command *cobra.Command) string {
+	return strings.TrimPrefix(command.CommandPath(), command.Root().Name()+" ")
+}
+
+const (
+	apiKeyPrecedence  = "overrides AXILIO_API_KEY and the saved key"
+	baseURLPrecedence = "overrides AXILIO_BASE_URL and saved base-url"
+	orgPrecedence     = "overrides AXILIO_ORG and the saved active org; API keys ignore it"
+)
+
+func apiResultHelp(action, result string) commandGlobalFlagHelp {
+	return commandGlobalFlagHelp{
+		apiKey:  fmt.Sprintf("API key for %s; %s", action, apiKeyPrecedence),
+		baseURL: fmt.Sprintf("API host for %s; %s", action, baseURLPrecedence),
+		noColor: fmt.Sprintf("Disable ANSI color in the human-readable %s", result),
+		org:     fmt.Sprintf("OAuth org for %s; %s", action, orgPrecedence),
+		output:  fmt.Sprintf("Render %s as table or json", result),
+		quiet:   fmt.Sprintf("Suppress stderr notes for %s; %s remains on stdout", action, result),
+	}
+}
+
+func apiActionHelp(action string, destructive bool) commandGlobalFlagHelp {
+	quiet := fmt.Sprintf("Suppress %s success messages", action)
+	if destructive {
+		quiet = fmt.Sprintf("Suppress the %s prompt and result; --yes is still required", action)
+	}
+	return commandGlobalFlagHelp{
+		apiKey:  fmt.Sprintf("API key for %s; %s", action, apiKeyPrecedence),
+		baseURL: fmt.Sprintf("API host for %s; %s", action, baseURLPrecedence),
+		noColor: fmt.Sprintf("No effect on %s; its runtime messages are unstyled", action),
+		org:     fmt.Sprintf("OAuth org for %s; %s", action, orgPrecedence),
+		output:  fmt.Sprintf("No JSON success result for %s; json suppresses its messages", action),
+		quiet:   quiet,
+	}
+}
+
+func localResultHelp(command, action, result string) commandGlobalFlagHelp {
+	return commandGlobalFlagHelp{
+		apiKey:  fmt.Sprintf("No effect on %s command; it uses local session data or its control URL", command),
+		baseURL: fmt.Sprintf("No effect on %s command; it does not call the Axilio API", command),
+		noColor: fmt.Sprintf("Disable ANSI color in the human-readable %s", result),
+		org:     fmt.Sprintf("No effect on %s command; phone control is selected by session, not org", command),
+		output:  fmt.Sprintf("Render %s as table or json", result),
+		quiet:   fmt.Sprintf("Suppress stderr notes for %s; %s remains on stdout", action, result),
+	}
+}
+
+func localActionHelp(command, action, outcome string) commandGlobalFlagHelp {
+	return commandGlobalFlagHelp{
+		apiKey:  fmt.Sprintf("No effect on %s command; it uses the selected session's control URL", command),
+		baseURL: fmt.Sprintf("No effect on %s command; it does not call the Axilio API", command),
+		noColor: fmt.Sprintf("No effect on %s command; its runtime message is unstyled", command),
+		org:     fmt.Sprintf("No effect on %s command; the target is selected by session, not org", command),
+		output:  fmt.Sprintf("No JSON success result for %s; json suppresses the success message", outcome),
+		quiet:   fmt.Sprintf("Suppress the %s success message; the phone action still runs", action),
+	}
+}
+
+func parentCommandHelp(command, apiChildren, resultChildren string) commandGlobalFlagHelp {
+	return commandGlobalFlagHelp{
+		apiKey:  fmt.Sprintf("No request on %s itself; API authentication applies to %s", command, apiChildren),
+		baseURL: fmt.Sprintf("No request on %s itself; API host selection applies to %s", command, apiChildren),
+		noColor: fmt.Sprintf("No runtime output from %s itself; subcommands control their own output", command),
+		org:     fmt.Sprintf("No request on %s itself; OAuth org selection applies to %s", command, apiChildren),
+		output:  fmt.Sprintf("No result from %s itself; output selection applies to %s", command, resultChildren),
+		quiet:   fmt.Sprintf("No runtime messages from %s itself; subcommands describe quiet behavior", command),
+	}
+}
+
+func noEffectHelp(command string) commandGlobalFlagHelp {
+	message := fmt.Sprintf("No effect on %s command", command)
+	return commandGlobalFlagHelp{
+		apiKey:  message,
+		baseURL: message,
+		noColor: message,
+		org:     message,
+		output:  message,
+		quiet:   message,
+	}
+}
+
+func buildGlobalFlagHelp() map[string]commandGlobalFlagHelp {
+	help := map[string]commandGlobalFlagHelp{
+		"login": {
+			apiKey:  "Verify and save this API key instead of opening browser OAuth",
+			baseURL: "API host for login; also saved when API-key login succeeds",
+			noColor: "Disable ANSI color in login progress and success messages",
+			org:     "Does not choose the login org; only scopes the post-login OAuth balance request",
+			output:  "Suppress login messages in json mode; no JSON result is emitted",
+			quiet:   "Suppress login messages; browser OAuth still opens when selected",
+		},
+		"logout": {
+			apiKey:  "No effect on logout command; saved credentials are cleared regardless",
+			baseURL: "No effect on logout command; OAuth revocation uses the session's saved host",
+			noColor: "Disable ANSI color in the signed-out success message",
+			org:     "No effect on logout command; the saved active org is cleared regardless",
+			output:  "Suppress logout messages in json mode; no JSON result is emitted",
+			quiet:   "Suppress logout warnings and the signed-out result",
+		},
+		"config": {
+			apiKey:  "Show this as the effective API key source; does not save the key",
+			baseURL: "Show this as the effective API host; does not save the host",
+			noColor: "Disable ANSI color in the human-readable configuration table",
+			org:     "Show this as the effective active org; does not save the selection",
+			output:  "Render the configuration summary as table or json",
+			quiet:   "Suppress stderr update notices; the configuration summary remains on stdout",
+		},
+		"config set": {
+			apiKey:  "No effect on config set command; only the named config value is saved",
+			baseURL: "No effect on config set command; the positional value is saved instead",
+			noColor: "No effect on config set command; its confirmation is unstyled",
+			org:     "No effect on config set command; active org is not an editable key",
+			output:  "No JSON success result for config set; json suppresses the confirmation",
+			quiet:   "Suppress the config set confirmation",
+		},
+		"config unset": {
+			apiKey:  "No effect on config unset command; credentials are not removed",
+			baseURL: "No effect on config unset command; it removes the saved base-url",
+			noColor: "No effect on config unset command; its confirmation is unstyled",
+			org:     "No effect on config unset command; active org is not removed",
+			output:  "No JSON success result for config unset; json suppresses the confirmation",
+			quiet:   "Suppress the config unset confirmation",
+		},
+		"orgs":      orgListHelp("orgs"),
+		"orgs list": orgListHelp("orgs list"),
+		"orgs use": {
+			apiKey:  "API-key auth cannot switch orgs; use a saved OAuth session",
+			baseURL: fmt.Sprintf("API host for the membership check; %s", baseURLPrecedence),
+			noColor: "No effect on orgs use command; its confirmation is unstyled",
+			org:     "Does not choose the org to save; the positional slug or ID does",
+			output:  "No JSON success result for orgs use; json suppresses the confirmation",
+			quiet:   "Suppress the org-selection confirmation",
+		},
+		"orgs clear": {
+			apiKey:  "No effect on orgs clear command; it only clears the saved org selection",
+			baseURL: "No effect on orgs clear command; it makes no API request",
+			noColor: "No effect on orgs clear command; its confirmation is unstyled",
+			org:     "No effect on orgs clear command; the supplied override is not saved",
+			output:  "No JSON success result for orgs clear; json suppresses the confirmation",
+			quiet:   "Suppress the org-clear confirmation",
+		},
+		"upgrade": {
+			apiKey:  "No effect on upgrade command; release checks use GitHub without Axilio auth",
+			baseURL: "No effect on upgrade command; release checks use GitHub",
+			noColor: "No effect on upgrade command; its runtime messages are unstyled",
+			org:     "No effect on upgrade command; releases are not organization-scoped",
+			output:  "No JSON success result for upgrade; json suppresses upgrade messages",
+			quiet:   "Suppress upgrade guidance and status messages",
+		},
+		"init": {
+			apiKey:  "No effect on init command. A supplied value only changes the final sign-in message",
+			baseURL: fmt.Sprintf("Host for the skill download and sign-in check; %s", baseURLPrecedence),
+			noColor: "Disable ANSI color in init success messages",
+			org:     "No effect on init command. Skill download and generated files are not org-scoped",
+			output:  "Suppress init prompts and messages in json mode; no JSON result is emitted",
+			quiet:   "Suppress init prompts and messages; --agent is required when no markers exist",
+		},
+		"sessions": parentCommandHelp("sessions", "list --remote, start, and stop", "its subcommands"),
+		"phones":   parentCommandHelp("phones", "list and mine", "list and mine"),
+		"phone": {
+			apiKey:  "No request on phone itself; only phone send uses API authentication",
+			baseURL: "No request on phone itself; only phone send uses an API host",
+			noColor: "No runtime output from phone itself; subcommands control their own output",
+			org:     "No request on phone itself; only phone send uses OAuth org selection",
+			output:  "No result from phone itself; output selection applies to phone subcommands",
+			quiet:   "No runtime messages from phone itself; subcommands describe quiet behavior",
+		},
+		"workflows": parentCommandHelp("workflows", "workflows list", "workflows list"),
+		"runs":      parentCommandHelp("runs", "runs subcommands", "runs subcommands"),
+		"api-keys":  parentCommandHelp("api-keys", "api-keys subcommands", "api-keys subcommands"),
+		"uploads":   parentCommandHelp("uploads", "uploads subcommands", "uploads subcommands"),
+		"help": {
+			apiKey:  "No effect on help command or the help content it renders",
+			baseURL: "No effect on help command or the help content it renders",
+			noColor: "No effect on help command; help styling is controlled by the renderer",
+			org:     "No effect on help command or the help content it renders",
+			output:  "Does not reformat help as JSON; json only suppresses the update notice",
+			quiet:   "Does not hide help; only suppresses the post-command update notice",
+		},
+		"completion": noEffectHelp("completion"),
+	}
+
+	help["status"] = apiResultHelp("the status request", "the status result")
+	help["doctor"] = apiResultHelp("doctor's authenticated checks", "the doctor report")
+
+	help["sessions list"] = commandGlobalFlagHelp{
+		apiKey:  "Authenticates only --remote listing; no effect on local lease files",
+		baseURL: "Selects the API host only with --remote; no effect on local lease files",
+		noColor: "Disable ANSI color in the human-readable session listing",
+		org:     "Selects the OAuth org only with --remote; no effect on local lease files",
+		output:  "Render local or remote sessions as table or json",
+		quiet:   "Suppress stderr notes; the session listing remains on stdout",
+	}
+	help["sessions current"] = localResultHelp("sessions current", "session resolution", "the current-session result")
+	help["sessions start"] = apiResultHelp("the phone-allocation request", "the allocated-session result")
+	help["sessions start"] = withOutput(help["sessions start"],
+		"Render the allocated session as table or json; --export always emits shell text",
+		"Suppress session guidance; the result or --export text remains on stdout")
+	help["sessions stop"] = apiActionHelp("session release", true)
+
+	help["phones list"] = apiResultHelp("the available-phone request", "the available-phone result")
+	help["phones mine"] = apiResultHelp("the dedicated-phone request", "the dedicated-phone result")
+
+	help["phone observe"] = localResultHelp("phone observe", "observation", "the observation result")
+	help["phone find"] = localResultHelp("phone find", "vision search", "the found-element result")
+	help["phone find-text"] = localResultHelp("phone find-text", "OCR search", "the text-match result")
+	help["phone tap"] = localActionHelp("phone tap", "tap", "tap")
+	help["phone long-press"] = localActionHelp("phone long-press", "long-press", "long-press")
+	help["phone swipe"] = localActionHelp("phone swipe", "swipe", "swipe")
+	help["phone type"] = localActionHelp("phone type", "typing", "typing")
+	help["phone key"] = localActionHelp("phone key", "key press", "key press")
+	help["phone screenshot"] = localActionHelp("phone screenshot", "screenshot", "screenshot write")
+	help["phone wait-for"] = localResultHelp("phone wait-for", "OCR polling", "the matched-element result")
+	help["phone wait-for"] = withOutput(help["phone wait-for"],
+		"Render a present match as table or json; --gone has no JSON success result",
+		"Suppress wait notes; a present-match result remains on stdout")
+	help["phone send"] = apiResultHelp("the upload-and-delivery request", "the delivery result")
+	help["phone send"] = withQuiet(help["phone send"],
+		"Suppress upload progress and delivery notes; the delivery result remains on stdout")
+
+	help["workflows list"] = apiResultHelp("the workflow-list request", "the workflow-list result")
+	help["runs list"] = apiResultHelp("the run-list request", "the run-list result")
+	help["runs start"] = apiResultHelp("the run-create request", "the created-run result")
+	help["runs start"] = withOutput(help["runs start"],
+		"Emit created run IDs as human messages or json",
+		"Suppress table-mode run IDs and guidance; a JSON result remains on stdout")
+	help["runs start"] = withNoColor(help["runs start"],
+		"No effect on runs start command; its human messages are unstyled")
+	help["runs get"] = apiResultHelp("the run-detail request", "the run-detail result")
+	help["runs cancel"] = apiActionHelp("run cancellation", true)
+
+	help["api-keys list"] = apiResultHelp("the API-key list request", "the API-key list")
+	help["api-keys create"] = apiResultHelp("the API-key create request", "the created API key")
+	help["api-keys create"] = withQuiet(help["api-keys create"],
+		"Suppress the save-now warning; the created key remains on stdout")
+	help["api-keys delete"] = apiActionHelp("API-key deletion", true)
+
+	help["uploads add"] = apiResultHelp("the file-upload request", "the stored-upload result")
+	help["uploads add"] = withQuiet(help["uploads add"],
+		"Suppress upload progress; the stored-upload result remains on stdout")
+	help["uploads list"] = apiResultHelp("the upload-list request", "the upload-list result")
+	help["uploads push"] = apiResultHelp("the file-delivery request", "the delivery result")
+	help["uploads push"] = withQuiet(help["uploads push"],
+		"Suppress delivery progress and notes; the delivery result remains on stdout")
+	help["uploads delete"] = apiResultHelp("the upload-delete request", "the deletion result")
+	help["uploads delete"] = withOutput(help["uploads delete"],
+		"Emit a human confirmation or JSON deletion result",
+		"Suppress the prompt and human confirmation; --yes is required; JSON still prints")
+	help["uploads delete"] = withNoColor(help["uploads delete"],
+		"No effect on uploads delete command; its human confirmation is unstyled")
+
+	for _, shell := range []string{"bash", "zsh", "fish", "powershell"} {
+		key := "completion " + shell
+		help[key] = commandGlobalFlagHelp{
+			apiKey:  fmt.Sprintf("No effect on %s completion generation", shell),
+			baseURL: fmt.Sprintf("No effect on %s completion generation", shell),
+			noColor: fmt.Sprintf("No effect on %s completion; the script contains no ANSI styling", shell),
+			org:     fmt.Sprintf("No effect on %s completion generation", shell),
+			output:  fmt.Sprintf("Does not reformat %s completion as JSON; the shell script remains on stdout", shell),
+			quiet:   fmt.Sprintf("Does not suppress the %s completion script; only stderr notices", shell),
+		}
+	}
+
+	return help
+}
+
+func orgListHelp(command string) commandGlobalFlagHelp {
+	return commandGlobalFlagHelp{
+		apiKey:  "API-key auth cannot list OAuth memberships; use a saved OAuth session",
+		baseURL: fmt.Sprintf("API host for the organization-list request; %s", baseURLPrecedence),
+		noColor: "Disable ANSI color in the human-readable organization listing",
+		org:     fmt.Sprintf("Mark this org active in the listing; %s", orgPrecedence),
+		output:  "Render organizations and the active selection as table or json",
+		quiet:   fmt.Sprintf("Suppress %s stderr notes; the organization list remains on stdout", command),
+	}
+}
+
+func withOutput(help commandGlobalFlagHelp, output, quiet string) commandGlobalFlagHelp {
+	help.output = output
+	help.quiet = quiet
+	return help
+}
+
+func withQuiet(help commandGlobalFlagHelp, quiet string) commandGlobalFlagHelp {
+	help.quiet = quiet
+	return help
+}
+
+func withNoColor(help commandGlobalFlagHelp, noColor string) commandGlobalFlagHelp {
+	help.noColor = noColor
+	return help
+}
+
+var globalFlagHelpByCommand = buildGlobalFlagHelp()
