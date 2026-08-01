@@ -36,6 +36,11 @@ jobs:
           # older Go can't parse newer source; goinstall sidesteps that.
           install-mode: goinstall
       - name: test (race)
+        # TEMPORARY: prod (api.axilio.ai) predates the /skill route
+        # (AXI-1527) and 404s TestMain's skill fetch; staging serves it.
+        # Remove this env once the prod backend deploy lands.
+        env:
+          AXILIO_BASE_URL: https://staging-api.axilio.ai
         run: go test -race ./...
 
   # Prove every release target builds before goreleaser ever runs, so a tag

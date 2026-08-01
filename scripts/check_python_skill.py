@@ -44,8 +44,11 @@ def fail(msg: str) -> None:
 
 
 def fetch_skill() -> str:
+    # An identifying User-Agent: the API's WAF rejects the default
+    # Python-urllib/* agent with a 403.
+    req = urllib.request.Request(SKILL_URL, headers={"User-Agent": "axilio-skill-sync/1.0"})  # noqa: S310
     try:
-        with urllib.request.urlopen(SKILL_URL, timeout=15) as resp:  # noqa: S310
+        with urllib.request.urlopen(req, timeout=15) as resp:  # noqa: S310
             return resp.read().decode("utf-8")
     except Exception as e:
         print(f"FAIL: could not fetch the agent skill from {SKILL_URL}: {e}", file=sys.stderr)

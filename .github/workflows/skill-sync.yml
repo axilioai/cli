@@ -59,6 +59,10 @@ jobs:
       - name: install the published SDK
         run: pip install --upgrade axilio
       - name: check the skill's Python section
+        # TEMPORARY: prod predates the /skill route (AXI-1527) and 404s;
+        # staging serves it. Remove once the prod backend deploy lands.
+        env:
+          AXILIO_SKILL_URL: https://staging-api.axilio.ai/api/v1/skill
         run: python scripts/check_python_skill.py
 
   go-surface:
@@ -74,4 +78,7 @@ jobs:
       # both languages in one place rather than only half the picture. TestMain
       # fetches the live hosted skill before any TestSkill* case runs.
       - name: check the skill's Go section
+        # TEMPORARY: staging host until prod serves /skill (see above).
+        env:
+          AXILIO_BASE_URL: https://staging-api.axilio.ai
         run: go test ./cmd/ -run TestSkill -v
