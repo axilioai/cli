@@ -12,7 +12,17 @@ import (
 )
 
 func apiKeysCmd() *cobra.Command {
-	cmd := &cobra.Command{Use: "api-keys", Short: "List, create, and delete API keys."}
+	cmd := &cobra.Command{
+		Use:   "api-keys",
+		Short: "List, create, and delete organization API keys.",
+		Long: "Manage API keys scoped to the active organization. List keys to discover " +
+			"their IDs, create a named key whose secret is shown once, or delete a key " +
+			"by ID. Organization access and API-key management permissions are enforced " +
+			"by the API.",
+		Example: `  axilio api-keys list
+  axilio api-keys create ci
+  axilio api-keys delete key_123 --yes`,
+	}
 	cmd.AddCommand(apiKeysListCmd(), apiKeysCreateCmd(), apiKeysDeleteCmd())
 	return cmd
 }
@@ -21,6 +31,11 @@ func apiKeysListCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "list",
 		Short: "List the API keys on your organization.",
+		Long: "List API keys in the active organization. Results include key ID, name, " +
+			"masked preview, last-used time, and creation time. Full secret values are " +
+			"never returned; use the ID with `api-keys delete`.",
+		Example: `  axilio api-keys list
+  axilio api-keys list -o json`,
 		RunE: func(_ *cobra.Command, _ []string) error {
 			cl, err := newClient()
 			if err != nil {
@@ -52,7 +67,12 @@ func apiKeysCreateCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "create <name>",
 		Short: "Create a new API key; the secret is shown once.",
-		Args:  cobra.ExactArgs(1),
+		Long: "Create a named API key in the active organization. The result includes " +
+			"the ID, name, full secret, and creation time. Save the secret immediately: " +
+			"later list calls show only a preview and the full value cannot be retrieved.",
+		Example: `  axilio api-keys create ci
+  axilio api-keys create "release automation" -o json`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
 			cl, err := newClient()
 			if err != nil {
@@ -82,7 +102,14 @@ func apiKeysDeleteCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "delete <key-id>",
 		Short: "Delete an API key by id.",
-		Args:  cobra.ExactArgs(1),
+		Long: "Permanently delete an organization API key using an ID discovered with " +
+			"`api-keys list`. Interactive use asks for confirmation. JSON, quiet, " +
+			"or redirected use cannot confirm, so pass --yes for non-interactive " +
+			"deletion. The current action-only success path does not emit a JSON body.",
+		Example: `  axilio api-keys list
+  axilio api-keys delete key_123
+  axilio api-keys delete key_123 --yes`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
 			cl, err := newClient()
 			if err != nil {
@@ -99,6 +126,6 @@ func apiKeysDeleteCmd() *cobra.Command {
 			return nil
 		},
 	}
-	cmd.Flags().BoolVarP(&yes, "yes", "y", false, "Skip the confirmation prompt")
+	cmd.Flags().BoolVarP(&yes, "yes", "y", false, "Delete without prompting; required for non-interactive use")
 	return cmd
 }

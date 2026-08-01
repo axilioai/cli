@@ -33,9 +33,16 @@ func phoneSendCmd() *cobra.Command {
 		Short: "Upload a local image/video and push it to the phone's gallery.",
 		Long: "Upload a local file into the org library and push it into the phone's media " +
 			"library so it appears in the gallery. Targets the current session's phone " +
-			"(override with --session). Phones accept deliveries up to 100 MiB, since the " +
-			"phone downloads over its own cellular link. With --wait, blocks until the " +
-			"phone reports the file delivered (or failed) instead of returning at dispatch.",
+			"(override with --session). Supported images are jpg, jpeg, png, webp, gif, " +
+			"and heic; supported videos are mp4, webm, mov, 3gp, and mkv. The target " +
+			"collection is inferred by media type unless DCIM, Pictures, or Movies is " +
+			"selected. Phones accept deliveries up to 100 MiB. By default the command " +
+			"returns after dispatch; --wait blocks for delivered or failed, and " +
+			"--timeout applies only with --wait. This combines `uploads add` and " +
+			"`uploads push` and therefore retains the upload in the org library.",
+		Example: `  axilio phone send ./photo.jpg
+  axilio phone send ./clip.mp4 --collection Movies
+  axilio phone send ./photo.jpg --wait --timeout 2m`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			s, err := session.Resolve(flagPhoneSession)
@@ -69,8 +76,8 @@ func phoneSendCmd() *cobra.Command {
 			return nil
 		},
 	}
-	cmd.Flags().BoolVar(&wait, "wait", false, "Block until the phone reports the file delivered or failed")
-	cmd.Flags().DurationVar(&timeout, "timeout", 60*time.Second, "Max time to wait with --wait")
-	cmd.Flags().StringVar(&collection, "collection", "", "Media collection: DCIM, Pictures, or Movies (default: by media type)")
+	cmd.Flags().BoolVar(&wait, "wait", false, "Block until the phone reports delivered or failed instead of returning at dispatch")
+	cmd.Flags().DurationVar(&timeout, "timeout", 60*time.Second, "Maximum delivery wait; applies only with --wait")
+	cmd.Flags().StringVar(&collection, "collection", "", "Target DCIM, Pictures, or Movies; omitted infers from media type")
 	return cmd
 }

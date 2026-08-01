@@ -24,8 +24,9 @@ multi-language SDK support lands. It does three things:
 - **Phone control**: observe the screen and drive it (find, tap, type, swipe,
   key) over the phone's control channel, using the same vision primitives as the
   SDK.
-- **A scripting surface**: deterministic `-o json` and stable exit codes on every
-  command, so an agent or shell script drives it without parsing prose.
+- **A scripting surface**: structured `-o json` for commands that return data,
+  quiet non-interactive operation, and stable exit codes. Some action-only
+  commands currently succeed without a JSON result body.
 
 ## Install
 
@@ -120,11 +121,13 @@ also reads, so one login makes the CLI and the SDKs work:
 $XDG_CONFIG_HOME/axilio/config.json   (else ~/.config/axilio/config.json), mode 0600
 ```
 
-Credentials resolve in this order (first wins): an explicit API key (`--api-key`
-flag, `AXILIO_API_KEY` env, or config file), then your OAuth session. The API
-host resolves via `--base-url` / `AXILIO_BASE_URL` / config, defaulting to
-`https://api.axilio.ai`. `axilio logout` clears both the key and the OAuth
-session.
+Credentials resolve in this order: `--api-key`, `AXILIO_API_KEY`, the saved
+config API key, then the saved OAuth session. The API host resolves from
+`--base-url`, `AXILIO_BASE_URL`, saved `base-url`, then
+`https://api.axilio.ai`. For OAuth, the organization resolves from `--org`,
+`AXILIO_ORG`, the saved active organization, then the OAuth session default.
+API keys are already bound to one organization. `axilio logout` clears the
+saved key, OAuth session, and active organization.
 
 ## Commands
 
@@ -139,21 +142,24 @@ session.
 | `phones list` | List phones you can start a session on right now (shared pool + your free dedicated phones). |
 | `phones mine` | List your org's dedicated phones, including ones currently in use (find a `phone_id` to pin). |
 | `sessions start` / `stop` / `list` / `current` | Acquire, release, and inspect phone leases. |
-| `phone observe` / `find` / `find-text` / `tap` / `long-press` / `swipe` / `type` / `key` / `screenshot` / `wait-for` | Drive the current phone session. |
-| `runs list` / `get` / `cancel` | Inspect and manage workflow runs. |
+| `phone observe` / `find` / `find-text` / `tap` / `long-press` / `swipe` / `type` / `key` / `screenshot` / `wait-for` | Observe and control the selected phone session. |
+| `phone send` | Upload a local image/video and push it to the selected session's phone. |
+| `workflows list` | Discover workflow IDs by recency or name search. |
+| `runs list` / `runs start` / `runs get` / `runs cancel` | Start, inspect, and cancel workflow runs. |
 | `api-keys list` / `create` / `delete` | Manage your organization's API keys. |
+| `uploads add` / `uploads list` / `uploads push` / `uploads delete` | Store files, inspect quota, deliver uploads, and free library quota. |
 | `completion <shell>` | Generate a shell-completion script. |
 
 ### Global flags
 
 | Flag | Meaning |
 | --- | --- |
-| `-o, --output table\|json` | Output format (default `table`). |
-| `-q, --quiet` | Suppress stderr chrome (notes and prompts) for non-interactive use. |
-| `--no-color` | Disable colored output. |
-| `--api-key` | Override the API key for this call. |
-| `--base-url` | Override the API host for this call. |
-| `--org` | Organization slug or id to act as for this call (OAuth sessions; also `AXILIO_ORG` / `org use`). |
+| `-o, --output table\|json` | Result format. JSON requires a structured command result (default `table`). |
+| `-q, --quiet` | Suppress stderr notes and prompts; destructive commands still require `--yes`. |
+| `--no-color` | Disable ANSI color in human-oriented output. |
+| `--api-key` | API key for API-backed commands; overrides `AXILIO_API_KEY` and the saved key. |
+| `--base-url` | API host for API-backed commands; overrides `AXILIO_BASE_URL` and saved `base-url`. |
+| `--org` | OAuth organization slug or ID; overrides `AXILIO_ORG` and the saved active org. |
 | `-v, --version` | Print the version. |
 
 Run `axilio <command> --help` for the flags on any command.
@@ -162,9 +168,11 @@ Run `axilio <command> --help` for the flags on any command.
 
 The CLI's output is a contract, not just cosmetics.
 
-- **`-o json`** gives every command a stable JSON shape on stdout. Human chrome
-  (notes, prompts, spinners) goes to stderr and is suppressed in JSON mode, so a
-  pipe into `jq` stays clean.
+- **`-o json`** writes structured command results to stdout. Human chrome
+  (notes, prompts, spinners) uses stderr and is suppressed in JSON mode, so
+  data-returning commands pipe cleanly into `jq`. Action-only commands do not
+  all emit a JSON success body yet; do not assume a successful empty stdout is
+  a parseable JSON result.
 - **`-q, --quiet`** suppresses the stderr chrome entirely. Destructive commands
   (`sessions stop`, `runs cancel`, `api-keys delete`) never prompt in `--quiet`
   or JSON mode; pass `--yes` to proceed non-interactively.
@@ -223,20 +231,39 @@ axilio phone observe                          # drives B's phone
 ```
 
 `axilio sessions list` shows the leases this CLI holds (a `*` marks the one the
-phone verbs target in the current shell); `--remote` lists all active sessions on
-the server. Selection precedence: `--session <id>` flag, then `AXILIO_SESSION`,
-then the sole active lease, then the most-recently-started one.
+phone verbs target in the current shell); `--remote` lists all active sessions
+on the server. Phone command session selection precedence is `--session`,
+`AXILIO_SESSION`, the sole active lease, the saved current-session pointer, then
+an ambiguity error.
 
-### Inspect runs and keys
+### Start and inspect runs
 
 ```bash
+axilio workflows list --search checkout
+axilio runs start <workflow-id>
+axilio runs start <workflow-id> --count 3
 axilio runs list
 axilio runs get <run-id>
 axilio runs cancel <run-id> --yes
+```
 
+### Manage API keys
+
+```bash
 axilio api-keys list
 axilio api-keys create ci-key                 # the secret is shown once
 axilio api-keys delete <key-id> --yes
+```
+
+### Send and reuse uploads
+
+```bash
+axilio phone send ./photo.jpg --wait          # add + push to selected session
+
+axilio uploads add ./clip.mp4                  # store once
+axilio uploads list                            # discover id and quota
+axilio uploads push <upload-id> --phone-id <phone-id> --wait
+axilio uploads delete <upload-id> --yes        # delivered copies stay on phones
 ```
 
 ## Shell completions
@@ -245,9 +272,14 @@ axilio api-keys delete <key-id> --yes
 axilio completion zsh   > "${fpath[1]}/_axilio"     # zsh
 axilio completion bash  > /etc/bash_completion.d/axilio
 axilio completion fish  > ~/.config/fish/completions/axilio.fish
+axilio completion powershell | Out-String | Invoke-Expression
+
+# Omit command and flag descriptions when a shell needs a smaller script:
+axilio completion zsh --no-descriptions > "${fpath[1]}/_axilio"
 ```
 
-Run `axilio completion --help` for per-shell instructions.
+Run `axilio completion --help` or
+`axilio completion <bash|zsh|fish|powershell> --help` for per-shell instructions.
 
 ## Help and support
 

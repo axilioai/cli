@@ -42,10 +42,16 @@ func doctorCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "doctor",
 		Short: "Check that your setup is sane: auth, connectivity, and environment.",
-		Long: "Run a one-shot health check of the CLI's setup — credentials, API " +
-			"reachability, account, and local environment. Exits non-zero if a " +
-			"required check fails, so scripts and agents can gate on it. Use -o json " +
-			"to parse the checks.",
+		Long: "Run a one-shot health check of credentials, authentication, API " +
+			"connectivity, account balance and plan, CLI version, config path, " +
+			"sessions directory, and current session. Missing or rejected " +
+			"credentials and authenticated connectivity failures are required " +
+			"failures and make the command exit non-zero. Account, plan, and local " +
+			"environment rows are informational; without credentials, connectivity " +
+			"is also informational. Each network probe is bounded to 8 seconds. " +
+			"Use -o json for an overall ok value and the complete checks array.",
+		Example: `  axilio doctor
+  axilio doctor -o json`,
 		RunE: func(_ *cobra.Command, _ []string) error {
 			checks := runDoctor(context.Background())
 

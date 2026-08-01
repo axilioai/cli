@@ -27,7 +27,14 @@ func uploadsCmd() *cobra.Command {
 		Use:   "uploads",
 		Short: "Add, list, push, and delete files in your organization's library.",
 		Long: "Manage the org file library. Files live here until deleted and can be " +
-			"pushed to any phone the org holds, so one upload serves many phones.",
+			"pushed to any phone the org holds, so one upload serves many phones. " +
+			"`add` stores a local file, `list` discovers uploads and quota, `push` " +
+			"delivers a stored upload, and `delete` frees library quota. `phone send` " +
+			"combines add and push for the selected session's phone.",
+		Example: `  axilio uploads add ./photo.jpg
+  axilio uploads list
+  axilio uploads push upl_123 --phone-id ph_123
+  axilio uploads delete upl_123 --yes`,
 	}
 	cmd.AddCommand(uploadsAddCmd(), uploadsListCmd(), uploadsPushCmd(), uploadsDeleteCmd())
 	return cmd
@@ -40,7 +47,11 @@ func uploadsAddCmd() *cobra.Command {
 		Short: "Upload a local file into the library without pushing it anywhere.",
 		Long: "Register a local file, upload its bytes, and verify them, leaving a ready " +
 			"file in the library. Use `axilio uploads push` to send it to a phone, or " +
-			"`axilio phone send` to do both in one step.",
+			"`axilio phone send` to do both in one step. The stored filename defaults " +
+			"to the local basename and MIME type is inferred from the extension; " +
+			"--filename and --mime-type override those values.",
+		Example: `  axilio uploads add ./photo.jpg
+  axilio uploads add ./asset --filename photo.jpg --mime-type image/jpeg`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cl, err := newClient()
@@ -72,8 +83,8 @@ func uploadsAddCmd() *cobra.Command {
 			return nil
 		},
 	}
-	cmd.Flags().StringVar(&filename, "filename", "", "Name to store the file under (default: the file's basename)")
-	cmd.Flags().StringVar(&mimeType, "mime-type", "", "Content type (default: guessed from the extension)")
+	cmd.Flags().StringVar(&filename, "filename", "", "Stored filename; omitted uses the local file's basename")
+	cmd.Flags().StringVar(&mimeType, "mime-type", "", "Stored MIME type; omitted infers it from the file extension")
 	return cmd
 }
 
@@ -87,6 +98,15 @@ func uploadsListCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "List the files in your organization's library.",
+		Long: "List uploads and standing storage quota for the active organization. " +
+			"Results include upload ID, filename, size, MIME type, status, and creation " +
+			"time. Page with --limit and --offset, search filenames by " +
+			"case-insensitive substring, and sort by created_at, filename, or " +
+			"size_bytes in asc or desc order. Omitting sort/order uses server defaults.",
+		Example: `  axilio uploads list
+  axilio uploads list --search receipt --limit 20 --offset 0
+  axilio uploads list --sort filename --order asc
+  axilio uploads list -o json`,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			cl, err := newClient()
 			if err != nil {
@@ -144,11 +164,11 @@ func uploadsListCmd() *cobra.Command {
 			return nil
 		},
 	}
-	cmd.Flags().Int64Var(&limit, "limit", 50, "Max files to return")
-	cmd.Flags().Int64Var(&offset, "offset", 0, "Pagination offset")
-	cmd.Flags().StringVar(&search, "search", "", "Filter by filename (case-insensitive substring)")
-	cmd.Flags().StringVar(&sortBy, "sort", "", "Sort by: created_at, filename, or size_bytes")
-	cmd.Flags().StringVar(&order, "order", "", "Sort direction: asc or desc")
+	cmd.Flags().Int64Var(&limit, "limit", 50, "Maximum files in this page")
+	cmd.Flags().Int64Var(&offset, "offset", 0, "Number of matching files to skip before this page")
+	cmd.Flags().StringVar(&search, "search", "", "Filter filenames by case-insensitive substring")
+	cmd.Flags().StringVar(&sortBy, "sort", "", "Sort key: created_at, filename, or size_bytes; omitted uses server default")
+	cmd.Flags().StringVar(&order, "order", "", "Sort direction: asc or desc; omitted uses server default")
 	return cmd
 }
 
@@ -164,7 +184,15 @@ func uploadsPushCmd() *cobra.Command {
 		Short: "Push a file already in the library to a phone.",
 		Long: "Send a stored library file to a phone's media library. Unlike " +
 			"`axilio phone send` this uploads nothing, so the same file can be " +
-			"pushed to many phones without re-uploading it or consuming more quota.",
+			"pushed to many phones without re-uploading it or consuming more quota. " +
+			"--phone-id is required and can be discovered with `phones mine` or " +
+			"`sessions list --remote`. The collection is inferred unless DCIM, " +
+			"Pictures, or Movies is selected. By default the command returns after " +
+			"dispatch; --wait blocks for delivered or failed, and --timeout applies " +
+			"only with --wait.",
+		Example: `  axilio uploads push upl_123 --phone-id ph_123
+  axilio uploads push upl_123 --phone-id ph_123 --collection Pictures
+  axilio uploads push upl_123 --phone-id ph_123 --wait --timeout 2m`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cl, err := newClient()
@@ -194,10 +222,10 @@ func uploadsPushCmd() *cobra.Command {
 			return nil
 		},
 	}
-	cmd.Flags().StringVar(&phoneID, "phone-id", "", "Target phone id (required)")
-	cmd.Flags().StringVar(&collection, "collection", "", "Media collection: DCIM, Pictures, or Movies (default: by media type)")
-	cmd.Flags().BoolVar(&wait, "wait", false, "Block until the phone reports the file delivered or failed")
-	cmd.Flags().DurationVar(&timeout, "timeout", 60*time.Second, "Max time to wait with --wait")
+	cmd.Flags().StringVar(&phoneID, "phone-id", "", "Target phone ID from `phones mine` or remote sessions (required)")
+	cmd.Flags().StringVar(&collection, "collection", "", "Target DCIM, Pictures, or Movies; omitted infers from media type")
+	cmd.Flags().BoolVar(&wait, "wait", false, "Block until the phone reports delivered or failed instead of returning at dispatch")
+	cmd.Flags().DurationVar(&timeout, "timeout", 60*time.Second, "Maximum delivery wait; applies only with --wait")
 	_ = cmd.MarkFlagRequired("phone-id")
 	return cmd
 }
@@ -208,7 +236,15 @@ func uploadsDeleteCmd() *cobra.Command {
 		Use:     "delete <upload-id>",
 		Aliases: []string{"rm"},
 		Short:   "Delete a file from the library and free its quota.",
-		Args:    cobra.ExactArgs(1),
+		Long: "Delete an upload from the active organization's library and free its " +
+			"storage quota. Use `uploads list` to discover the upload ID. This does " +
+			"not recall copies already delivered to phones. Interactive use asks for " +
+			"confirmation; JSON, quiet, or redirected use requires --yes. The alias " +
+			"`uploads rm` performs the same operation.",
+		Example: `  axilio uploads list
+  axilio uploads delete upl_123
+  axilio uploads rm upl_123 --yes`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cl, err := newClient()
 			if err != nil {
@@ -236,7 +272,7 @@ func uploadsDeleteCmd() *cobra.Command {
 			return nil
 		},
 	}
-	cmd.Flags().BoolVarP(&yes, "yes", "y", false, "Skip the confirmation prompt")
+	cmd.Flags().BoolVarP(&yes, "yes", "y", false, "Delete without prompting; required for non-interactive use")
 	return cmd
 }
 
