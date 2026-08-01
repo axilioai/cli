@@ -298,7 +298,10 @@ func TestDocumentationHelpParity(t *testing.T) {
 		t.Error("README still claims universal JSON success output")
 	}
 
-	skill := readTestFile(t, "agentskill.md")
+	// The skill is no longer a file in this repo (AXI-1527): it's hosted at
+	// the backend's /skill route, fetched once per test binary by TestMain.
+	// These assertions therefore check the copy users actually receive.
+	skill := agentSkillBody
 	if !strings.Contains(skill, "axilio phone key enter") {
 		t.Error("agent skill must show the supported enter key")
 	}
