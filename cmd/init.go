@@ -3,9 +3,10 @@ package cmd
 import (
 	"bufio"
 	"context"
-	_ "embed"
 	"errors"
 	"fmt"
+	"io"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -17,8 +18,39 @@ import (
 	"golang.org/x/term"
 )
 
-//go:embed agentskill.md
-var agentSkillBody string
+// skillURL is where the canonical agent skill markdown is hosted (AXI-1527).
+// It's the same content the dashboard's "Get Agent Prompt" button fetches —
+// centralizing it means an edit lands in one place (the backend's /skill
+// route) instead of needing a matching commit here and in the dashboard.
+func skillURL() string {
+	_, host := resolvedCreds()
+	return sdkBaseURL(util.FirstNonEmpty(host, defaultAPIHost)) + "/skill"
+}
+
+// fetchSkillBody downloads the current agent skill markdown. This makes
+// `init` require network, but it already did: the sign-in check a few lines
+// later needs it too, and a skill fetched fresh can never be the stale-embed
+// problem skillStamp exists to warn about.
+func fetchSkillBody(ctx context.Context) (string, error) {
+	url := skillURL()
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return "", err
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("could not reach %s: %w", url, err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("fetching agent skill from %s: unexpected status %d", url, resp.StatusCode)
+	}
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+	return string(body), nil
+}
 
 // skillDescription is the one-line summary in each agent's frontmatter.
 const skillDescription = "Drive real Axilio phones from the axilio CLI (observe/find/tap/type), then write the equivalent SDK script in Python or Go."
@@ -86,6 +118,10 @@ func runInit(ctx context.Context, agent string, force bool) error {
 	if err != nil {
 		return err
 	}
+	body, err := fetchSkillBody(ctx)
+	if err != nil {
+		return fmt.Errorf("fetching the agent skill: %w", err)
+	}
 	for _, t := range targets {
 		// Auto-detected targets that already carry the skill are skipped with a
 		// note; only an explicit --agent hard-errors, since then the user named
@@ -94,7 +130,7 @@ func runInit(ctx context.Context, agent string, force bool) error {
 			printer().Note("  %s already has the skill; refresh with `axilio init --agent %s --force`.", skillTargetPath(t), t)
 			continue
 		}
-		if err := writeAgentTarget(t, force); err != nil {
+		if err := writeAgentTarget(t, body, force); err != nil {
 			return err
 		}
 	}
@@ -102,14 +138,14 @@ func runInit(ctx context.Context, agent string, force bool) error {
 	return nil
 }
 
-func writeAgentTarget(agent string, force bool) error {
+func writeAgentTarget(agent, body string, force bool) error {
 	switch agent {
 	case "claude":
-		return writeSkillFile(filepath.Join(".claude", "skills", "axilio", "SKILL.md"), claudeFrontmatter+skillStamp("claude")+agentSkillBody, force)
+		return writeSkillFile(filepath.Join(".claude", "skills", "axilio", "SKILL.md"), claudeFrontmatter+skillStamp("claude")+body, force)
 	case "cursor":
-		return writeSkillFile(filepath.Join(".cursor", "rules", "axilio.mdc"), cursorFrontmatter+skillStamp("cursor")+agentSkillBody, force)
+		return writeSkillFile(filepath.Join(".cursor", "rules", "axilio.mdc"), cursorFrontmatter+skillStamp("cursor")+body, force)
 	default:
-		return writeAgentsMD(force)
+		return writeAgentsMD(body, force)
 	}
 }
 
@@ -258,9 +294,9 @@ func writeSkillFile(path, content string, force bool) error {
 // The stamp goes inside the block, not in the markers: the markers are matched
 // with strings.Index to find an existing section, so a version in them would stop
 // a newer CLI from recognizing (and refreshing) a block an older one wrote.
-func writeAgentsMD(force bool) error {
+func writeAgentsMD(body string, force bool) error {
 	const path = "AGENTS.md"
-	block := agentsMarkerBegin + "\n\n" + skillStamp("codex") + agentSkillBody + "\n" + agentsMarkerEnd + "\n"
+	block := agentsMarkerBegin + "\n\n" + skillStamp("codex") + body + "\n" + agentsMarkerEnd + "\n"
 
 	existing, err := os.ReadFile(path)
 	if errors.Is(err, os.ErrNotExist) {

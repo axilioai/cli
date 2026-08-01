@@ -1,32 +1,44 @@
 name: Skill sync
 
-# The agent skill (cmd/agentskill.md) documents both SDK surfaces. An agent reads
-# it and writes code a customer runs unattended, so a symbol that no longer exists
-# doesn't produce a stale doc — it produces a broken deliverable.
+# The agent skill documents both SDK surfaces. An agent reads it and writes
+# code a customer runs unattended, so a symbol that no longer exists doesn't
+# produce a stale doc — it produces a broken deliverable.
+#
+# The skill itself is no longer a file in this repo (AXI-1527): it's hosted
+# at the backend's /skill route, the same place `axilio init` and the
+# dashboard's "Get Agent Prompt" button fetch it from. That centralizes
+# authorship (one file to edit, not this repo and the dashboard kept in
+# sync by hand) but it also means the skill can change with NO commit to
+# this repo at all — a normal push-triggered CI can never observe that.
 #
 # The Go half is guarded in-repo by cmd/agentskill_test.go (the CLI depends on
-# platform-go, so `go test` catches a rename at PR time). The Python half cannot be
-# guarded that way: the CLI has no dependency on platform-python, by design.
+# platform-go, so `go test` catches a rename at PR time, and TestMain fetches
+# the live skill fresh on every run). The Python half can't be guarded the
+# same way: the CLI has no dependency on platform-python, by design.
 #
-# Hence this job, and hence the schedule. platform-python publishes on its own
-# cadence, so the skill can rot with no CLI change to trigger CI — a PR-only gate
-# would never fire. The nightly run is the one that actually catches drift; the
-# PR trigger just gives fast feedback when the skill itself is edited.
+# Hence this job runs against the live hosted skill on a schedule, not just
+# on push: platform-python releases on its own cadence and the backend's
+# skill content can move on its own too, so the nightly run is what actually
+# catches drift in either direction. The push/PR triggers just give fast
+# feedback when the checkers themselves change.
 
 on:
   pull_request:
     paths:
-      - 'cmd/agentskill.md'
+      - 'cmd/agentskill_test.go'
+      - 'cmd/init.go'
       - 'scripts/check_python_skill.py'
       - '.github/workflows/skill-sync.yml'
   push:
     branches: [main]
     paths:
-      - 'cmd/agentskill.md'
+      - 'cmd/agentskill_test.go'
+      - 'cmd/init.go'
       - 'scripts/check_python_skill.py'
   schedule:
-    # 07:00 UTC daily — catches a platform-python release that moved the surface
-    # out from under a skill nobody has touched.
+    # 07:00 UTC daily — catches a platform-python release, or a backend-side
+    # skill edit, that moved the surface out from under a checker nobody
+    # touched.
     - cron: '0 7 * * *'
   workflow_dispatch:
 
@@ -59,6 +71,7 @@ jobs:
           go-version-file: go.mod
           cache: true
       # Same assertions CI runs, surfaced here too so a scheduled run reports on
-      # both languages in one place rather than only half the picture.
+      # both languages in one place rather than only half the picture. TestMain
+      # fetches the live hosted skill before any TestSkill* case runs.
       - name: check the skill's Go section
         run: go test ./cmd/ -run TestSkill -v

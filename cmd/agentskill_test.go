@@ -1,6 +1,9 @@
 package cmd
 
 import (
+	"context"
+	"fmt"
+	"os"
 	"reflect"
 	"regexp"
 	"strings"
@@ -22,6 +25,26 @@ import (
 // platform-python, by design. That guard lives in .github/workflows/skill-sync.yml,
 // which pip-installs axilio and introspects the <!-- lang:python --> block the same
 // way. Adding a language means adding a block plus a checker; see that workflow.
+//
+// The skill itself is no longer a local file (AXI-1527): it's hosted at the
+// backend's /skill route, the same place init.go's fetchSkillBody and the
+// dashboard's "Get Agent Prompt" button read from. TestMain fetches it once
+// for the whole binary, so these tests check the copy that is actually live
+// rather than a local file that could have drifted from it.
+
+// agentSkillBody holds the fetched skill markdown for the duration of the
+// test binary.
+var agentSkillBody string
+
+func TestMain(m *testing.M) {
+	body, err := fetchSkillBody(context.Background())
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "fetching the agent skill for TestSkill*: %v\n", err)
+		os.Exit(1)
+	}
+	agentSkillBody = body
+	os.Exit(m.Run())
+}
 
 // langBlock extracts one <!-- lang:X --> ... <!-- /lang:X --> section.
 func langBlock(t *testing.T, lang string) string {
@@ -29,7 +52,7 @@ func langBlock(t *testing.T, lang string) string {
 	re := regexp.MustCompile(`(?s)<!-- lang:` + lang + ` -->(.*?)<!-- /lang:` + lang + ` -->`)
 	m := re.FindStringSubmatch(agentSkillBody)
 	if m == nil {
-		t.Fatalf("agentskill.md has no <!-- lang:%s --> block", lang)
+		t.Fatalf("the hosted skill has no <!-- lang:%s --> block", lang)
 	}
 	return m[1]
 }
@@ -61,7 +84,7 @@ func TestSkillGoDriverMethodsExist(t *testing.T) {
 	typ := reflect.TypeOf(&mobile.MobileDriver{})
 	for _, name := range methods {
 		if _, ok := typ.MethodByName(name); !ok {
-			t.Errorf("agentskill.md documents driver.%s(), which does not exist on *mobile.MobileDriver — "+
+			t.Errorf("the hosted skill documents driver.%s(), which does not exist on *mobile.MobileDriver — "+
 				"the skill would teach an agent to write code that does not compile", name)
 		}
 	}
@@ -81,7 +104,7 @@ func TestSkillGoElementMethodsExist(t *testing.T) {
 	typ := reflect.TypeOf(mobile.Element{})
 	for _, name := range methods {
 		if _, ok := typ.MethodByName(name); !ok {
-			t.Errorf("agentskill.md documents el.%s(), which does not exist on mobile.Element", name)
+			t.Errorf("the hosted skill documents el.%s(), which does not exist on mobile.Element", name)
 		}
 	}
 }
@@ -119,7 +142,7 @@ func TestSkillTeachesSemanticSelectors(t *testing.T) {
 		"--query",
 	} {
 		if !strings.Contains(strings.ToLower(agentSkillBody), strings.ToLower(want)) {
-			t.Errorf("agentskill.md no longer teaches %q", want)
+			t.Errorf("the hosted skill no longer teaches %q", want)
 		}
 	}
 	// The rule needs its own section, not a passing mention buried in a list.
@@ -132,7 +155,7 @@ func TestSkillTeachesSemanticSelectors(t *testing.T) {
 // defaults to whichever SDK appears first and the user never gets a say.
 func TestSkillAsksForLanguage(t *testing.T) {
 	if !strings.Contains(agentSkillBody, "Which SDK should I write this in") {
-		t.Error("agentskill.md no longer tells the agent to ask which SDK to write")
+		t.Error("the hosted skill no longer tells the agent to ask which SDK to write")
 	}
 	for _, lang := range []string{"python", "go"} {
 		langBlock(t, lang) // fatals if the block is missing
