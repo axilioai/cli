@@ -147,12 +147,16 @@ func buildGlobalFlagHelp() map[string]commandGlobalFlagHelp {
 			quiet:   "Suppress logout warnings and the signed-out result",
 		},
 		"config": {
-			apiKey:  "No actual effect. Ephemerally shows this as the effective API key source; does not persist the new key. Use axilio login --api-key [api_key] to verify and persist a new key.",
-			baseURL: "No actual effect. Ephemerally shows this as the effective API host; does not save the new host. See above to change base-url using `axilio config set base-url`.",
+			apiKey: "No actual effect. Ephemerally shows this as the effective API key source;\n" +
+				"does not persist the new key. Use axilio login --api-key [api_key] to\n" +
+				"verify and persist a new key.",
+			baseURL: "No actual effect. Ephemerally shows this as the effective API host;\n" +
+				"does not save the new host. See the above help content to change base-url.",
 			noColor: "Disable ANSI color in the human-readable configuration table",
-			org:     "No actual effect. Ephemerally changes the displayed org only, does not save the selection. Use axilio orgs use [org_name] instead to persist changes to active org setting.",
-			output:  "Render the configuration summary as table or json",
-			quiet:   "Suppress stderr update notices; the configuration summary remains on stdout",
+			org: "No actual effect. Ephemerally changes the displayed org only, does not save the selection.\n" +
+				"Use axilio orgs use [org_name] instead to persist changes to active org setting.",
+			output: "Render the configuration summary as table or json",
+			quiet:  "Suppress stderr update notices; the configuration summary remains on stdout",
 		},
 		"config set": {
 			apiKey:  "No effect on config set command; only the named config value is saved",
