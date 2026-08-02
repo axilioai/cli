@@ -26,7 +26,11 @@ func uploadsCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "uploads",
 		Short: "Add, list, push, and delete files in your organization's library.",
-		Long: "Manage the org file library. Files live here until deleted and can be " +
+		Long: "Running `axilio uploads` without a subcommand is equivalent to " +
+			"`axilio uploads --help`: it only displays this help and does not add, " +
+			"list, push, or delete uploads. Global flags shown here therefore have no " +
+			"effect. Pass flags to an uploads subcommand instead.\n\n" +
+			"Manage the org file library. Files live here until deleted and can be " +
 			"pushed to any phone the org holds, so one upload serves many phones. " +
 			"`add` stores a local file, `list` discovers uploads and quota, `push` " +
 			"delivers a stored upload, and `delete` frees library quota. `phone send` " +

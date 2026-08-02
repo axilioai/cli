@@ -15,7 +15,11 @@ func runsCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "runs",
 		Short: "Start, inspect, and cancel workflow runs.",
-		Long: "Manage workflow executions in the active organization. Discover a " +
+		Long: "Running `axilio runs` without a subcommand is equivalent to " +
+			"`axilio runs --help`: it only displays this help and does not list, " +
+			"start, inspect, or cancel runs. Global flags shown here therefore have " +
+			"no effect. Pass flags to a runs subcommand instead.\n\n" +
+			"Manage workflow executions in the active organization. Discover a " +
 			"workflow ID with `workflows list`, start one or more runs, list recent " +
 			"run IDs and statuses, inspect a run in detail, or cancel queued and " +
 			"running work.",

@@ -79,6 +79,12 @@ func groupFlagsByOwner(command *cobra.Command) {
 				flag.Usage = usage
 			}
 		})
+		cmd.Flags().VisitAll(func(flag *pflag.Flag) {
+			if usage, ok := commandOwnedFlagUsage(cmd, flag.Name); ok {
+				originalUsage[flag] = flag.Usage
+				flag.Usage = usage
+			}
+		})
 		defer func() {
 			cmd.SetOut(output)
 			for flag, hidden := range originalHidden {

@@ -15,7 +15,11 @@ func apiKeysCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "api-keys",
 		Short: "List, create, and delete organization API keys.",
-		Long: "Manage API keys scoped to the active organization. List keys to discover " +
+		Long: "Running `axilio api-keys` without a subcommand is equivalent to " +
+			"`axilio api-keys --help`: it only displays this help and does not list, " +
+			"create, or delete API keys. Global flags shown here therefore have no " +
+			"effect. Pass flags to an api-keys subcommand instead.\n\n" +
+			"Manage API keys scoped to the active organization. List keys to discover " +
 			"their IDs, create a named key whose secret is shown once, or delete a key " +
 			"by ID. Organization access and API-key management permissions are enforced " +
 			"by the API.",

@@ -47,6 +47,13 @@ func commandGlobalFlagUsage(command *cobra.Command, name string) (string, bool) 
 	return help.usage(name)
 }
 
+func commandOwnedFlagUsage(command *cobra.Command, name string) (string, bool) {
+	if commandHelpKey(command) == "phone" && name == "session" {
+		return "No effect on phone command; bare axilio phone only displays this help", true
+	}
+	return "", false
+}
+
 func commandHelpKey(command *cobra.Command) string {
 	return strings.TrimPrefix(command.CommandPath(), command.Root().Name()+" ")
 }
@@ -55,6 +62,7 @@ const (
 	apiKeyPrecedence  = "overrides AXILIO_API_KEY and the saved key"
 	baseURLPrecedence = "overrides AXILIO_BASE_URL and saved base-url"
 	orgPrecedence     = "overrides AXILIO_ORG and the saved active org; API keys ignore it"
+	phoneControlAuth  = "No effect; the session's embedded control token in the websocket URL authenticates phone commands"
 )
 
 func apiResultHelp(action, result string) commandGlobalFlagHelp {
@@ -94,9 +102,15 @@ func localResultHelp(command, action, result string) commandGlobalFlagHelp {
 	}
 }
 
+func phoneResultHelp(command, action, result string) commandGlobalFlagHelp {
+	help := localResultHelp(command, action, result)
+	help.apiKey = phoneControlAuth
+	return help
+}
+
 func localActionHelp(command, action, outcome string) commandGlobalFlagHelp {
 	return commandGlobalFlagHelp{
-		apiKey:  fmt.Sprintf("No effect on %s command; it uses the selected session's control URL", command),
+		apiKey:  phoneControlAuth,
 		baseURL: fmt.Sprintf("No effect on %s command; it does not call the Axilio API", command),
 		noColor: fmt.Sprintf("No effect on %s command; its runtime message is unstyled", command),
 		org:     fmt.Sprintf("No effect on %s command; the target is selected by session, not org", command),
@@ -105,19 +119,20 @@ func localActionHelp(command, action, outcome string) commandGlobalFlagHelp {
 	}
 }
 
-func parentCommandHelp(command, apiChildren, resultChildren string) commandGlobalFlagHelp {
+func noEffectHelp(command string) commandGlobalFlagHelp {
+	message := fmt.Sprintf("No effect on %s command", command)
 	return commandGlobalFlagHelp{
-		apiKey:  fmt.Sprintf("No request on %s itself; API authentication applies to %s", command, apiChildren),
-		baseURL: fmt.Sprintf("No request on %s itself; API host selection applies to %s", command, apiChildren),
-		noColor: fmt.Sprintf("No runtime output from %s itself; subcommands control their own output", command),
-		org:     fmt.Sprintf("No request on %s itself; OAuth org selection applies to %s", command, apiChildren),
-		output:  fmt.Sprintf("No result from %s itself; output selection applies to %s", command, resultChildren),
-		quiet:   fmt.Sprintf("No runtime messages from %s itself; subcommands describe quiet behavior", command),
+		apiKey:  message,
+		baseURL: message,
+		noColor: message,
+		org:     message,
+		output:  message,
+		quiet:   message,
 	}
 }
 
-func noEffectHelp(command string) commandGlobalFlagHelp {
-	message := fmt.Sprintf("No effect on %s command", command)
+func helpOnlyCommandHelp(command string) commandGlobalFlagHelp {
+	message := fmt.Sprintf("No effect on %s command; bare axilio %s only displays this help", command, command)
 	return commandGlobalFlagHelp{
 		apiKey:  message,
 		baseURL: message,
@@ -208,20 +223,13 @@ func buildGlobalFlagHelp() map[string]commandGlobalFlagHelp {
 			output:  "Suppress init prompts and messages in json mode; no JSON result is emitted",
 			quiet:   "Suppress init prompts and messages; --agent is required when no markers exist",
 		},
-		"sessions": parentCommandHelp("sessions", "list --remote, start, and stop", "its subcommands"),
-		"phones":   parentCommandHelp("phones", "list and mine", "list and mine"),
-		"phone": {
-			apiKey:  "No request on phone itself; only phone send uses API authentication",
-			baseURL: "No request on phone itself; only phone send uses an API host",
-			noColor: "No runtime output from phone itself; subcommands control their own output",
-			org:     "No request on phone itself; only phone send uses OAuth org selection",
-			output:  "No result from phone itself; output selection applies to phone subcommands",
-			quiet:   "No runtime messages from phone itself; subcommands describe quiet behavior",
-		},
-		"workflows": parentCommandHelp("workflows", "workflows list", "workflows list"),
-		"runs":      parentCommandHelp("runs", "runs subcommands", "runs subcommands"),
-		"api-keys":  parentCommandHelp("api-keys", "api-keys subcommands", "api-keys subcommands"),
-		"uploads":   parentCommandHelp("uploads", "uploads subcommands", "uploads subcommands"),
+		"sessions":  helpOnlyCommandHelp("sessions"),
+		"phones":    helpOnlyCommandHelp("phones"),
+		"phone":     helpOnlyCommandHelp("phone"),
+		"workflows": helpOnlyCommandHelp("workflows"),
+		"runs":      helpOnlyCommandHelp("runs"),
+		"api-keys":  helpOnlyCommandHelp("api-keys"),
+		"uploads":   helpOnlyCommandHelp("uploads"),
 		"help": {
 			apiKey:  "No effect on help command or the help content it renders",
 			baseURL: "No effect on help command or the help content it renders",
@@ -254,16 +262,16 @@ func buildGlobalFlagHelp() map[string]commandGlobalFlagHelp {
 	help["phones list"] = apiResultHelp("the available-phone request", "the available-phone result")
 	help["phones mine"] = apiResultHelp("the dedicated-phone request", "the dedicated-phone result")
 
-	help["phone observe"] = localResultHelp("phone observe", "observation", "the observation result")
-	help["phone find"] = localResultHelp("phone find", "vision search", "the found-element result")
-	help["phone find-text"] = localResultHelp("phone find-text", "OCR search", "the text-match result")
+	help["phone observe"] = phoneResultHelp("phone observe", "observation", "the observation result")
+	help["phone find"] = phoneResultHelp("phone find", "vision search", "the found-element result")
+	help["phone find-text"] = phoneResultHelp("phone find-text", "OCR search", "the text-match result")
 	help["phone tap"] = localActionHelp("phone tap", "tap", "tap")
 	help["phone long-press"] = localActionHelp("phone long-press", "long-press", "long-press")
 	help["phone swipe"] = localActionHelp("phone swipe", "swipe", "swipe")
 	help["phone type"] = localActionHelp("phone type", "typing", "typing")
 	help["phone key"] = localActionHelp("phone key", "key press", "key press")
 	help["phone screenshot"] = localActionHelp("phone screenshot", "screenshot", "screenshot write")
-	help["phone wait-for"] = localResultHelp("phone wait-for", "OCR polling", "the matched-element result")
+	help["phone wait-for"] = phoneResultHelp("phone wait-for", "OCR polling", "the matched-element result")
 	help["phone wait-for"] = withOutput(help["phone wait-for"],
 		"Render a present match as table or json; --gone has no JSON success result",
 		"Suppress wait notes; a present-match result remains on stdout")
@@ -322,7 +330,7 @@ func orgListHelp(command string) commandGlobalFlagHelp {
 		apiKey:  "API-key auth cannot list OAuth memberships; use a saved OAuth session",
 		baseURL: fmt.Sprintf("API host for the organization-list request; %s", baseURLPrecedence),
 		noColor: "Disable ANSI color in the human-readable organization listing",
-		org:     fmt.Sprintf("Mark this org active in the listing; %s", orgPrecedence),
+		org:     "No effect on orgs list command; the supplied override is not saved, only changes displayed org for one command",
 		output:  "Render organizations and the active selection as table or json",
 		quiet:   fmt.Sprintf("Suppress %s stderr notes; the organization list remains on stdout", command),
 	}
