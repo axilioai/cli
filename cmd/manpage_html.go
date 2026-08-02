@@ -126,6 +126,8 @@ var manpageHTMLTemplate = template.Must(template.New("axilio-manpage").Parse(`<!
     span.top-link { font-size: 70%; }
     main.manual-text { font-family: monospace, courier; }
     main.manual-text > p, main.manual-text > ul, main.manual-text > ol, main.manual-text > dl, main.manual-text > pre { margin-left: 64px; max-width: 686px; }
+    code.language-console { display: block; box-sizing: border-box; padding: 12px 14px; border: 1px solid #d8d8d8; border-left: 4px solid #008000; background-color: #f5f5f5; color: #181818; line-height: 1.45; white-space: pre; overflow-x: auto; overflow-wrap: normal; box-shadow: inset 0 0 0 1px #fff; }
+    code.language-console::first-line { color: #006000; font-weight: bold; }
     main.manual-text h3 + p, main.manual-text h3 + pre, main.manual-text h4 + p, main.manual-text h4 + pre { margin-left: 64px; }
     main.manual-text dl dt { margin-top: 0.6em; }
     main.manual-text dl dd { margin-left: 32px; }

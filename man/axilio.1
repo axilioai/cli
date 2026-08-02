@@ -166,70 +166,37 @@ remains on stdout
 .PP
 \fBSample 1\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio api-keys create ci
-.EE
-
-.PP
-\fBStandard output\fP
-
-.EX
+user@host ~ % axilio api-keys create ci
 ID       <key-id>
 Name     ci
 Key      axl_<new-secret>
 Created  <timestamp>
-.EE
 
-.PP
-\fBStandard error\fP
-
-.EX
+# Standard error:
 Save this key now; it will not be shown again.
+
+# Exit status: 0
+# Notes: The displayed secret is representative and is never a real
+#        credential.
 .EE
-
-.PP
-\fBExit status:\fP 0.
-
-.PP
-\fBNotes:\fP The displayed secret is representative and is never a real credential.
 
 .PP
 \fBSample 2\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio api-keys create "release automation" -o json
-.EE
-
-.PP
-\fBStandard output\fP
-
-.EX
+user@host ~ % axilio api-keys create "release automation" -o json
 {
   "id": "<key-id>",
   "name": "release automation",
   "key_value": "axl_<new-secret>",
   "created_at": "<timestamp>"
 }
+
+# Exit status: 0
+# Notes: Save the returned secret immediately; it is representative here
+#        and never a real credential.
 .EE
-
-.PP
-\fBStandard error\fP
-
-.PP
-None.
-
-.PP
-\fBExit status:\fP 0.
-
-.PP
-\fBNotes:\fP Save the returned secret immediately; it is representative here and
-never a real credential.
 
 .SS delete
 .EX
@@ -278,114 +245,52 @@ result; --yes is still required; JSON still prints
 .PP
 \fBSample 1\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio api-keys list
-.EE
-
-.PP
-\fBStandard output\fP
-
-.EX
+user@host ~ % axilio api-keys list
 ID       NAME  KEY       LAST USED  CREATED
 <key-id> ci    axl_ci…   -          <timestamp>
+
+# Exit status: 0
+# Notes: Use the listed key ID with api-keys delete.
 .EE
-
-.PP
-\fBStandard error\fP
-
-.PP
-None.
-
-.PP
-\fBExit status:\fP 0.
-
-.PP
-\fBNotes:\fP Use the listed key ID with api-keys delete.
 
 .PP
 \fBSample 2\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio api-keys delete key_123
-.EE
+user@host ~ % axilio api-keys delete key_123
 
-.PP
-\fBStandard output\fP
-
-.PP
-None.
-
-.PP
-\fBStandard error\fP
-
-.EX
+# Standard error:
 Delete API key key_123? [y/N] Deleted key_123
+
+# Exit status: 0
+# Notes: Without --yes, table mode reads confirmation from stdin,
+#        including redirected input. JSON and quiet modes require --yes.
 .EE
-
-.PP
-\fBExit status:\fP 0.
-
-.PP
-\fBNotes:\fP Without --yes, table mode reads confirmation from stdin, including
-redirected input. JSON and quiet modes require --yes.
 
 .PP
 \fBSample 3\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio api-keys delete key_123 --yes
-.EE
+user@host ~ % axilio api-keys delete key_123 --yes
 
-.PP
-\fBStandard output\fP
-
-.PP
-None.
-
-.PP
-\fBStandard error\fP
-
-.EX
+# Standard error:
 Deleted key_123
-.EE
 
-.PP
-\fBExit status:\fP 0.
+# Exit status: 0
+.EE
 
 .PP
 \fBSample 4\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio api-keys delete <key-id> --yes
-.EE
+user@host ~ % axilio api-keys delete <key-id> --yes
 
-.PP
-\fBStandard output\fP
-
-.PP
-None.
-
-.PP
-\fBStandard error\fP
-
-.EX
+# Standard error:
 Deleted <key-id>
-.EE
 
-.PP
-\fBExit status:\fP 0.
+# Exit status: 0
+.EE
 
 .SS list
 .EX
@@ -427,48 +332,21 @@ request; the API-key list remains on stdout
 .PP
 \fBSample 1\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio api-keys list
-.EE
-
-.PP
-\fBStandard output\fP
-
-.EX
+user@host ~ % axilio api-keys list
 ID       NAME  KEY       LAST USED  CREATED
 <key-id> ci    axl_ci…   -          <timestamp>
+
+# Exit status: 0
+# Notes: Only the masked preview is returned; an empty result says no
+#        keys were found.
 .EE
-
-.PP
-\fBStandard error\fP
-
-.PP
-None.
-
-.PP
-\fBExit status:\fP 0.
-
-.PP
-\fBNotes:\fP Only the masked preview is returned; an empty result says no keys were
-found.
 
 .PP
 \fBSample 2\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio api-keys list -o json
-.EE
-
-.PP
-\fBStandard output\fP
-
-.EX
+user@host ~ % axilio api-keys list -o json
 {
   "api_keys": [
     {
@@ -482,19 +360,10 @@ axilio api-keys list -o json
   "offset": 0,
   "total": 1
 }
+
+# Exit status: 0
+# Notes: Key IDs and timestamps vary; full secrets are never listed.
 .EE
-
-.PP
-\fBStandard error\fP
-
-.PP
-None.
-
-.PP
-\fBExit status:\fP 0.
-
-.PP
-\fBNotes:\fP Key IDs and timestamps vary; full secrets are never listed.
 
 .SH completion
 .EX
@@ -590,33 +459,16 @@ only stderr notices
 .PP
 \fBExamples and expected output\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio completion bash
-.EE
-
-.PP
-\fBStandard output\fP
-
-.EX
+user@host ~ % axilio completion bash
 # bash completion V2 for axilio  -*- shell-script -*-
 
 __axilio_debug()
+
+# Exit status: 0
+# Notes: The sample is shortened; stdout is a complete Bash completion
+#        script.
 .EE
-
-.PP
-\fBStandard error\fP
-
-.PP
-None.
-
-.PP
-\fBExit status:\fP 0.
-
-.PP
-\fBNotes:\fP The sample is shortened; stdout is a complete Bash completion script.
 
 .SS fish
 .EX
@@ -667,33 +519,16 @@ only stderr notices
 .PP
 \fBExamples and expected output\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio completion fish
-.EE
-
-.PP
-\fBStandard output\fP
-
-.EX
+user@host ~ % axilio completion fish
 # fish completion for axilio  -*- shell-script -*-
 
 function __axilio_debug
+
+# Exit status: 0
+# Notes: The sample is shortened; stdout is a complete Fish completion
+#        script.
 .EE
-
-.PP
-\fBStandard error\fP
-
-.PP
-None.
-
-.PP
-\fBExit status:\fP 0.
-
-.PP
-\fBNotes:\fP The sample is shortened; stdout is a complete Fish completion script.
 
 .SS powershell
 .EX
@@ -739,34 +574,16 @@ script; only stderr notices
 .PP
 \fBExamples and expected output\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio completion powershell
-.EE
-
-.PP
-\fBStandard output\fP
-
-.EX
+user@host ~ % axilio completion powershell
 # powershell completion for axilio  -*- shell-script -*-
 
 function __axilio_debug {
+
+# Exit status: 0
+# Notes: The sample is shortened; stdout is a complete PowerShell
+#        completion script.
 .EE
-
-.PP
-\fBStandard error\fP
-
-.PP
-None.
-
-.PP
-\fBExit status:\fP 0.
-
-.PP
-\fBNotes:\fP The sample is shortened; stdout is a complete PowerShell completion
-script.
 
 .SS zsh
 .EX
@@ -828,34 +645,17 @@ only stderr notices
 .PP
 \fBExamples and expected output\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio completion zsh
-.EE
-
-.PP
-\fBStandard output\fP
-
-.EX
+user@host ~ % axilio completion zsh
 #compdef axilio
 compdef _axilio axilio
 
 # zsh completion for axilio
+
+# Exit status: 0
+# Notes: The sample is shortened; stdout is a complete Zsh completion
+#        script.
 .EE
-
-.PP
-\fBStandard error\fP
-
-.PP
-None.
-
-.PP
-\fBExit status:\fP 0.
-
-.PP
-\fBNotes:\fP The sample is shortened; stdout is a complete Zsh completion script.
 
 .SH config
 .EX
@@ -916,84 +716,40 @@ configuration summary remains on stdout
 .PP
 \fBSample 1\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio config
-.EE
-
-.PP
-\fBStandard output\fP
-
-.EX
+user@host ~ % axilio config
 API host     https://api.axilio.ai
 Auth method  api-key (source: config)
 Active org   (session default)
 Config file  <config-path>
 Sessions dir <sessions-directory>
+
+# Exit status: 0
 .EE
-
-.PP
-\fBStandard error\fP
-
-.PP
-None.
-
-.PP
-\fBExit status:\fP 0.
 
 .PP
 \fBSample 2\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio config set base-url https://api.axilio.ai
-.EE
+user@host ~ % axilio config set base-url https://api.axilio.ai
 
-.PP
-\fBStandard output\fP
-
-.PP
-None.
-
-.PP
-\fBStandard error\fP
-
-.EX
+# Standard error:
 Set base-url = https://api.axilio.ai in <config-path>
-.EE
 
-.PP
-\fBExit status:\fP 0.
+# Exit status: 0
+.EE
 
 .PP
 \fBSample 3\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio config unset base-url
-.EE
+user@host ~ % axilio config unset base-url
 
-.PP
-\fBStandard output\fP
-
-.PP
-None.
-
-.PP
-\fBStandard error\fP
-
-.EX
+# Standard error:
 Unset base-url in <config-path>
-.EE
 
-.PP
-\fBExit status:\fP 0.
+# Exit status: 0
+.EE
 
 .SS set
 .EX
@@ -1037,58 +793,28 @@ still prints
 .PP
 \fBSample 1\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio config set base-url https://api.axilio.ai
-.EE
+user@host ~ % axilio config set base-url https://api.axilio.ai
 
-.PP
-\fBStandard output\fP
-
-.PP
-None.
-
-.PP
-\fBStandard error\fP
-
-.EX
+# Standard error:
 Set base-url = https://api.axilio.ai in <config-path>
-.EE
 
-.PP
-\fBExit status:\fP 0.
+# Exit status: 0
+.EE
 
 .PP
 \fBSample 2\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio config
-.EE
-
-.PP
-\fBStandard output\fP
-
-.EX
+user@host ~ % axilio config
 API host     https://api.axilio.ai
 Auth method  api-key (source: config)
 Active org   (session default)
 Config file  <config-path>
 Sessions dir <sessions-directory>
+
+# Exit status: 0
 .EE
-
-.PP
-\fBStandard error\fP
-
-.PP
-None.
-
-.PP
-\fBExit status:\fP 0.
 
 .SS unset
 .EX
@@ -1129,58 +855,28 @@ JSON still prints
 .PP
 \fBSample 1\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio config unset base-url
-.EE
+user@host ~ % axilio config unset base-url
 
-.PP
-\fBStandard output\fP
-
-.PP
-None.
-
-.PP
-\fBStandard error\fP
-
-.EX
+# Standard error:
 Unset base-url in <config-path>
-.EE
 
-.PP
-\fBExit status:\fP 0.
+# Exit status: 0
+.EE
 
 .PP
 \fBSample 2\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio config
-.EE
-
-.PP
-\fBStandard output\fP
-
-.EX
+user@host ~ % axilio config
 API host     https://api.axilio.ai
 Auth method  api-key (source: config)
 Active org   (session default)
 Config file  <config-path>
 Sessions dir <sessions-directory>
+
+# Exit status: 0
 .EE
-
-.PP
-\fBStandard error\fP
-
-.PP
-None.
-
-.PP
-\fBExit status:\fP 0.
 
 .SH doctor
 .EX
@@ -1227,52 +923,29 @@ checks; the doctor report remains on stdout
 .PP
 \fBSample 1\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio doctor
+user@host ~ % axilio doctor
+CHECK           | STATUS | DETAIL
+Authentication  | ok     | method: oauth (browser session)
+Credentials     | ok     | oauth session present
+Connectivity    | ok     | https://api.axilio.ai/api/v1 reachable
+Account         | ok     | balance: $5.00
+Plan            | ok     | Hobby (active, up to 1 concurrent)
+CLI version     | ok     | 0.6.1 (<commit>) <go-version> <build-date>
+Config file     | ok     | <config-path>
+Sessions dir    | ok     | <sessions-directory>
+Current session | ok     | <session-id> (<phone-id>)
+
+# Exit status: 0
+# Notes: Representative authenticated report; balance, plan, build
+#        metadata, paths, and current session vary.
 .EE
-
-.PP
-\fBStandard output\fP
-
-.EX
-CHECK            STATUS  DETAIL
-Authentication   ok      method: api-key (source: config)
-Credentials      ok      API key present (axl_…)
-Connectivity     ok      https://api.axilio.ai/api/v1 reachable
-Account          ok      balance: $5.00
-\&...
-.EE
-
-.PP
-\fBStandard error\fP
-
-.PP
-None.
-
-.PP
-\fBExit status:\fP 0.
-
-.PP
-\fBNotes:\fP Representative excerpt; the full report also includes local environment
-rows.
 
 .PP
 \fBSample 2\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio doctor -o json
-.EE
-
-.PP
-\fBStandard output\fP
-
-.EX
+user@host ~ % axilio doctor -o json
 {
   "checks": [
     {
@@ -1283,57 +956,33 @@ axilio doctor -o json
   ],
   "ok": true
 }
+
+# Exit status: 0
+# Notes: Shortened valid JSON; the complete checks array includes
+#        connectivity, account, version, config, and session rows.
 .EE
-
-.PP
-\fBStandard error\fP
-
-.PP
-None.
-
-.PP
-\fBExit status:\fP 0.
-
-.PP
-\fBNotes:\fP Shortened valid JSON; the complete checks array includes connectivity,
-account, version, config, and session rows.
 
 .PP
 \fBSample 3\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-AXILIO_API_KEY=axl_invalid axilio doctor
-.EE
-
-.PP
-\fBStandard output\fP
-
-.EX
-CHECK           STATUS  DETAIL
-Authentication  ok      method: api-key (source: env (AXILIO_API_KEY))
-Credentials     ok      API key present (axl_…)
-Connectivity    ok      https://api.axilio.ai/api/v1 reachable
-Authentication fail    API key rejected (HTTP 401); run `axilio login`
+user@host ~ % AXILIO_API_KEY=axl_invalid axilio doctor
+CHECK          | STATUS | DETAIL
+Authentication | ok     | method: api-key (source: env (AXILIO_API_KEY))
+Credentials    | ok     | API key present (axl_…)
+Connectivity   | ok     | https://api.axilio.ai/api/v1 reachable
+Authentication | fail   | API key rejected (HTTP 401); run `axilio login`
 \&...
-.EE
 
-.PP
-\fBStandard error\fP
-
-.EX
+# Standard error:
 doctor: API key rejected (HTTP 401); run `axilio login`
+
+# Exit status: 3
+# Notes: Authentication failures exit 3; authenticated transport
+#        failures exit 6. Fang adds ERROR framing and may add ANSI
+#        styling at the process boundary; the stderr sample shows the
+#        underlying message.
 .EE
-
-.PP
-\fBExit status:\fP 3.
-
-.PP
-\fBNotes:\fP Authentication failures exit 3; authenticated transport failures exit 6.
-Fang adds ERROR framing and may add ANSI styling at the process
-boundary; the stderr sample shows the underlying message.
 
 .SH help
 .EX
@@ -1370,36 +1019,18 @@ post-command update notice
 .PP
 \fBExamples and expected output\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio help phone tap
-.EE
-
-.PP
-\fBStandard output\fP
-
-.EX
+user@host ~ % axilio help phone tap
 Perform a tap action on the selected phone.
 
 USAGE
 
   axilio phone tap [x y] [--flags]
+
+# Exit status: 0
+# Notes: The complete help includes examples and command-effective flag
+#        descriptions.
 .EE
-
-.PP
-\fBStandard error\fP
-
-.PP
-None.
-
-.PP
-\fBExit status:\fP 0.
-
-.PP
-\fBNotes:\fP The complete help includes examples and command-effective flag
-descriptions.
 
 .SH init
 .EX
@@ -1471,95 +1102,48 @@ written and skipped path lists (default "table")
 .PP
 \fBSample 1\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio init
-.EE
+user@host ~ % axilio init
 
-.PP
-\fBStandard output\fP
-
-.PP
-None.
-
-.PP
-\fBStandard error\fP
-
-.EX
+# Standard error:
 ✓ Wrote the Axilio agent skill to <detected-target>
 Not signed in. A human must run `axilio login` (browser), or set AXILIO_API_KEY.
+
+# Exit status: 0
+# Notes: Representative stderr excerpt; detected targets depend on
+#        repository markers, existing auto-detected skills may be
+#        skipped, and the command finishes with a suggested agent
+#        prompt.
 .EE
-
-.PP
-\fBExit status:\fP 0.
-
-.PP
-\fBNotes:\fP Representative stderr excerpt; detected targets depend on repository
-markers, existing auto-detected skills may be skipped, and the command
-finishes with a suggested agent prompt.
 
 .PP
 \fBSample 2\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio init --agent codex
-.EE
+user@host ~ % axilio init --agent codex
 
-.PP
-\fBStandard output\fP
-
-.PP
-None.
-
-.PP
-\fBStandard error\fP
-
-.EX
+# Standard error:
 ✓ Wrote the Axilio agent skill to AGENTS.md
 Not signed in. A human must run `axilio login` (browser), or set AXILIO_API_KEY.
+
+# Exit status: 0
+# Notes: Excerpt: stderr then prints the suggested first agent prompt.
 .EE
-
-.PP
-\fBExit status:\fP 0.
-
-.PP
-\fBNotes:\fP Excerpt: stderr then prints the suggested first agent prompt.
 
 .PP
 \fBSample 3\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio init --agent claude --force
-.EE
+user@host ~ % axilio init --agent claude --force
 
-.PP
-\fBStandard output\fP
-
-.PP
-None.
-
-.PP
-\fBStandard error\fP
-
-.EX
+# Standard error:
 ✓ Wrote the Axilio agent skill to .claude/skills/axilio/SKILL.md
 Not signed in. A human must run `axilio login` (browser), or set AXILIO_API_KEY.
+
+# Exit status: 0
+# Notes: Excerpt: --force replaces an existing Axilio-owned Claude skill
+#        before the suggested first agent prompt.
 .EE
-
-.PP
-\fBExit status:\fP 0.
-
-.PP
-\fBNotes:\fP Excerpt: --force replaces an existing Axilio-owned Claude skill before
-the suggested first agent prompt.
 
 .SH login
 .EX
@@ -1603,93 +1187,47 @@ still opens; JSON still prints
 .PP
 \fBSample 1\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio login
-.EE
+user@host ~ % axilio login
 
-.PP
-\fBStandard output\fP
-
-.PP
-None.
-
-.PP
-\fBStandard error\fP
-
-.EX
+# Standard error:
 → Opening your browser to authorize the CLI…
 ✓ Signed in to https://api.axilio.ai
+
+# Exit status: 0
+# Notes: Representative stderr excerpt; the browser URL, optional
+#        organization line, and balance result vary by login.
 .EE
-
-.PP
-\fBExit status:\fP 0.
-
-.PP
-\fBNotes:\fP Representative stderr excerpt; the browser URL, optional organization
-line, and balance result vary by login.
 
 .PP
 \fBSample 2\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio login --api-key axl_xxx
-.EE
+user@host ~ % axilio login --api-key axl_xxx
 
-.PP
-\fBStandard output\fP
-
-.PP
-None.
-
-.PP
-\fBStandard error\fP
-
-.EX
+# Standard error:
 ✓ Signed in to https://api.axilio.ai
   Balance  $5.00
   Saved to <config-path>
+
+# Exit status: 0
+# Notes: axl_xxx is a non-secret format placeholder; replace it with a
+#        valid key before running the command.
 .EE
-
-.PP
-\fBExit status:\fP 0.
-
-.PP
-\fBNotes:\fP axl_xxx is a non-secret format placeholder; replace it with a valid key
-before running the command.
 
 .PP
 \fBSample 3\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-printf '%s\\n' "$AXILIO_API_KEY" | axilio login
-.EE
+user@host ~ % printf '%s\\n' "$AXILIO_API_KEY" | axilio login
 
-.PP
-\fBStandard output\fP
-
-.PP
-None.
-
-.PP
-\fBStandard error\fP
-
-.EX
+# Standard error:
 ✓ Signed in to https://api.axilio.ai
   Balance  $5.00
   Saved to <config-path>
-.EE
 
-.PP
-\fBExit status:\fP 0.
+# Exit status: 0
+.EE
 
 .SH logout
 .EX
@@ -1731,63 +1269,32 @@ still prints
 .PP
 \fBSample 1\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio logout
-.EE
+user@host ~ % axilio logout
 
-.PP
-\fBStandard output\fP
-
-.PP
-None.
-
-.PP
-\fBStandard error\fP
-
-.EX
+# Standard error:
 ✓ Signed out.
+
+# Exit status: 0
+# Notes: Already-signed-out is also exit 0 and reports Already signed
+#        out.
 .EE
-
-.PP
-\fBExit status:\fP 0.
-
-.PP
-\fBNotes:\fP Already-signed-out is also exit 0 and reports Already signed out.
 
 .PP
 \fBSample 2\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio status
-.EE
+user@host ~ % axilio status
 
-.PP
-\fBStandard output\fP
-
-.PP
-None.
-
-.PP
-\fBStandard error\fP
-
-.EX
+# Standard error:
 not signed in; run `axilio login` or set AXILIO_API_KEY
+
+# Exit status: 3
+# Notes: Follow-up verification after logout; environment credentials
+#        can still keep status authenticated. Fang adds ERROR framing
+#        and may add ANSI styling at the process boundary; the stderr
+#        sample shows the underlying message.
 .EE
-
-.PP
-\fBExit status:\fP 3.
-
-.PP
-\fBNotes:\fP Follow-up verification after logout; environment credentials can still
-keep status authenticated. Fang adds ERROR framing and may add ANSI
-styling at the process boundary; the stderr sample shows the underlying
-message.
 
 .SH orgs
 .EX
@@ -1830,135 +1337,59 @@ list remains on stdout
 .PP
 \fBSample 1\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio orgs
-.EE
-
-.PP
-\fBStandard output\fP
-
-.EX
-   SLUG         NAME          ID
+user@host ~ % axilio orgs
+SLUG         NAME          ID
 *  example-org  Example Inc.  <organization-id>
+
+# Exit status: 0
 .EE
-
-.PP
-\fBStandard error\fP
-
-.PP
-None.
-
-.PP
-\fBExit status:\fP 0.
 
 .PP
 \fBSample 2\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio orgs list
-.EE
-
-.PP
-\fBStandard output\fP
-
-.EX
-   SLUG         NAME          ID
+user@host ~ % axilio orgs list
+SLUG         NAME          ID
 *  example-org  Example Inc.  <organization-id>
+
+# Exit status: 0
 .EE
-
-.PP
-\fBStandard error\fP
-
-.PP
-None.
-
-.PP
-\fBExit status:\fP 0.
 
 .PP
 \fBSample 3\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio orgs use example-org
-.EE
+user@host ~ % axilio orgs use example-org
 
-.PP
-\fBStandard output\fP
-
-.PP
-None.
-
-.PP
-\fBStandard error\fP
-
-.EX
+# Standard error:
 Active organization set to example-org (Example Inc.).
-.EE
 
-.PP
-\fBExit status:\fP 0.
+# Exit status: 0
+.EE
 
 .PP
 \fBSample 4\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio --org another-org workflows list
-.EE
-
-.PP
-\fBStandard output\fP
-
-.EX
+user@host ~ % axilio --org another-org workflows list
 WORKFLOW ID   NAME      PLATFORM  STATUS  LAST RUN
 <workflow-id> Checkout  android   active  <timestamp>
+
+# Exit status: 0
 .EE
-
-.PP
-\fBStandard error\fP
-
-.PP
-None.
-
-.PP
-\fBExit status:\fP 0.
 
 .PP
 \fBSample 5\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio orgs clear
-.EE
+user@host ~ % axilio orgs clear
 
-.PP
-\fBStandard output\fP
-
-.PP
-None.
-
-.PP
-\fBStandard error\fP
-
-.EX
+# Standard error:
 Cleared the active organization; using your session default.
-.EE
 
-.PP
-\fBExit status:\fP 0.
+# Exit status: 0
+.EE
 
 .SS clear
 .EX
@@ -2000,63 +1431,32 @@ still prints
 .PP
 \fBSample 1\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio orgs clear
-.EE
+user@host ~ % axilio orgs clear
 
-.PP
-\fBStandard output\fP
-
-.PP
-None.
-
-.PP
-\fBStandard error\fP
-
-.EX
+# Standard error:
 Cleared the active organization; using your session default.
+
+# Exit status: 0
+# Notes: If no organization is set, it reports that state and still
+#        exits 0.
 .EE
-
-.PP
-\fBExit status:\fP 0.
-
-.PP
-\fBNotes:\fP If no organization is set, it reports that state and still exits 0.
 
 .PP
 \fBSample 2\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio orgs list
-.EE
-
-.PP
-\fBStandard output\fP
-
-.EX
-   SLUG         NAME          ID
+user@host ~ % axilio orgs list
+SLUG         NAME          ID
    example-org  Example Inc.  <organization-id>
-.EE
 
-.PP
-\fBStandard error\fP
-
-.EX
+# Standard error:
 No active org set; using your session default.
+
+# Exit status: 0
+# Notes: The full note suggests `axilio orgs use <slug>` to persist a
+#        selection.
 .EE
-
-.PP
-\fBExit status:\fP 0.
-
-.PP
-\fBNotes:\fP The full note suggests \fBaxilio orgs use \\<slug\\>\fR to persist a
-selection.
 
 .SS list
 .EX
@@ -2099,63 +1499,30 @@ organization list remains on stdout
 .PP
 \fBSample 1\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio orgs list
-.EE
-
-.PP
-\fBStandard output\fP
-
-.EX
-   SLUG         NAME          ID
+user@host ~ % axilio orgs list
+SLUG         NAME          ID
 *  example-org  Example Inc.  <organization-id>
+
+# Exit status: 0
 .EE
-
-.PP
-\fBStandard error\fP
-
-.PP
-None.
-
-.PP
-\fBExit status:\fP 0.
 
 .PP
 \fBSample 2\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio orgs list -o json
-.EE
-
-.PP
-\fBStandard output\fP
-
-.EX
+user@host ~ % axilio orgs list -o json
 {
   "active": "example-org",
   "organizations": [
     {"id": "<organization-id>", "slug": "example-org", "name": "Example Inc."}
   ]
 }
+
+# Exit status: 0
+# Notes: Organization membership and the active selector vary by
+#        session.
 .EE
-
-.PP
-\fBStandard error\fP
-
-.PP
-None.
-
-.PP
-\fBExit status:\fP 0.
-
-.PP
-\fBNotes:\fP Organization membership and the active selector vary by session.
 
 .SS use
 .EX
@@ -2197,55 +1564,25 @@ JSON still prints
 .PP
 \fBSample 1\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio orgs list
-.EE
-
-.PP
-\fBStandard output\fP
-
-.EX
-   SLUG         NAME          ID
+user@host ~ % axilio orgs list
+SLUG         NAME          ID
 *  example-org  Example Inc.  <organization-id>
+
+# Exit status: 0
 .EE
-
-.PP
-\fBStandard error\fP
-
-.PP
-None.
-
-.PP
-\fBExit status:\fP 0.
 
 .PP
 \fBSample 2\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio orgs use example-org
-.EE
+user@host ~ % axilio orgs use example-org
 
-.PP
-\fBStandard output\fP
-
-.PP
-None.
-
-.PP
-\fBStandard error\fP
-
-.EX
+# Standard error:
 Active organization set to example-org (Example Inc.).
-.EE
 
-.PP
-\fBExit status:\fP 0.
+# Exit status: 0
+.EE
 
 .SH phone
 .EX
@@ -2373,81 +1710,38 @@ found-element result remains on stdout
 .PP
 \fBSample 1\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio phone find "the search box"
-.EE
-
-.PP
-\fBStandard output\fP
-
-.EX
+user@host ~ % axilio phone find "the search box"
 Text        Search
 Center      540,620
 BBox        80,560 920x120
 Confidence  0.99
 Source      ocr
+
+# Exit status: 0
 .EE
-
-.PP
-\fBStandard error\fP
-
-.PP
-None.
-
-.PP
-\fBExit status:\fP 0.
 
 .PP
 \fBSample 2\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio phone find "settings icon" --ocr-engine premium
-.EE
-
-.PP
-\fBStandard output\fP
-
-.EX
+user@host ~ % axilio phone find "settings icon" --ocr-engine premium
 Text
 Center      900,120
 BBox        840,60 120x120
 Confidence  0.98
 Source      vlm
+
+# Exit status: 0
+# Notes: Vision-model elements can have no text; coordinates depend on
+#        the current frame.
 .EE
-
-.PP
-\fBStandard error\fP
-
-.PP
-None.
-
-.PP
-\fBExit status:\fP 0.
-
-.PP
-\fBNotes:\fP Vision-model elements can have no text; coordinates depend on the
-current frame.
 
 .PP
 \fBSample 3\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio phone find "continue button" --timeout 15s -o json
-.EE
-
-.PP
-\fBStandard output\fP
-
-.EX
+user@host ~ % axilio phone find "continue button" --timeout 15s -o json
 {
   "text": "Continue",
   "center": {"x": 540, "y": 1120},
@@ -2455,19 +1749,10 @@ axilio phone find "continue button" --timeout 15s -o json
   "confidence": 0.98,
   "source": "ocr"
 }
+
+# Exit status: 0
+# Notes: Element content and coordinates depend on the current frame.
 .EE
-
-.PP
-\fBStandard error\fP
-
-.PP
-None.
-
-.PP
-\fBExit status:\fP 0.
-
-.PP
-\fBNotes:\fP Element content and coordinates depend on the current frame.
 
 .SS find-text
 .EX
@@ -2522,126 +1807,54 @@ text-match result remains on stdout
 .PP
 \fBSample 1\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio phone find-text "sign in"
-.EE
-
-.PP
-\fBStandard output\fP
-
-.EX
+user@host ~ % axilio phone find-text "sign in"
 Text        Sign in
 Center      540,1120
 BBox        80,1060 920x120
 Confidence  0.98
 Source      ocr
+
+# Exit status: 0
+# Notes: The default is a case-insensitive substring match.
 .EE
-
-.PP
-\fBStandard error\fP
-
-.PP
-None.
-
-.PP
-\fBExit status:\fP 0.
-
-.PP
-\fBNotes:\fP The default is a case-insensitive substring match.
 
 .PP
 \fBSample 2\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio phone find-text "Sign in" --exact
-.EE
-
-.PP
-\fBStandard output\fP
-
-.EX
+user@host ~ % axilio phone find-text "Sign in" --exact
 Text        Sign in
 Center      540,1120
 BBox        80,1060 920x120
 Confidence  0.98
 Source      ocr
+
+# Exit status: 0
+# Notes: Exact matching is case-sensitive.
 .EE
-
-.PP
-\fBStandard error\fP
-
-.PP
-None.
-
-.PP
-\fBExit status:\fP 0.
-
-.PP
-\fBNotes:\fP Exact matching is case-sensitive.
 
 .PP
 \fBSample 3\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio phone find-text "settings"
-.EE
-
-.PP
-\fBStandard output\fP
-
-.EX
+user@host ~ % axilio phone find-text "settings"
 No match.
+
+# Exit status: 0
+# Notes: No match is success; -o json emits null.
 .EE
-
-.PP
-\fBStandard error\fP
-
-.PP
-None.
-
-.PP
-\fBExit status:\fP 0.
-
-.PP
-\fBNotes:\fP No match is success; -o json emits null.
 
 .PP
 \fBSample 4\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio phone find-text "settings" -o json
-.EE
-
-.PP
-\fBStandard output\fP
-
-.EX
+user@host ~ % axilio phone find-text "settings" -o json
 null
+
+# Exit status: 0
+# Notes: No match is a successful literal JSON null.
 .EE
-
-.PP
-\fBStandard error\fP
-
-.PP
-None.
-
-.PP
-\fBExit status:\fP 0.
-
-.PP
-\fBNotes:\fP No match is a successful literal JSON null.
 
 .SS key
 .EX
@@ -2685,28 +1898,14 @@ action still runs; JSON still prints
 .PP
 \fBExamples and expected output\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio phone key enter
-.EE
+user@host ~ % axilio phone key enter
 
-.PP
-\fBStandard output\fP
-
-.PP
-None.
-
-.PP
-\fBStandard error\fP
-
-.EX
+# Standard error:
 Pressed enter
-.EE
 
-.PP
-\fBExit status:\fP 0.
+# Exit status: 0
+.EE
 
 .SS long-press
 .EX
@@ -2761,54 +1960,26 @@ action still runs; JSON still prints
 .PP
 \fBSample 1\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio phone long-press 540 1080
-.EE
+user@host ~ % axilio phone long-press 540 1080
 
-.PP
-\fBStandard output\fP
-
-.PP
-None.
-
-.PP
-\fBStandard error\fP
-
-.EX
+# Standard error:
 Long-pressed 540,1080 for 800ms
-.EE
 
-.PP
-\fBExit status:\fP 0.
+# Exit status: 0
+.EE
 
 .PP
 \fBSample 2\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio phone long-press 540 1080 --duration-ms 1200
-.EE
+user@host ~ % axilio phone long-press 540 1080 --duration-ms 1200
 
-.PP
-\fBStandard output\fP
-
-.PP
-None.
-
-.PP
-\fBStandard error\fP
-
-.EX
+# Standard error:
 Long-pressed 540,1080 for 1200ms
-.EE
 
-.PP
-\fBExit status:\fP 0.
+# Exit status: 0
+.EE
 
 .SS observe
 .EX
@@ -2864,81 +2035,41 @@ observation result remains on stdout
 .PP
 \fBSample 1\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio phone observe
-.EE
-
-.PP
-\fBStandard output\fP
-
-.EX
+user@host ~ % axilio phone observe
 TEXT          X    Y     CONF
 coffee shops  540  620   0.99
 Continue      540  1120  0.98
-.EE
 
-.PP
-\fBStandard error\fP
-
-.EX
+# Standard error:
 2 texts, 0 icons  1080x2400
+
+# Exit status: 0
+# Notes: JSON includes texts, icons, dimensions, screen hash, and
+#        capture time.
 .EE
-
-.PP
-\fBExit status:\fP 0.
-
-.PP
-\fBNotes:\fP JSON includes texts, icons, dimensions, screen hash, and capture time.
 
 .PP
 \fBSample 2\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio phone observe --ocr-engine premium
-.EE
-
-.PP
-\fBStandard output\fP
-
-.EX
+user@host ~ % axilio phone observe --ocr-engine premium
 TEXT          X    Y     CONF
 coffee shops  540  620   0.99
 Continue      540  1120  0.98
-.EE
 
-.PP
-\fBStandard error\fP
-
-.EX
+# Standard error:
 2 texts, 0 icons  1080x2400
+
+# Exit status: 0
+# Notes: Premium OCR changes recognition, not the table shape.
 .EE
-
-.PP
-\fBExit status:\fP 0.
-
-.PP
-\fBNotes:\fP Premium OCR changes recognition, not the table shape.
 
 .PP
 \fBSample 3\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio phone observe -o json
-.EE
-
-.PP
-\fBStandard output\fP
-
-.EX
+user@host ~ % axilio phone observe -o json
 {
   "texts": [
     {"text": "Continue", "center": {"x": 540, "y": 1120}, "confidence": 0.98}
@@ -2949,20 +2080,11 @@ axilio phone observe -o json
   "height": 2400,
   "captured_at": "<timestamp>"
 }
+
+# Exit status: 0
+# Notes: Shortened representative screen JSON; elements also include
+#        bounding boxes and sources.
 .EE
-
-.PP
-\fBStandard error\fP
-
-.PP
-None.
-
-.PP
-\fBExit status:\fP 0.
-
-.PP
-\fBNotes:\fP Shortened representative screen JSON; elements also include bounding
-boxes and sources.
 
 .PP
 \fBWalkthrough\fP
@@ -3035,94 +2157,49 @@ action still runs; JSON still prints
 .PP
 \fBSample 1\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio phone screenshot
-.EE
+user@host ~ % axilio phone screenshot
 
-.PP
-\fBStandard output\fP
-
-.PP
-None.
-
-.PP
-\fBStandard error\fP
-
-.EX
+# Standard error:
 Wrote screenshot.png (<bytes> bytes)
+
+# Exit status: 0
+# Notes: A new file requests mode 0644, subject to the process umask.
+#        Overwriting an existing file preserves its mode while replacing
+#        its contents.
 .EE
-
-.PP
-\fBExit status:\fP 0.
-
-.PP
-\fBNotes:\fP A new file requests mode 0644, subject to the process umask. Overwriting
-an existing file preserves its mode while replacing its contents.
 
 .PP
 \fBSample 2\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio phone screenshot --out login.png
-.EE
+user@host ~ % axilio phone screenshot --out login.png
 
-.PP
-\fBStandard output\fP
-
-.PP
-None.
-
-.PP
-\fBStandard error\fP
-
-.EX
+# Standard error:
 Wrote login.png (<bytes> bytes)
+
+# Exit status: 0
+# Notes: A new file requests mode 0644, subject to the process umask.
+#        Overwriting an existing file preserves its mode while replacing
+#        its contents.
 .EE
-
-.PP
-\fBExit status:\fP 0.
-
-.PP
-\fBNotes:\fP A new file requests mode 0644, subject to the process umask. Overwriting
-an existing file preserves its mode while replacing its contents.
 
 .PP
 \fBSample 3\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio phone screenshot --out ./login.png
-.EE
+user@host ~ % axilio phone screenshot --out ./login.png
 
-.PP
-\fBStandard output\fP
-
-.PP
-None.
-
-.PP
-\fBStandard error\fP
-
-.EX
+# Standard error:
 Wrote ./login.png (<bytes> bytes)
+
+# Exit status: 0
+# Notes: Deliberate correction of the legacy artifacts/login.png
+#        example: screenshot does not create missing parent directories,
+#        so this target uses the existing current directory. A new file
+#        requests mode 0644 subject to umask; overwrite preserves the
+#        existing mode.
 .EE
-
-.PP
-\fBExit status:\fP 0.
-
-.PP
-\fBNotes:\fP Deliberate correction of the legacy artifacts/login.png example:
-screenshot does not create missing parent directories, so this target
-uses the existing current directory. A new file requests mode 0644
-subject to umask; overwrite preserves the existing mode.
 
 .SS send
 .EX
@@ -3188,102 +2265,54 @@ delivery result remains on stdout
 .PP
 \fBSample 1\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio phone send ./photo.jpg
-.EE
-
-.PP
-\fBStandard output\fP
-
-.EX
+user@host ~ % axilio phone send ./photo.jpg
 Delivery  <delivery-id>
 File      photo.jpg
 Status    dispatched
-.EE
 
-.PP
-\fBStandard error\fP
-
-.EX
+# Standard error:
 → Sending photo.jpg to phone <phone-id>
 pushed; re-run with --wait to confirm delivery
+
+# Exit status: 0
+# Notes: The upload remains in the organization library.
 .EE
-
-.PP
-\fBExit status:\fP 0.
-
-.PP
-\fBNotes:\fP The upload remains in the organization library.
 
 .PP
 \fBSample 2\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio phone send ./clip.mp4 --collection Movies
-.EE
-
-.PP
-\fBStandard output\fP
-
-.EX
+user@host ~ % axilio phone send ./clip.mp4 --collection Movies
 Delivery  <delivery-id>
 File      clip.mp4
 Status    dispatched
-.EE
 
-.PP
-\fBStandard error\fP
-
-.EX
+# Standard error:
 → Sending clip.mp4 to phone <phone-id>
 pushed; re-run with --wait to confirm delivery
+
+# Exit status: 0
+# Notes: The upload remains in the organization library and is delivered
+#        to Movies.
 .EE
-
-.PP
-\fBExit status:\fP 0.
-
-.PP
-\fBNotes:\fP The upload remains in the organization library and is delivered to
-Movies.
 
 .PP
 \fBSample 3\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio phone send ./photo.jpg --wait --timeout 2m
-.EE
-
-.PP
-\fBStandard output\fP
-
-.EX
+user@host ~ % axilio phone send ./photo.jpg --wait --timeout 2m
 Delivery  <delivery-id>
 File      photo.jpg
 Status    delivered
-.EE
 
-.PP
-\fBStandard error\fP
-
-.EX
+# Standard error:
 → Sending photo.jpg to phone <phone-id>
+
+# Exit status: 0
+# Notes: With --wait, the command returns only after delivered, failed,
+#        or the two-minute deadline.
 .EE
-
-.PP
-\fBExit status:\fP 0.
-
-.PP
-\fBNotes:\fP With --wait, the command returns only after delivered, failed, or the
-two-minute deadline.
 
 .SS swipe
 .EX
@@ -3337,54 +2366,26 @@ action still runs; JSON still prints
 .PP
 \fBSample 1\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio phone swipe 540 1600 540 500
-.EE
+user@host ~ % axilio phone swipe 540 1600 540 500
 
-.PP
-\fBStandard output\fP
-
-.PP
-None.
-
-.PP
-\fBStandard error\fP
-
-.EX
+# Standard error:
 Swiped 540,1600 -> 540,500
-.EE
 
-.PP
-\fBExit status:\fP 0.
+# Exit status: 0
+.EE
 
 .PP
 \fBSample 2\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio phone swipe 200 800 900 800 --duration-ms 500
-.EE
+user@host ~ % axilio phone swipe 200 800 900 800 --duration-ms 500
 
-.PP
-\fBStandard output\fP
-
-.PP
-None.
-
-.PP
-\fBStandard error\fP
-
-.EX
+# Standard error:
 Swiped 200,800 -> 900,800
-.EE
 
-.PP
-\fBExit status:\fP 0.
+# Exit status: 0
+.EE
 
 .SS tap
 .EX
@@ -3453,80 +2454,38 @@ still runs; JSON still prints
 .PP
 \fBSample 1\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio phone tap --query "the search box"
-.EE
+user@host ~ % axilio phone tap --query "the search box"
 
-.PP
-\fBStandard output\fP
-
-.PP
-None.
-
-.PP
-\fBStandard error\fP
-
-.EX
+# Standard error:
 Tapped "the search box" at 540,620
-.EE
 
-.PP
-\fBExit status:\fP 0.
+# Exit status: 0
+.EE
 
 .PP
 \fBSample 2\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio phone tap 540 1200
-.EE
+user@host ~ % axilio phone tap 540 1200
 
-.PP
-\fBStandard output\fP
-
-.PP
-None.
-
-.PP
-\fBStandard error\fP
-
-.EX
+# Standard error:
 Tapped 540,1200
-.EE
 
-.PP
-\fBExit status:\fP 0.
+# Exit status: 0
+.EE
 
 .PP
 \fBSample 3\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio phone tap --session sess_123 --query "continue"
-.EE
+user@host ~ % axilio phone tap --session sess_123 --query "continue"
 
-.PP
-\fBStandard output\fP
-
-.PP
-None.
-
-.PP
-\fBStandard error\fP
-
-.EX
+# Standard error:
 Tapped "continue" at 540,1120
-.EE
 
-.PP
-\fBExit status:\fP 0.
+# Exit status: 0
+.EE
 
 .SS type
 .EX
@@ -3575,80 +2534,38 @@ action still runs; JSON still prints
 .PP
 \fBSample 1\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio phone type "hello world"
-.EE
+user@host ~ % axilio phone type "hello world"
 
-.PP
-\fBStandard output\fP
-
-.PP
-None.
-
-.PP
-\fBStandard error\fP
-
-.EX
+# Standard error:
 Typed "hello world"
-.EE
 
-.PP
-\fBExit status:\fP 0.
+# Exit status: 0
+.EE
 
 .PP
 \fBSample 2\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio phone type 'user@example.com'
-.EE
+user@host ~ % axilio phone type 'user@example.com'
 
-.PP
-\fBStandard output\fP
-
-.PP
-None.
-
-.PP
-\fBStandard error\fP
-
-.EX
+# Standard error:
 Typed "user@example.com"
-.EE
 
-.PP
-\fBExit status:\fP 0.
+# Exit status: 0
+.EE
 
 .PP
 \fBSample 3\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio phone type "don't split this text"
-.EE
+user@host ~ % axilio phone type "don't split this text"
 
-.PP
-\fBStandard output\fP
-
-.PP
-None.
-
-.PP
-\fBStandard error\fP
-
-.EX
+# Standard error:
 Typed "don't split this text"
-.EE
 
-.PP
-\fBExit status:\fP 0.
+# Exit status: 0
+.EE
 
 .SS wait-for
 .EX
@@ -3708,122 +2625,58 @@ remain on stdout
 .PP
 \fBSample 1\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio phone wait-for "Results"
-.EE
-
-.PP
-\fBStandard output\fP
-
-.EX
+user@host ~ % axilio phone wait-for "Results"
 Text        Results
 Center      540,1120
 BBox        80,1060 920x120
 Confidence  0.98
 Source      ocr
+
+# Exit status: 0
 .EE
-
-.PP
-\fBStandard error\fP
-
-.PP
-None.
-
-.PP
-\fBExit status:\fP 0.
 
 .PP
 \fBSample 2\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio phone wait-for "Loading" --gone
-.EE
+user@host ~ % axilio phone wait-for "Loading" --gone
 
-.PP
-\fBStandard output\fP
-
-.PP
-None.
-
-.PP
-\fBStandard error\fP
-
-.EX
+# Standard error:
 "Loading" gone
-.EE
 
-.PP
-\fBExit status:\fP 0.
+# Exit status: 0
+.EE
 
 .PP
 \fBSample 3\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio phone wait-for "Ready" --exact --timeout 30s
-.EE
-
-.PP
-\fBStandard output\fP
-
-.EX
+user@host ~ % axilio phone wait-for "Ready" --exact --timeout 30s
 Text        Ready
 Center      540,1120
 BBox        80,1060 920x120
 Confidence  0.98
 Source      ocr
+
+# Exit status: 0
+# Notes: Exact matching is case-sensitive and waits up to 30 seconds.
 .EE
-
-.PP
-\fBStandard error\fP
-
-.PP
-None.
-
-.PP
-\fBExit status:\fP 0.
-
-.PP
-\fBNotes:\fP Exact matching is case-sensitive and waits up to 30 seconds.
 
 .PP
 \fBSample 4\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio phone wait-for "Results" --timeout 1s
-.EE
+user@host ~ % axilio phone wait-for "Results" --timeout 1s
 
-.PP
-\fBStandard output\fP
-
-.PP
-None.
-
-.PP
-\fBStandard error\fP
-
-.EX
+# Standard error:
 timeout: text not found within deadline: Results
+
+# Exit status: 5
+# Notes: Timeouts use the stable timeout exit status. Fang adds ERROR
+#        framing and may add ANSI styling at the process boundary; the
+#        stderr sample shows the underlying message.
 .EE
-
-.PP
-\fBExit status:\fP 5.
-
-.PP
-\fBNotes:\fP Timeouts use the stable timeout exit status. Fang adds ERROR framing and
-may add ANSI styling at the process boundary; the stderr sample shows
-the underlying message.
 
 .SH phones
 .EX
@@ -3914,47 +2767,20 @@ request; the available-phone result remains on stdout
 .PP
 \fBSample 1\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio phones list
-.EE
-
-.PP
-\fBStandard output\fP
-
-.EX
+user@host ~ % axilio phones list
 PHONE ID   TYPE     MODEL    STATUS
 <phone-id> android  Pixel 8  active
+
+# Exit status: 0
+# Notes: An empty successful result prints No phones available.
 .EE
-
-.PP
-\fBStandard error\fP
-
-.PP
-None.
-
-.PP
-\fBExit status:\fP 0.
-
-.PP
-\fBNotes:\fP An empty successful result prints No phones available.
 
 .PP
 \fBSample 2\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio phones list -o json
-.EE
-
-.PP
-\fBStandard output\fP
-
-.EX
+user@host ~ % axilio phones list -o json
 {
   "android_count": 1,
   "iphone_count": 0,
@@ -3970,20 +2796,11 @@ axilio phones list -o json
     }
   ]
 }
+
+# Exit status: 0
+# Notes: Counts, inventory, and optional phone fields vary by
+#        organization and availability.
 .EE
-
-.PP
-\fBStandard error\fP
-
-.PP
-None.
-
-.PP
-\fBExit status:\fP 0.
-
-.PP
-\fBNotes:\fP Counts, inventory, and optional phone fields vary by organization and
-availability.
 
 .SS mine
 .EX
@@ -4026,65 +2843,33 @@ request; the dedicated-phone result remains on stdout
 .PP
 \fBSample 1\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio phones mine
-.EE
-
-.PP
-\fBStandard output\fP
-
-.EX
+user@host ~ % axilio phones mine
 PHONE ID   NICKNAME  TYPE     MODEL    STATUS  SESSION
 <phone-id> demo      android  Pixel 8  active  <session-id>
+
+# Exit status: 0
+# Notes: An empty successful result prints No dedicated phones.
 .EE
-
-.PP
-\fBStandard error\fP
-
-.PP
-None.
-
-.PP
-\fBExit status:\fP 0.
-
-.PP
-\fBNotes:\fP An empty successful result prints No dedicated phones.
 
 .PP
 \fBSample 2\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio sessions start --phone-id ph_123
-.EE
-
-.PP
-\fBStandard output\fP
-
-.EX
+user@host ~ % axilio sessions start --phone-id ph_123
 Session      <session-id>
 Phone        ph_123
 Region       us-central
 Live view    <live-view-url>
 Control URL  <control-url>
-.EE
 
-.PP
-\fBStandard error\fP
-
-.EX
+# Standard error:
 Drive it:  axilio phone observe
 Pin it to this shell (for parallel work):  export AXILIO_SESSION=<session-id>
 Release it with:  axilio sessions stop <session-id>
-.EE
 
-.PP
-\fBExit status:\fP 0.
+# Exit status: 0
+.EE
 
 .SH runs
 .EX
@@ -4183,114 +2968,52 @@ result; --yes is still required; JSON still prints
 .PP
 \fBSample 1\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio runs list
-.EE
-
-.PP
-\fBStandard output\fP
-
-.EX
+user@host ~ % axilio runs list
 RUN ID   STATUS     TRIGGER  WORKFLOW      CREATED
 <run-id> running    manual   <workflow-id> <timestamp>
+
+# Exit status: 0
+# Notes: Use a queued or running run ID with runs cancel.
 .EE
-
-.PP
-\fBStandard error\fP
-
-.PP
-None.
-
-.PP
-\fBExit status:\fP 0.
-
-.PP
-\fBNotes:\fP Use a queued or running run ID with runs cancel.
 
 .PP
 \fBSample 2\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio runs cancel run_123
-.EE
+user@host ~ % axilio runs cancel run_123
 
-.PP
-\fBStandard output\fP
-
-.PP
-None.
-
-.PP
-\fBStandard error\fP
-
-.EX
+# Standard error:
 Cancel run run_123? [y/N] Canceled run_123
+
+# Exit status: 0
+# Notes: Without --yes, table mode reads confirmation from stdin,
+#        including redirected input. JSON and quiet modes require --yes.
 .EE
-
-.PP
-\fBExit status:\fP 0.
-
-.PP
-\fBNotes:\fP Without --yes, table mode reads confirmation from stdin, including
-redirected input. JSON and quiet modes require --yes.
 
 .PP
 \fBSample 3\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio runs cancel run_123 --yes
-.EE
+user@host ~ % axilio runs cancel run_123 --yes
 
-.PP
-\fBStandard output\fP
-
-.PP
-None.
-
-.PP
-\fBStandard error\fP
-
-.EX
+# Standard error:
 Canceled run_123
-.EE
 
-.PP
-\fBExit status:\fP 0.
+# Exit status: 0
+.EE
 
 .PP
 \fBSample 4\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio runs cancel <run-id> --yes
-.EE
+user@host ~ % axilio runs cancel <run-id> --yes
 
-.PP
-\fBStandard output\fP
-
-.PP
-None.
-
-.PP
-\fBStandard error\fP
-
-.EX
+# Standard error:
 Canceled <run-id>
-.EE
 
-.PP
-\fBExit status:\fP 0.
+# Exit status: 0
+.EE
 
 .SS get
 .EX
@@ -4331,47 +3054,20 @@ request; the run-detail result remains on stdout
 .PP
 \fBSample 1\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio runs list
-.EE
-
-.PP
-\fBStandard output\fP
-
-.EX
+user@host ~ % axilio runs list
 RUN ID   STATUS     TRIGGER  WORKFLOW      CREATED
 <run-id> completed  manual   <workflow-id> <timestamp>
+
+# Exit status: 0
+# Notes: Use a returned run ID with runs get.
 .EE
-
-.PP
-\fBStandard error\fP
-
-.PP
-None.
-
-.PP
-\fBExit status:\fP 0.
-
-.PP
-\fBNotes:\fP Use a returned run ID with runs get.
 
 .PP
 \fBSample 2\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio runs get run_123
-.EE
-
-.PP
-\fBStandard output\fP
-
-.EX
+user@host ~ % axilio runs get run_123
 Run        run_123
 Status     completed
 Trigger    manual
@@ -4383,31 +3079,15 @@ Started    <started-at>
 Completed  <completed-at>
 Error      -
 Video      <video-url>
+
+# Exit status: 0
 .EE
-
-.PP
-\fBStandard error\fP
-
-.PP
-None.
-
-.PP
-\fBExit status:\fP 0.
 
 .PP
 \fBSample 3\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio runs get run_123 -o json
-.EE
-
-.PP
-\fBStandard output\fP
-
-.EX
+user@host ~ % axilio runs get run_123 -o json
 {
   "id": "run_123",
   "status": "completed",
@@ -4416,35 +3096,17 @@ axilio runs get run_123 -o json
   "session_id": "<session-id>",
   "phone_id": "<phone-id>"
 }
+
+# Exit status: 0
+# Notes: Shortened representative SDK response; timestamps, errors, and
+#        video URL appear when present.
 .EE
-
-.PP
-\fBStandard error\fP
-
-.PP
-None.
-
-.PP
-\fBExit status:\fP 0.
-
-.PP
-\fBNotes:\fP Shortened representative SDK response; timestamps, errors, and video URL
-appear when present.
 
 .PP
 \fBSample 4\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio runs get <run-id>
-.EE
-
-.PP
-\fBStandard output\fP
-
-.EX
+user@host ~ % axilio runs get <run-id>
 Run        <run-id>
 Status     completed
 Trigger    manual
@@ -4456,16 +3118,9 @@ Started    <started-at>
 Completed  <completed-at>
 Error      -
 Video      <video-url>
+
+# Exit status: 0
 .EE
-
-.PP
-\fBStandard error\fP
-
-.PP
-None.
-
-.PP
-\fBExit status:\fP 0.
 
 .SS list
 .EX
@@ -4515,77 +3170,32 @@ the run-list result remains on stdout
 .PP
 \fBSample 1\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio runs list
-.EE
-
-.PP
-\fBStandard output\fP
-
-.EX
+user@host ~ % axilio runs list
 RUN ID   STATUS     TRIGGER  WORKFLOW      CREATED
 <run-id> completed  manual   <workflow-id> <timestamp>
+
+# Exit status: 0
+# Notes: An empty successful result prints No runs found.
 .EE
-
-.PP
-\fBStandard error\fP
-
-.PP
-None.
-
-.PP
-\fBExit status:\fP 0.
-
-.PP
-\fBNotes:\fP An empty successful result prints No runs found.
 
 .PP
 \fBSample 2\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio runs list --workflow wf_123 --limit 10
-.EE
-
-.PP
-\fBStandard output\fP
-
-.EX
+user@host ~ % axilio runs list --workflow wf_123 --limit 10
 RUN ID   STATUS     TRIGGER  WORKFLOW  CREATED
 <run-id> completed  manual   wf_123    <timestamp>
+
+# Exit status: 0
+# Notes: Run IDs, statuses, and timestamps vary.
 .EE
-
-.PP
-\fBStandard error\fP
-
-.PP
-None.
-
-.PP
-\fBExit status:\fP 0.
-
-.PP
-\fBNotes:\fP Run IDs, statuses, and timestamps vary.
 
 .PP
 \fBSample 3\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio runs list -o json
-.EE
-
-.PP
-\fBStandard output\fP
-
-.EX
+user@host ~ % axilio runs list -o json
 {
   "limit": 20,
   "offset": 0,
@@ -4599,20 +3209,11 @@ axilio runs list -o json
   ],
   "total": 1
 }
+
+# Exit status: 0
+# Notes: Shortened representative SDK response; run records can include
+#        additional fields.
 .EE
-
-.PP
-\fBStandard error\fP
-
-.PP
-None.
-
-.PP
-\fBExit status:\fP 0.
-
-.PP
-\fBNotes:\fP Shortened representative SDK response; run records can include
-additional fields.
 
 .SS start
 .EX
@@ -4677,137 +3278,65 @@ result remains on stdout
 .PP
 \fBSample 1\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio runs start wf_123
-.EE
+user@host ~ % axilio runs start wf_123
 
-.PP
-\fBStandard output\fP
-
-.PP
-None.
-
-.PP
-\fBStandard error\fP
-
-.EX
+# Standard error:
 Started run <run-id>
-.EE
 
-.PP
-\fBExit status:\fP 0.
+# Exit status: 0
+.EE
 
 .PP
 \fBSample 2\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio runs start wf_123 --count 3
-.EE
+user@host ~ % axilio runs start wf_123 --count 3
 
-.PP
-\fBStandard output\fP
-
-.PP
-None.
-
-.PP
-\fBStandard error\fP
-
-.EX
+# Standard error:
 Started run <run-id-1>
 Started run <run-id-2>
 Started run <run-id-3>
-.EE
 
-.PP
-\fBExit status:\fP 0.
+# Exit status: 0
+.EE
 
 .PP
 \fBSample 3\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio runs start wf_123 --phone-id ph_123
-.EE
+user@host ~ % axilio runs start wf_123 --phone-id ph_123
 
-.PP
-\fBStandard output\fP
-
-.PP
-None.
-
-.PP
-\fBStandard error\fP
-
-.EX
+# Standard error:
 Started run <run-id>
-.EE
 
-.PP
-\fBExit status:\fP 0.
+# Exit status: 0
+.EE
 
 .PP
 \fBSample 4\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio runs start wf_123 --start-timeout 300
-.EE
+user@host ~ % axilio runs start wf_123 --start-timeout 300
 
-.PP
-\fBStandard output\fP
-
-.PP
-None.
-
-.PP
-\fBStandard error\fP
-
-.EX
+# Standard error:
 Started run <run-id>
-.EE
 
-.PP
-\fBExit status:\fP 0.
+# Exit status: 0
+.EE
 
 .PP
 \fBSample 5\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio runs start <workflow-id>
-.EE
+user@host ~ % axilio runs start <workflow-id>
 
-.PP
-\fBStandard output\fP
-
-.PP
-None.
-
-.PP
-\fBStandard error\fP
-
-.EX
+# Standard error:
 Started run <run-id>
+
+# Exit status: 0
+# Notes: -o json emits the complete run_ids response on stdout.
 .EE
-
-.PP
-\fBExit status:\fP 0.
-
-.PP
-\fBNotes:\fP -o json emits the complete run_ids response on stdout.
 
 .SH sessions
 .EX
@@ -4902,80 +3431,35 @@ the current-session result remains on stdout
 .PP
 \fBSample 1\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio sessions current
-.EE
-
-.PP
-\fBStandard output\fP
-
-.EX
+user@host ~ % axilio sessions current
 Session  <session-id>
 Phone    <phone-id>
 Type     android
+
+# Exit status: 0
+# Notes: No selected session is an exit-0 answer; JSON prints null.
 .EE
-
-.PP
-\fBStandard error\fP
-
-.PP
-None.
-
-.PP
-\fBExit status:\fP 0.
-
-.PP
-\fBNotes:\fP No selected session is an exit-0 answer; JSON prints null.
 
 .PP
 \fBSample 2\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-AXILIO_SESSION=sess_123 axilio sessions current
-.EE
-
-.PP
-\fBStandard output\fP
-
-.EX
+user@host ~ % AXILIO_SESSION=sess_123 axilio sessions current
 Session  sess_123
 Phone    <phone-id>
 Type     android
+
+# Exit status: 0
+# Notes: The named lease must exist locally; AXILIO_SESSION has
+#        precedence over sole-lease and current-pointer selection.
 .EE
-
-.PP
-\fBStandard error\fP
-
-.PP
-None.
-
-.PP
-\fBExit status:\fP 0.
-
-.PP
-\fBNotes:\fP The named lease must exist locally; AXILIO_SESSION has precedence over
-sole-lease and current-pointer selection.
 
 .PP
 \fBSample 3\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio sessions current -o json
-.EE
-
-.PP
-\fBStandard output\fP
-
-.EX
+user@host ~ % axilio sessions current -o json
 {
   "session_id": "<session-id>",
   "phone_id": "<phone-id>",
@@ -4983,19 +3467,10 @@ axilio sessions current -o json
   "control_url": "<control-url>",
   "created_at": "<timestamp>"
 }
+
+# Exit status: 0
+# Notes: With no selected lease, the successful JSON result is null.
 .EE
-
-.PP
-\fBStandard error\fP
-
-.PP
-None.
-
-.PP
-\fBExit status:\fP 0.
-
-.PP
-\fBNotes:\fP With no selected lease, the successful JSON result is null.
 
 .SS list
 .EX
@@ -5044,79 +3519,34 @@ remains on stdout
 .PP
 \fBSample 1\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio sessions list
-.EE
-
-.PP
-\fBStandard output\fP
-
-.EX
-   SESSION       PHONE       TYPE
+user@host ~ % axilio sessions list
+SESSION       PHONE       TYPE
 *  <session-id>  <phone-id>  android
+
+# Exit status: 0
+# Notes: With no local leases, stdout says how to acquire one and exit
+#        status is 0.
 .EE
-
-.PP
-\fBStandard error\fP
-
-.PP
-None.
-
-.PP
-\fBExit status:\fP 0.
-
-.PP
-\fBNotes:\fP With no local leases, stdout says how to acquire one and exit status is
-0.
 
 .PP
 \fBSample 2\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio sessions list --remote
-.EE
-
-.PP
-\fBStandard output\fP
-
-.EX
+user@host ~ % axilio sessions list --remote
 SESSION       PHONE       TYPE     MODEL
 <session-id>  <phone-id>  android  Pixel 8
+
+# Exit status: 0
+# Notes: Remote results come from the API and do not mark the locally
+#        selected lease.
 .EE
-
-.PP
-\fBStandard error\fP
-
-.PP
-None.
-
-.PP
-\fBExit status:\fP 0.
-
-.PP
-\fBNotes:\fP Remote results come from the API and do not mark the locally selected
-lease.
 
 .PP
 \fBSample 3\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio sessions list -o json
-.EE
-
-.PP
-\fBStandard output\fP
-
-.EX
+user@host ~ % axilio sessions list -o json
 [
   {
     "session_id": "<session-id>",
@@ -5126,19 +3556,11 @@ axilio sessions list -o json
     "created_at": "<timestamp>"
   }
 ]
+
+# Exit status: 0
+# Notes: Local lease JSON includes the stored control URL; IDs and URLs
+#        vary.
 .EE
-
-.PP
-\fBStandard error\fP
-
-.PP
-None.
-
-.PP
-\fBExit status:\fP 0.
-
-.PP
-\fBNotes:\fP Local lease JSON includes the stored control URL; IDs and URLs vary.
 
 .SS start
 .EX
@@ -5198,192 +3620,100 @@ or json; --export always emits shell text (default "table")
 .PP
 \fBSample 1\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio sessions start
-.EE
-
-.PP
-\fBStandard output\fP
-
-.EX
+user@host ~ % axilio sessions start
 Session      <session-id>
 Phone        <phone-id>
 Region       us-central
 Live view    <live-view-url>
 Control URL  <control-url>
-.EE
 
-.PP
-\fBStandard error\fP
-
-.EX
+# Standard error:
 Drive it:  axilio phone observe
 Pin it to this shell (for parallel work):  export AXILIO_SESSION=<session-id>
 Release it with:  axilio sessions stop <session-id>
-.EE
 
-.PP
-\fBExit status:\fP 0.
+# Exit status: 0
+.EE
 
 .PP
 \fBSample 2\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio sessions start --phone-type iphone
-.EE
-
-.PP
-\fBStandard output\fP
-
-.EX
+user@host ~ % axilio sessions start --phone-type iphone
 Session      <session-id>
 Phone        <phone-id>
 Region       us-central
 Live view    <live-view-url>
 Control URL  <control-url>
-.EE
 
-.PP
-\fBStandard error\fP
-
-.EX
+# Standard error:
 Drive it:  axilio phone observe
 Pin it to this shell (for parallel work):  export AXILIO_SESSION=<session-id>
 Release it with:  axilio sessions stop <session-id>
-.EE
 
-.PP
-\fBExit status:\fP 0.
+# Exit status: 0
+.EE
 
 .PP
 \fBSample 3\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio sessions start --phone-id ph_123
-.EE
-
-.PP
-\fBStandard output\fP
-
-.EX
+user@host ~ % axilio sessions start --phone-id ph_123
 Session      <session-id>
 Phone        ph_123
 Region       us-central
 Live view    <live-view-url>
 Control URL  <control-url>
-.EE
 
-.PP
-\fBStandard error\fP
-
-.EX
+# Standard error:
 Drive it:  axilio phone observe
 Pin it to this shell (for parallel work):  export AXILIO_SESSION=<session-id>
 Release it with:  axilio sessions stop <session-id>
-.EE
 
-.PP
-\fBExit status:\fP 0.
+# Exit status: 0
+.EE
 
 .PP
 \fBSample 4\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio sessions start --workflow wf_123
-.EE
-
-.PP
-\fBStandard output\fP
-
-.EX
+user@host ~ % axilio sessions start --workflow wf_123
 Session      <session-id>
 Phone        <phone-id>
 Region       us-central
 Live view    <live-view-url>
 Control URL  <control-url>
-.EE
 
-.PP
-\fBStandard error\fP
-
-.EX
+# Standard error:
 Drive it:  axilio phone observe
 Pin it to this shell (for parallel work):  export AXILIO_SESSION=<session-id>
 Release it with:  axilio sessions stop <session-id>
-.EE
 
-.PP
-\fBExit status:\fP 0.
+# Exit status: 0
+.EE
 
 .PP
 \fBSample 5\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio sessions start --export
-.EE
-
-.PP
-\fBStandard output\fP
-
-.EX
+user@host ~ % axilio sessions start --export
 export AXILIO_SESSION=<session-id>
+
+# Exit status: 0
+# Notes: --export emits shell text even when -o json is also supplied.
 .EE
-
-.PP
-\fBStandard error\fP
-
-.PP
-None.
-
-.PP
-\fBExit status:\fP 0.
-
-.PP
-\fBNotes:\fP --export emits shell text even when -o json is also supplied.
 
 .PP
 \fBSample 6\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-eval "$(axilio sessions start --export)"
+user@host ~ % eval "$(axilio sessions start --export)"
+
+# Exit status: 0
+# Notes: The shell consumes the nested command's export line and sets
+#        AXILIO_SESSION in the current shell.
 .EE
-
-.PP
-\fBStandard output\fP
-
-.PP
-None.
-
-.PP
-\fBStandard error\fP
-
-.PP
-None.
-
-.PP
-\fBExit status:\fP 0.
-
-.PP
-\fBNotes:\fP The shell consumes the nested command's export line and sets
-AXILIO_SESSION in the current shell.
 
 .SS stop
 .EX
@@ -5433,114 +3763,52 @@ result; --yes is still required; JSON still prints
 .PP
 \fBSample 1\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio sessions list --remote
-.EE
-
-.PP
-\fBStandard output\fP
-
-.EX
+user@host ~ % axilio sessions list --remote
 SESSION       PHONE       TYPE     MODEL
 <session-id>  <phone-id>  android  Pixel 8
+
+# Exit status: 0
+# Notes: Use the returned session or phone ID with sessions stop.
 .EE
-
-.PP
-\fBStandard error\fP
-
-.PP
-None.
-
-.PP
-\fBExit status:\fP 0.
-
-.PP
-\fBNotes:\fP Use the returned session or phone ID with sessions stop.
 
 .PP
 \fBSample 2\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio sessions stop sess_123
-.EE
+user@host ~ % axilio sessions stop sess_123
 
-.PP
-\fBStandard output\fP
-
-.PP
-None.
-
-.PP
-\fBStandard error\fP
-
-.EX
+# Standard error:
 Release <phone-id>? [y/N] Released <phone-id>.
+
+# Exit status: 0
+# Notes: Without --yes, table mode reads confirmation from stdin,
+#        including redirected input. JSON and quiet modes require --yes.
 .EE
-
-.PP
-\fBExit status:\fP 0.
-
-.PP
-\fBNotes:\fP Without --yes, table mode reads confirmation from stdin, including
-redirected input. JSON and quiet modes require --yes.
 
 .PP
 \fBSample 3\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio sessions stop ph_123 --yes
-.EE
+user@host ~ % axilio sessions stop ph_123 --yes
 
-.PP
-\fBStandard output\fP
-
-.PP
-None.
-
-.PP
-\fBStandard error\fP
-
-.EX
+# Standard error:
 Released ph_123.
-.EE
 
-.PP
-\fBExit status:\fP 0.
+# Exit status: 0
+.EE
 
 .PP
 \fBSample 4\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio sessions stop <session-id> --yes
-.EE
+user@host ~ % axilio sessions stop <session-id> --yes
 
-.PP
-\fBStandard output\fP
-
-.PP
-None.
-
-.PP
-\fBStandard error\fP
-
-.EX
+# Standard error:
 Released <phone-id>.
-.EE
 
-.PP
-\fBExit status:\fP 0.
+# Exit status: 0
+.EE
 
 .SH status
 .EX
@@ -5582,65 +3850,31 @@ the status result remains on stdout
 .PP
 \fBSample 1\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio status
-.EE
-
-.PP
-\fBStandard output\fP
-
-.EX
+user@host ~ % axilio status
 Status      ok
 API host    https://api.axilio.ai/api/v1
 Active org  (session default)
 Balance     $5.00
+
+# Exit status: 0
 .EE
-
-.PP
-\fBStandard error\fP
-
-.PP
-None.
-
-.PP
-\fBExit status:\fP 0.
 
 .PP
 \fBSample 2\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio status -o json
-.EE
-
-.PP
-\fBStandard output\fP
-
-.EX
+user@host ~ % axilio status -o json
 {
   "active_org": "",
   "api_host": "https://api.axilio.ai/api/v1",
   "balance": "$5.00",
   "status": "ok"
 }
+
+# Exit status: 0
+# Notes: Balance and active organization vary by account.
 .EE
-
-.PP
-\fBStandard error\fP
-
-.PP
-None.
-
-.PP
-\fBExit status:\fP 0.
-
-.PP
-\fBNotes:\fP Balance and active organization vary by account.
 
 .SH upgrade
 .EX
@@ -5691,80 +3925,43 @@ still prints
 .PP
 \fBSample 1\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio upgrade --check
-.EE
+user@host ~ % axilio upgrade --check
 
-.PP
-\fBStandard output\fP
-
-.PP
-None.
-
-.PP
-\fBStandard error\fP
-
-.EX
+# Standard error:
 A newer release is available: <old> -> <new>. Run `axilio upgrade` to install.
+
+# Exit status: 0
+# Notes: The version placeholders vary. This is the newer-release
+#        branch; up-to-date, no-release, development, and
+#        Homebrew-managed installations report their own state instead.
 .EE
-
-.PP
-\fBExit status:\fP 0.
-
-.PP
-\fBNotes:\fP The version placeholders vary. This is the newer-release branch;
-up-to-date, no-release, development, and Homebrew-managed installations
-report their own state instead.
 
 .PP
 \fBSample 2\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio upgrade
-.EE
+user@host ~ % axilio upgrade
 
-.PP
-\fBStandard output\fP
-
-.PP
-None.
-
-.PP
-\fBStandard error\fP
-
-.EX
+# Standard error:
 Upgrading axilio <current-version> -> <latest-version>...
 Upgraded to <latest-version>.
+
+# Exit status: 0
+# Notes: Standalone release only; development builds and
+#        Homebrew-managed installs print their own package-manager
+#        guidance.
 .EE
-
-.PP
-\fBExit status:\fP 0.
-
-.PP
-\fBNotes:\fP Standalone release only; development builds and Homebrew-managed
-installs print their own package-manager guidance.
 
 .PP
 \fBSample 3\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-brew upgrade axilio
+user@host ~ % brew upgrade axilio
+
+# External behavior: Output and exit status are owned by Homebrew, not
+#                    the axilio CLI.
 .EE
-
-.PP
-\fBExternal command behavior\fP
-
-.PP
-Output and exit status are owned by Homebrew, not the axilio CLI.
 
 .SH uploads
 .EX
@@ -5868,67 +4065,38 @@ result remains on stdout
 .PP
 \fBSample 1\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio uploads add ./photo.jpg
-.EE
-
-.PP
-\fBStandard output\fP
-
-.EX
+user@host ~ % axilio uploads add ./photo.jpg
 ID        <upload-id>
 Filename  photo.jpg
 Size      2.0 MiB
 Type      image/jpeg
 Status    ready
-.EE
 
-.PP
-\fBStandard error\fP
-
-.EX
+# Standard error:
 → Uploading photo.jpg
-.EE
 
-.PP
-\fBExit status:\fP 0.
+# Exit status: 0
+.EE
 
 .PP
 \fBSample 2\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio uploads add ./asset --filename photo.jpg --mime-type image/jpeg
-.EE
-
-.PP
-\fBStandard output\fP
-
-.EX
+user@host ~ % axilio uploads add ./asset --filename photo.jpg --mime-type image/jpeg
 ID        <upload-id>
 Filename  photo.jpg
 Size      2.0 MiB
 Type      image/jpeg
 Status    ready
-.EE
 
-.PP
-\fBStandard error\fP
-
-.EX
+# Standard error:
 → Uploading asset
+
+# Exit status: 0
+# Notes: --filename and --mime-type override values inferred from the
+#        local path.
 .EE
-
-.PP
-\fBExit status:\fP 0.
-
-.PP
-\fBNotes:\fP --filename and --mime-type override values inferred from the local path.
 
 .SS delete
 .EX
@@ -5979,121 +4147,59 @@ deletion result (default "table")
 .PP
 \fBSample 1\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio uploads list
-.EE
-
-.PP
-\fBStandard output\fP
-
-.EX
+user@host ~ % axilio uploads list
 ID          FILENAME   SIZE     TYPE        STATUS  CREATED
 <upload-id> photo.jpg  2.0 MiB  image/jpeg  ready   <timestamp>
-.EE
 
-.PP
-\fBStandard error\fP
-
-.EX
+# Standard error:
 1 of 10000 files, 2.0 MiB of 50.0 GiB used
+
+# Exit status: 0
+# Notes: Use the listed upload ID with uploads delete.
 .EE
-
-.PP
-\fBExit status:\fP 0.
-
-.PP
-\fBNotes:\fP Use the listed upload ID with uploads delete.
 
 .PP
 \fBSample 2\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio uploads delete upl_123
-.EE
+user@host ~ % axilio uploads delete upl_123
 
-.PP
-\fBStandard output\fP
-
-.PP
-None.
-
-.PP
-\fBStandard error\fP
-
-.EX
+# Standard error:
 Delete upload upl_123? Also recall it from phones holding or receiving a copy?
+
+# Exit status: 0
+# Notes: The table-mode prompt continues with [y/N], then reports
+#        Deleted upl_123 after confirmation. Redirected stdin can
+#        answer; JSON and quiet modes require --yes.
 .EE
-
-.PP
-\fBExit status:\fP 0.
-
-.PP
-\fBNotes:\fP The table-mode prompt continues with [y/N], then reports Deleted upl_123
-after confirmation. Redirected stdin can answer; JSON and quiet modes
-require --yes.
 
 .PP
 \fBSample 3\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio uploads rm upl_123 --yes
-.EE
+user@host ~ % axilio uploads rm upl_123 --yes
 
-.PP
-\fBStandard output\fP
-
-.PP
-None.
-
-.PP
-\fBStandard error\fP
-
-.EX
+# Standard error:
 Deleted upl_123
-.EE
 
-.PP
-\fBExit status:\fP 0.
+# Exit status: 0
+.EE
 
 .PP
 \fBSample 4\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio uploads delete <upload-id> --yes
-.EE
+user@host ~ % axilio uploads delete <upload-id> --yes
 
-.PP
-\fBStandard output\fP
-
-.PP
-None.
-
-.PP
-\fBStandard error\fP
-
-.EX
+# Standard error:
 Deleted <upload-id>
+
+# Exit status: 0
+# Notes: The API removes the library object immediately and schedules
+#        recall from phones holding or receiving a copy; the pinned
+#        helper discards the pending-phone count.
 .EE
-
-.PP
-\fBExit status:\fP 0.
-
-.PP
-\fBNotes:\fP The API removes the library object immediately and schedules recall from
-phones holding or receiving a copy; the pinned helper discards the
-pending-phone count.
 
 .SS list
 .EX
@@ -6153,112 +4259,56 @@ request; the upload-list result remains on stdout
 .PP
 \fBSample 1\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio uploads list
-.EE
-
-.PP
-\fBStandard output\fP
-
-.EX
+user@host ~ % axilio uploads list
 ID          FILENAME   SIZE     TYPE        STATUS  CREATED
 <upload-id> photo.jpg  2.0 MiB  image/jpeg  ready   <timestamp>
-.EE
 
-.PP
-\fBStandard error\fP
-
-.EX
+# Standard error:
 1 of 10000 files, 2.0 MiB of 50.0 GiB used
+
+# Exit status: 0
+# Notes: An empty page still reports quota usage; the current global
+#        limits are 10000 files and 50 GiB.
 .EE
-
-.PP
-\fBExit status:\fP 0.
-
-.PP
-\fBNotes:\fP An empty page still reports quota usage; the current global limits are
-10000 files and 50 GiB.
 
 .PP
 \fBSample 2\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio uploads list --search receipt --limit 20 --offset 0
-.EE
-
-.PP
-\fBStandard output\fP
-
-.EX
+user@host ~ % axilio uploads list --search receipt --limit 20 --offset 0
 ID          FILENAME     SIZE      TYPE       STATUS  CREATED
 <upload-id> receipt.jpg  512.0 KiB image/jpeg ready   <timestamp>
-.EE
 
-.PP
-\fBStandard error\fP
-
-.EX
+# Standard error:
 1 of 10000 files, 512.0 KiB of 50.0 GiB used
+
+# Exit status: 0
+# Notes: Results and bytes used vary by organization; the limits are
+#        global.
 .EE
-
-.PP
-\fBExit status:\fP 0.
-
-.PP
-\fBNotes:\fP Results and bytes used vary by organization; the limits are global.
 
 .PP
 \fBSample 3\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio uploads list --sort filename --order asc
-.EE
-
-.PP
-\fBStandard output\fP
-
-.EX
+user@host ~ % axilio uploads list --sort filename --order asc
 ID          FILENAME   SIZE     TYPE        STATUS  CREATED
 <upload-id> photo.jpg  2.0 MiB  image/jpeg  ready   <timestamp>
-.EE
 
-.PP
-\fBStandard error\fP
-
-.EX
+# Standard error:
 1 of 10000 files, 2.0 MiB of 50.0 GiB used
+
+# Exit status: 0
+# Notes: Rows are sorted by filename ascending; results and bytes used
+#        vary by organization.
 .EE
-
-.PP
-\fBExit status:\fP 0.
-
-.PP
-\fBNotes:\fP Rows are sorted by filename ascending; results and bytes used vary by
-organization.
 
 .PP
 \fBSample 4\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio uploads list -o json
-.EE
-
-.PP
-\fBStandard output\fP
-
-.EX
+user@host ~ % axilio uploads list -o json
 {
   "files": [
     {
@@ -6278,20 +4328,11 @@ axilio uploads list -o json
     "byte_limit": 53687091200
   }
 }
+
+# Exit status: 0
+# Notes: Representative response; files, result count, and bytes used
+#        vary by organization; limits are global.
 .EE
-
-.PP
-\fBStandard error\fP
-
-.PP
-None.
-
-.PP
-\fBExit status:\fP 0.
-
-.PP
-\fBNotes:\fP Representative response; files, result count, and bytes used vary by
-organization; limits are global.
 
 .SS push
 .EX
@@ -6352,128 +4393,68 @@ delivery result remains on stdout
 .PP
 \fBSample 1\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio uploads push upl_123 --phone-id ph_123
-.EE
-
-.PP
-\fBStandard output\fP
-
-.EX
+user@host ~ % axilio uploads push upl_123 --phone-id ph_123
 Delivery  <delivery-id>
 File      photo.jpg
 Status    dispatched
-.EE
 
-.PP
-\fBStandard error\fP
-
-.EX
+# Standard error:
 → Pushing upl_123 to phone ph_123
 pushed; re-run with --wait to confirm delivery
-.EE
 
-.PP
-\fBExit status:\fP 0.
+# Exit status: 0
+.EE
 
 .PP
 \fBSample 2\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio uploads push upl_123 --phone-id ph_123 --collection Pictures
-.EE
-
-.PP
-\fBStandard output\fP
-
-.EX
+user@host ~ % axilio uploads push upl_123 --phone-id ph_123 --collection Pictures
 Delivery  <delivery-id>
 File      photo.jpg
 Status    dispatched
-.EE
 
-.PP
-\fBStandard error\fP
-
-.EX
+# Standard error:
 → Pushing upl_123 to phone ph_123
 pushed; re-run with --wait to confirm delivery
+
+# Exit status: 0
+# Notes: The phone receives the file in Pictures.
 .EE
-
-.PP
-\fBExit status:\fP 0.
-
-.PP
-\fBNotes:\fP The phone receives the file in Pictures.
 
 .PP
 \fBSample 3\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio uploads push upl_123 --phone-id ph_123 --wait --timeout 2m
-.EE
-
-.PP
-\fBStandard output\fP
-
-.EX
+user@host ~ % axilio uploads push upl_123 --phone-id ph_123 --wait --timeout 2m
 Delivery  <delivery-id>
 File      photo.jpg
 Status    delivered
-.EE
 
-.PP
-\fBStandard error\fP
-
-.EX
+# Standard error:
 → Pushing upl_123 to phone ph_123
+
+# Exit status: 0
+# Notes: With --wait, the command returns only after delivered, failed,
+#        or the two-minute deadline.
 .EE
-
-.PP
-\fBExit status:\fP 0.
-
-.PP
-\fBNotes:\fP With --wait, the command returns only after delivered, failed, or the
-two-minute deadline.
 
 .PP
 \fBSample 4\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio uploads push <upload-id> --phone-id <phone-id>
-.EE
-
-.PP
-\fBStandard output\fP
-
-.EX
+user@host ~ % axilio uploads push <upload-id> --phone-id <phone-id>
 Delivery  <delivery-id>
 File      photo.jpg
 Status    dispatched
-.EE
 
-.PP
-\fBStandard error\fP
-
-.EX
+# Standard error:
 → Pushing <upload-id> to phone <phone-id>
 pushed; re-run with --wait to confirm delivery
-.EE
 
-.PP
-\fBExit status:\fP 0.
+# Exit status: 0
+.EE
 
 .SH workflows
 .EX
@@ -6570,77 +4551,32 @@ request; the workflow-list result remains on stdout
 .PP
 \fBSample 1\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio workflows list
-.EE
-
-.PP
-\fBStandard output\fP
-
-.EX
+user@host ~ % axilio workflows list
 WORKFLOW ID   NAME      PLATFORM  STATUS  LAST RUN
 <workflow-id> Checkout  android   active  <timestamp>
+
+# Exit status: 0
+# Notes: An empty successful result prints No workflows found.
 .EE
-
-.PP
-\fBStandard error\fP
-
-.PP
-None.
-
-.PP
-\fBExit status:\fP 0.
-
-.PP
-\fBNotes:\fP An empty successful result prints No workflows found.
 
 .PP
 \fBSample 2\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio workflows list --search checkout --limit 10
-.EE
-
-.PP
-\fBStandard output\fP
-
-.EX
+user@host ~ % axilio workflows list --search checkout --limit 10
 WORKFLOW ID   NAME      PLATFORM  STATUS  LAST RUN
 <workflow-id> Checkout  android   active  <timestamp>
+
+# Exit status: 0
+# Notes: Names, IDs, statuses, and timestamps vary by organization.
 .EE
-
-.PP
-\fBStandard error\fP
-
-.PP
-None.
-
-.PP
-\fBExit status:\fP 0.
-
-.PP
-\fBNotes:\fP Names, IDs, statuses, and timestamps vary by organization.
 
 .PP
 \fBSample 3\fP
 
-.PP
-\fBInvocation\fP
-
 .EX
-axilio workflows list -o json
-.EE
-
-.PP
-\fBStandard output\fP
-
-.EX
+user@host ~ % axilio workflows list -o json
 {
   "limit": 20,
   "offset": 0,
@@ -6656,20 +4592,11 @@ axilio workflows list -o json
     }
   ]
 }
+
+# Exit status: 0
+# Notes: Shortened representative SDK response; workflow records can
+#        include additional fields and stats.
 .EE
-
-.PP
-\fBStandard error\fP
-
-.PP
-None.
-
-.PP
-\fBExit status:\fP 0.
-
-.PP
-\fBNotes:\fP Shortened representative SDK response; workflow records can include
-additional fields and stats.
 
 
 .SH ENVIRONMENT

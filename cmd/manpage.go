@@ -203,36 +203,51 @@ func writeManpageLabel(b *strings.Builder, label string) {
 }
 
 func writeSample(b *strings.Builder, sample CommandSample) {
-	b.WriteString("**Invocation**\n\n")
-	writeLiteral(b, sample.Invocation)
+	var transcript strings.Builder
+	fmt.Fprintf(&transcript, "user@host ~ %% %s\n", strings.TrimSpace(sample.Invocation))
 	if strings.TrimSpace(sample.ExternalBehavior) != "" {
-		b.WriteString("**External command behavior**\n\n")
-		writeWrapped(b, sample.ExternalBehavior)
+		transcript.WriteByte('\n')
+		writeTerminalComment(&transcript, "External behavior", sample.ExternalBehavior)
 		if strings.TrimSpace(sample.Notes) != "" {
-			b.WriteString("**Notes:** ")
-			writeWrapped(b, sample.Notes)
+			writeTerminalComment(&transcript, "Notes", sample.Notes)
 		}
+		writeTerminalLiteral(b, transcript.String())
 		return
 	}
 
-	b.WriteString("**Standard output**\n\n")
-	if streamIsNone(sample.Stdout) {
-		writeWrapped(b, "None.")
-	} else {
-		writeLiteral(b, sample.Stdout)
+	if !streamIsNone(sample.Stdout) {
+		transcript.WriteString(strings.TrimSpace(sample.Stdout))
+		transcript.WriteByte('\n')
 	}
 
-	b.WriteString("**Standard error**\n\n")
-	if streamIsNone(sample.Stderr) {
-		writeWrapped(b, "None.")
-	} else {
-		writeLiteral(b, sample.Stderr)
+	if !streamIsNone(sample.Stderr) {
+		transcript.WriteByte('\n')
+		transcript.WriteString("# Standard error:\n")
+		transcript.WriteString(strings.TrimSpace(sample.Stderr))
+		transcript.WriteByte('\n')
 	}
 
-	fmt.Fprintf(b, "**Exit status:** %d.\n\n", sample.ExitStatus)
+	transcript.WriteByte('\n')
+	writeTerminalComment(&transcript, "Exit status", strconv.Itoa(sample.ExitStatus))
 	if strings.TrimSpace(sample.Notes) != "" {
-		b.WriteString("**Notes:** ")
-		writeWrapped(b, sample.Notes)
+		writeTerminalComment(&transcript, "Notes", sample.Notes)
+	}
+	writeTerminalLiteral(b, transcript.String())
+}
+
+func writeTerminalComment(out *strings.Builder, label, value string) {
+	prefix := "# " + label + ": "
+	continuation := "# " + strings.Repeat(" ", utf8.RuneCountInString(label)+2)
+	width := max(manpageWrapWidth-utf8.RuneCountInString(prefix), 20)
+	lines := wrapExampleComment(strings.Split(strings.TrimSpace(value), "\n"), width)
+	for i, line := range lines {
+		if i == 0 {
+			out.WriteString(prefix)
+		} else {
+			out.WriteString(continuation)
+		}
+		out.WriteString(line)
+		out.WriteByte('\n')
 	}
 }
 
@@ -536,11 +551,21 @@ func writeWrapped(b *strings.Builder, text string) {
 }
 
 func writeLiteral(b *strings.Builder, text string) {
+	writeFencedLiteral(b, text, "")
+}
+
+func writeTerminalLiteral(b *strings.Builder, text string) {
+	writeFencedLiteral(b, text, "console")
+}
+
+func writeFencedLiteral(b *strings.Builder, text, language string) {
 	text = strings.Trim(strings.ReplaceAll(text, "\r\n", "\n"), "\n")
 	if text == "" {
 		return
 	}
-	b.WriteString("```\n")
+	b.WriteString("```")
+	b.WriteString(language)
+	b.WriteByte('\n')
 	b.WriteString(text)
 	b.WriteString("\n```\n\n")
 }

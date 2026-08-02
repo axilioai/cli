@@ -227,14 +227,54 @@ func TestManpageExternalSampleDoesNotGuessProcessContract(t *testing.T) {
 		"Output and exit status are owned by Homebrew, not the axilio CLI.",
 	))
 	got := rendered.String()
-	if !strings.Contains(got, "**External command behavior**") ||
+	if !strings.Contains(got, "```console\nuser@host ~ % brew upgrade axilio") ||
+		!strings.Contains(got, "# External behavior:") ||
 		!strings.Contains(got, "owned by Homebrew") {
 		t.Fatalf("external behavior is missing:\n%s", got)
 	}
-	for _, forbidden := range []string{"**Standard output**", "**Standard error**", "**Exit status:**"} {
+	for _, forbidden := range []string{"**Standard output**", "# Standard error:", "# Exit status:"} {
 		if strings.Contains(got, forbidden) {
 			t.Errorf("external sample guessed %s:\n%s", forbidden, got)
 		}
+	}
+}
+
+func TestManpageSampleUsesOneTerminalTranscript(t *testing.T) {
+	var rendered strings.Builder
+	writeSample(&rendered, CommandSample{
+		Invocation: "axilio doctor",
+		Stdout:     "CHECK | STATUS | DETAIL\nAuth  | ok     | ready",
+		ExitStatus: 0,
+		Notes:      "Representative report.",
+	})
+	got := rendered.String()
+	for _, want := range []string{
+		"```console\nuser@host ~ % axilio doctor\n",
+		"CHECK | STATUS | DETAIL",
+		"# Exit status: 0",
+		"# Notes: Representative report.",
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("terminal transcript missing %q:\n%s", want, got)
+		}
+	}
+	for _, unwanted := range []string{"**Invocation**", "**Standard output**", "**Standard error**", "None."} {
+		if strings.Contains(got, unwanted) {
+			t.Errorf("terminal transcript retains separate field %q:\n%s", unwanted, got)
+		}
+	}
+}
+
+func TestManpageSampleLabelsNonemptyStderrInsideTranscript(t *testing.T) {
+	var rendered strings.Builder
+	writeSample(&rendered, CommandSample{
+		Invocation: "axilio login",
+		Stderr:     "Opening browser",
+		ExitStatus: 0,
+	})
+	got := rendered.String()
+	if !strings.Contains(got, "user@host ~ % axilio login\n\n# Standard error:\nOpening browser") {
+		t.Fatalf("stderr is not identified inside terminal transcript:\n%s", got)
 	}
 }
 

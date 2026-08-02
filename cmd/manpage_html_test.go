@@ -45,6 +45,12 @@ func TestGenerateManpageHTMLDeterministicAndComplete(t *testing.T) {
 		"color: #1030ff",
 		"background-color: #ffe0e0",
 		`<span class="top-link">top</span>`,
+		`<code class="language-console">user@host ~ % axilio doctor`,
+		"background-color: #f5f5f5",
+		"border-left: 4px solid #008000",
+		"white-space: pre",
+		"overflow-x: auto",
+		"code.language-console::first-line",
 	} {
 		if !strings.Contains(page, want) {
 			t.Errorf("generated HTML missing %q", want)
