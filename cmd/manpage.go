@@ -13,6 +13,7 @@ import (
 
 	"github.com/axilioai/cli/internal/exit"
 	"github.com/cpuguy83/go-md2man/v2/md2man"
+	"github.com/russross/blackfriday/v2"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )
@@ -32,7 +33,12 @@ func GenerateManpage(root *cobra.Command, version string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	roff := bytes.TrimRight(md2man.Render([]byte(markdown)), "\n")
+	renderer := md2man.NewRoffRenderer()
+	roff := bytes.TrimRight(blackfriday.Run(
+		[]byte(markdown),
+		blackfriday.WithRenderer(renderer),
+		blackfriday.WithExtensions(renderer.GetExtensions()|blackfriday.HeadingIDs),
+	), "\n")
 	return append(roff, '\n'), nil
 }
 
@@ -63,16 +69,18 @@ func generateManpageMarkdown(root *cobra.Command, version string) (string, error
 
 	var b strings.Builder
 	fmt.Fprintf(&b, "%% \"AXILIO\" \"1\" \"%s\" \"axilio %s\" \"Axilio CLI Manual\"\n", manpageSourceDate, version)
-	b.WriteString("# NAME\n")
+	writeManpageHeading(&b, 1, "NAME", "NAME")
 	writeWrapped(&b, root.Name()+" - "+strings.TrimSuffix(root.Short, "."))
 
-	b.WriteString("# SYNOPSIS\n")
+	writeManpageHeading(&b, 1, "SYNOPSIS", "SYNOPSIS")
 	writeLiteral(&b, root.Name()+" [global options] <command> [command options]")
 
-	b.WriteString("# DESCRIPTION\n")
-	writeDescription(&b, firstNonempty(root.Long, root.Short))
+	overview, resolution, outputBehavior := splitManpageRootDescription(firstNonempty(root.Long, root.Short))
+	writeManpageHeading(&b, 1, "DESCRIPTION", "DESCRIPTION")
+	writeDescription(&b, overview)
+	writeWrapped(&b, "Resolution precedence and output-mode details are collected under NOTES.")
 
-	b.WriteString("# COMMON WORKFLOW\n")
+	writeManpageHeading(&b, 1, "COMMON WORKFLOW", "COMMON_WORKFLOW")
 	writeWrapped(&b, "A typical interactive session signs in, acquires a phone, observes it, performs an action, verifies the result, and releases the session:")
 	if docs, ok := CommandDocs(root); ok && len(docs.Samples) > 0 {
 		invocations := make([]string, 0, len(docs.Samples))
@@ -87,29 +95,31 @@ func generateManpageMarkdown(root *cobra.Command, version string) (string, error
 	}
 	writeWrapped(&b, "Use `axilio sessions start --export` with `eval` when separate shells or agents must pin different sessions through `AXILIO_SESSION`.")
 
-	b.WriteString("# GLOBAL OPTIONS\n")
+	writeManpageHeading(&b, 1, "GLOBAL OPTIONS", "GLOBAL_OPTIONS")
 	writeFlagList(&b, root, rootGlobalFlags(root), false)
 
-	b.WriteString("# COMMANDS\n")
-	writeWrapped(&b, "The following inventory is generated from the public Cobra command tree. Parent commands describe workflows; runnable commands include representative output and exit behavior from their structured documentation.")
-	for _, command := range commands {
-		writeWrapped(&b, fmt.Sprintf("* **%s** - %s", command.CommandPath(), strings.TrimSuffix(command.Short, ".")))
+	writeManpageHeading(&b, 1, "COMMANDS", "COMMANDS")
+	writeWrapped(&b, "Commands are grouped by their top-level family. Each runnable command includes representative output and exit behavior from its structured documentation.")
+	for _, command := range publicCommandChildren(root) {
+		writeCommandTree(&b, root, command, 2)
 	}
 
-	for _, command := range commands {
-		writeCommandReference(&b, root, command)
-	}
-
-	b.WriteString("# ENVIRONMENT\n")
+	writeManpageHeading(&b, 1, "ENVIRONMENT", "ENVIRONMENT")
 	writeEnvironment(&b)
 
-	b.WriteString("# EXIT STATUS\n")
+	writeManpageHeading(&b, 1, "EXIT STATUS", "EXIT_STATUS")
 	writeExitStatuses(&b)
 
-	b.WriteString("# FILES\n")
+	writeManpageHeading(&b, 1, "FILES", "FILES")
 	writeFiles(&b)
 
-	b.WriteString("# EXAMPLES\n")
+	writeManpageHeading(&b, 1, "NOTES", "NOTES")
+	writeManpageHeading(&b, 2, "Resolution precedence", "NOTES_resolution_precedence")
+	writeDescription(&b, resolution)
+	writeManpageHeading(&b, 2, "Output behavior", "NOTES_output_behavior")
+	writeDescription(&b, outputBehavior)
+
+	writeManpageHeading(&b, 1, "EXAMPLES", "EXAMPLES")
 	writeWrapped(&b, "Observe and act on a selected phone session:")
 	writeLiteral(&b, "axilio sessions start --phone-type android\naxilio phone observe\naxilio phone tap --query \"the search box\"\naxilio phone type \"coffee shops\"\naxilio phone observe")
 	writeWrapped(&b, "Start independent sessions in separate shells:")
@@ -117,7 +127,7 @@ func generateManpageMarkdown(root *cobra.Command, version string) (string, error
 	writeWrapped(&b, "Run a workflow and request machine-readable output:")
 	writeLiteral(&b, "axilio workflows list -o json\naxilio runs start <workflow-id> --count 2 -o json")
 
-	b.WriteString("# SEE ALSO\n")
+	writeManpageHeading(&b, 1, "SEE ALSO", "SEE_ALSO")
 	writeWrapped(&b, "Axilio documentation: https://docs.axilio.ai")
 	writeWrapped(&b, "CLI issue tracker: https://github.com/axilioai/cli/issues")
 	writeWrapped(&b, "Axilio product site: https://axilio.ai")
@@ -125,10 +135,15 @@ func generateManpageMarkdown(root *cobra.Command, version string) (string, error
 	return b.String(), nil
 }
 
+func writeCommandTree(b *strings.Builder, root, command *cobra.Command, level int) {
+	writeManpageHeading(b, min(level, 6), command.Name(), commandHTMLAnchor(root, command))
+	writeCommandReference(b, root, command)
+	for _, child := range publicCommandChildren(command) {
+		writeCommandTree(b, root, child, level+1)
+	}
+}
+
 func writeCommandReference(b *strings.Builder, root, command *cobra.Command) {
-	b.WriteString("## ")
-	b.WriteString(command.CommandPath())
-	b.WriteByte('\n')
 	writeLiteral(b, command.UseLine())
 	docs, hasDocs := CommandDocs(command)
 	description := firstNonempty(command.Long, command.Short)
@@ -139,22 +154,22 @@ func writeCommandReference(b *strings.Builder, root, command *cobra.Command) {
 
 	local := commandLocalFlags(command)
 	if len(local) > 0 {
-		b.WriteString("### Command options\n")
+		writeManpageLabel(b, "Command options")
 		writeFlagList(b, command, local, true)
 	}
 
 	inherited := commandInheritedFlags(root, command)
 	if len(inherited) > 0 {
-		b.WriteString("### Parent options\n")
+		writeManpageLabel(b, "Parent options")
 		writeFlagList(b, command, inherited, true)
 	}
 
-	b.WriteString("### Global-option behavior\n")
+	writeManpageLabel(b, "Global-option behavior")
 	writeFlagList(b, command, rootGlobalFlags(root), true)
 
 	if hasDocs && len(docs.Samples) > 0 {
 		if command.Runnable() {
-			b.WriteString("### Examples and expected output\n")
+			writeManpageLabel(b, "Examples and expected output")
 			for i, sample := range docs.Samples {
 				if len(docs.Samples) > 1 {
 					fmt.Fprintf(b, "**Sample %d**\n\n", i+1)
@@ -162,7 +177,7 @@ func writeCommandReference(b *strings.Builder, root, command *cobra.Command) {
 				writeSample(b, sample)
 			}
 		} else {
-			b.WriteString("### Workflow examples\n")
+			writeManpageLabel(b, "Workflow examples")
 			invocations := make([]string, 0, len(docs.Samples))
 			for _, sample := range docs.Samples {
 				invocations = append(invocations, sample.Invocation)
@@ -170,13 +185,21 @@ func writeCommandReference(b *strings.Builder, root, command *cobra.Command) {
 			writeLiteral(b, strings.Join(invocations, "\n"))
 		}
 	} else if strings.TrimSpace(command.Example) != "" {
-		b.WriteString("### Examples\n")
+		writeManpageLabel(b, "Examples")
 		writeLiteral(b, deindent(command.Example))
 	}
 	if hasDocs && strings.TrimSpace(docs.Walkthrough) != "" {
-		b.WriteString("### Walkthrough\n")
+		writeManpageLabel(b, "Walkthrough")
 		writeLiteral(b, docs.Walkthrough)
 	}
+}
+
+func writeManpageHeading(b *strings.Builder, level int, label, id string) {
+	fmt.Fprintf(b, "%s %s {#%s}\n", strings.Repeat("#", level), label, id)
+}
+
+func writeManpageLabel(b *strings.Builder, label string) {
+	fmt.Fprintf(b, "**%s**\n\n", label)
 }
 
 func writeSample(b *strings.Builder, sample CommandSample) {
@@ -222,20 +245,65 @@ func publicCommands(root *cobra.Command) []*cobra.Command {
 	var commands []*cobra.Command
 	var walk func(*cobra.Command)
 	walk = func(parent *cobra.Command) {
-		children := append([]*cobra.Command(nil), parent.Commands()...)
-		sort.Slice(children, func(i, j int) bool {
-			return children[i].Name() < children[j].Name()
-		})
-		for _, child := range children {
-			if child.Hidden {
-				continue
-			}
+		for _, child := range publicCommandChildren(parent) {
 			commands = append(commands, child)
 			walk(child)
 		}
 	}
 	walk(root)
 	return commands
+}
+
+func publicCommandChildren(parent *cobra.Command) []*cobra.Command {
+	children := append([]*cobra.Command(nil), parent.Commands()...)
+	sort.Slice(children, func(i, j int) bool {
+		return children[i].Name() < children[j].Name()
+	})
+	visible := children[:0]
+	for _, child := range children {
+		if !child.Hidden {
+			visible = append(visible, child)
+		}
+	}
+	return visible
+}
+
+func commandHTMLAnchor(root, command *cobra.Command) string {
+	path := strings.TrimPrefix(command.CommandPath(), root.CommandPath()+" ")
+	return "COMMAND_" + strings.ReplaceAll(path, " ", "-")
+}
+
+func splitManpageRootDescription(description string) (overview, resolution, outputBehavior string) {
+	paragraphs := strings.Split(strings.TrimSpace(description), "\n\n")
+	marker := -1
+	for i, paragraph := range paragraphs {
+		if strings.TrimSpace(paragraph) == "Precedence rules:" {
+			marker = i
+			break
+		}
+	}
+	if marker < 0 {
+		return strings.TrimSpace(description), "None.", "None."
+	}
+
+	overview = strings.Join(paragraphs[:marker], "\n\n")
+	reference := paragraphs[marker+1:]
+	if len(reference) == 0 {
+		return overview, "None.", "None."
+	}
+	last := strings.TrimSpace(reference[len(reference)-1])
+	if strings.HasPrefix(last, "Table output for human readability") {
+		outputBehavior = last
+		reference = reference[:len(reference)-1]
+	}
+	resolution = strings.Join(reference, "\n\n")
+	if strings.TrimSpace(resolution) == "" {
+		resolution = "None."
+	}
+	if strings.TrimSpace(outputBehavior) == "" {
+		outputBehavior = "None."
+	}
+	return overview, resolution, outputBehavior
 }
 
 func rootGlobalFlags(root *cobra.Command) []*pflag.Flag {

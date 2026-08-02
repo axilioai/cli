@@ -31,37 +31,7 @@ api-keys            manage organization-scoped API keys
 .EE
 
 .PP
-Precedence rules:
-
-.PP
-Credentials resolve in this order: --api-key, AXILIO_API_KEY, the saved
-config API key, then the saved OAuth session.
-
-.PP
-The organization resolves from --org, AXILIO_ORG, the saved active
-organization, then the OAuth session default. Note that each API key is
-scoped to the organization that created it and cannot switch
-organizations with --org.
-
-.PP
-API host resolves from --base-url, AXILIO_BASE_URL, saved base-url, then
-https://api.axilio.ai.
-
-.PP
-Phone command session selection precedence is --session, AXILIO_SESSION,
-the sole active lease, the saved current-session pointer, then an
-ambiguity error.
-
-.PP
-Table output for human readability is the default. Every successful
-runnable application command emits valid JSON with -o json; action
-commands return a small acknowledgment. Built-in help, completion, and
-version output remains text. The sessions start --export command emits
-shell text for eval. Notes, prompts, and progress use stderr and are
-suppressed in JSON or quiet mode. Quiet and JSON modes do not confirm
-destructive actions; pass --yes where offered. API-key, base-URL, and
-organization flags affect API-backed commands; they do not select a
-local phone session.
+Resolution precedence and output-mode details are collected under NOTES.
 
 
 .SH COMMON WORKFLOW
@@ -104,153 +74,11 @@ commands still require --yes
 
 
 .SH COMMANDS
-The following inventory is generated from the public Cobra command tree.
-Parent commands describe workflows; runnable commands include
-representative output and exit behavior from their structured
+Commands are grouped by their top-level family. Each runnable command
+includes representative output and exit behavior from its structured
 documentation.
-.IP \(bu 2
-\fBaxilio api-keys\fP - List, create, and delete organization API keys
-.IP \(bu 2
-\fBaxilio api-keys create\fP - Create a new API key; the secret is shown
-once
-.IP \(bu 2
-\fBaxilio api-keys delete\fP - Delete an API key by id
-.IP \(bu 2
-\fBaxilio api-keys list\fP - List the API keys on your organization
-.IP \(bu 2
-\fBaxilio completion\fP - Generate the autocompletion script for the
-specified shell
-.IP \(bu 2
-\fBaxilio completion bash\fP - Generate the autocompletion script for
-bash
-.IP \(bu 2
-\fBaxilio completion fish\fP - Generate the autocompletion script for
-fish
-.IP \(bu 2
-\fBaxilio completion powershell\fP - Generate the autocompletion script
-for powershell
-.IP \(bu 2
-\fBaxilio completion zsh\fP - Generate the autocompletion script for zsh
-.IP \(bu 2
-\fBaxilio config\fP - Show and edit CLI configuration (API host, paths,
-auth)
-.IP \(bu 2
-\fBaxilio config set\fP - Set a config value. Supported keys: base-url
-.IP \(bu 2
-\fBaxilio config unset\fP - Clear a config value. Supported keys:
-base-url
-.IP \(bu 2
-\fBaxilio doctor\fP - Check that your setup is sane: auth, connectivity,
-and environment
-.IP \(bu 2
-\fBaxilio help\fP - Help about any command
-.IP \(bu 2
-\fBaxilio init\fP - Drop an agent skill into this repo so a coding agent
-can drive phones via the CLI
-.IP \(bu 2
-\fBaxilio login\fP - Sign in: browser OAuth by default, or store an API
-key
-.IP \(bu 2
-\fBaxilio logout\fP - Remove stored credentials (API key and OAuth
-session)
-.IP \(bu 2
-\fBaxilio orgs\fP - List and switch the active organization (OAuth
-sessions)
-.IP \(bu 2
-\fBaxilio orgs clear\fP - Clear the active organization (revert to your
-session default)
-.IP \(bu 2
-\fBaxilio orgs list\fP - List the organizations you belong to
-.IP \(bu 2
-\fBaxilio orgs use\fP - Set the active organization for future commands
-.IP \(bu 2
-\fBaxilio phone\fP - Observe and control the selected session's phone
-.IP \(bu 2
-\fBaxilio phone find\fP - Locate an element by natural-language query
-(vision)
-.IP \(bu 2
-\fBaxilio phone find-text\fP - Return the first OCR text match, or an
-empty successful result
-.IP \(bu 2
-\fBaxilio phone key\fP - Press the supported named key: enter
-.IP \(bu 2
-\fBaxilio phone long-press\fP - Press and hold at coordinates
-.IP \(bu 2
-\fBaxilio phone observe\fP - Capture the screen: text + icon elements
-with coordinates
-.IP \(bu 2
-\fBaxilio phone screenshot\fP - Capture the screen as a PNG file
-.IP \(bu 2
-\fBaxilio phone send\fP - Upload a local image/video and push it to the
-phone's gallery
-.IP \(bu 2
-\fBaxilio phone swipe\fP - Swipe from one point to another
-.IP \(bu 2
-\fBaxilio phone tap\fP - Tap at coordinates, or at a natural-language
-target with --query
-.IP \(bu 2
-\fBaxilio phone type\fP - Type a string of text
-.IP \(bu 2
-\fBaxilio phone wait-for\fP - Poll until text appears (or disappears
-with --gone)
-.IP \(bu 2
-\fBaxilio phones\fP - Discover shared and dedicated phones
-.IP \(bu 2
-\fBaxilio phones list\fP - List phones you can start a session on right
-now (shared pool + your free dedicated phones)
-.IP \(bu 2
-\fBaxilio phones mine\fP - List your org's dedicated phones, including
-ones currently in use
-.IP \(bu 2
-\fBaxilio runs\fP - Start, inspect, and cancel workflow runs
-.IP \(bu 2
-\fBaxilio runs cancel\fP - Cancel a queued or running run
-.IP \(bu 2
-\fBaxilio runs get\fP - Show a single run in detail
-.IP \(bu 2
-\fBaxilio runs list\fP - List recent runs, most recent first
-.IP \(bu 2
-\fBaxilio runs start\fP - Start one or more runs of a workflow
-.IP \(bu 2
-\fBaxilio sessions\fP - Acquire, list, select, and release phone
-sessions
-.IP \(bu 2
-\fBaxilio sessions current\fP - Show the session currently selected for
-phone commands
-.IP \(bu 2
-\fBaxilio sessions list\fP - List the phone leases this CLI holds
-(--remote for all server sessions)
-.IP \(bu 2
-\fBaxilio sessions start\fP - Acquire a phone and open a session; the
-lease persists until you stop it
-.IP \(bu 2
-\fBaxilio sessions stop\fP - Release a session by session id or phone id
-.IP \(bu 2
-\fBaxilio status\fP - Check your credentials and reach the API
-.IP \(bu 2
-\fBaxilio upgrade\fP - Update axilio to the latest release
-.IP \(bu 2
-\fBaxilio uploads\fP - Add, list, push, and delete files in your
-organization's library
-.IP \(bu 2
-\fBaxilio uploads add\fP - Upload a local file into the library without
-pushing it anywhere
-.IP \(bu 2
-\fBaxilio uploads delete\fP - Delete a file from the library and free
-its quota
-.IP \(bu 2
-\fBaxilio uploads list\fP - List the files in your organization's
-library
-.IP \(bu 2
-\fBaxilio uploads push\fP - Push a file already in the library to a
-phone
-.IP \(bu 2
-\fBaxilio workflows\fP - Discover workflows that can be run
-.IP \(bu 2
-\fBaxilio workflows list\fP - List workflows in your org, most recent
-first
 
-.SH axilio api-keys
+.SH api-keys
 .EX
 axilio api-keys
 .EE
@@ -267,7 +95,8 @@ their IDs, create a named key whose secret is shown once, or delete a
 key by ID. Organization access and API-key management permissions are
 enforced by the API.
 
-.SS Global-option behavior
+.PP
+\fBGlobal-option behavior\fP
 .IP \(bu 2
 \fB--api-key\fP=\fIvalue\fP - No effect on api-keys command; bare axilio
 api-keys only displays this help
@@ -287,7 +116,9 @@ axilio api-keys only displays this help (default "table")
 \fB-q\fP, \fB--quiet\fP - No effect on api-keys command; bare axilio
 api-keys only displays this help
 
-.SS Workflow examples
+.PP
+\fBWorkflow examples\fP
+
 .EX
 axilio api-keys list
 axilio api-keys create ci
@@ -295,7 +126,7 @@ axilio api-keys delete key_123 --yes
 axilio api-keys delete <key-id> --yes
 .EE
 
-.SH axilio api-keys create
+.SS create
 .EX
 axilio api-keys create <name>
 .EE
@@ -308,7 +139,8 @@ The result includes the ID, name, full secret, and creation time. Save
 the secret immediately: later list calls show only a preview and the
 full value cannot be retrieved.
 
-.SS Global-option behavior
+.PP
+\fBGlobal-option behavior\fP
 .IP \(bu 2
 \fB--api-key\fP=\fIvalue\fP - API key for the API-key create request;
 overrides AXILIO_API_KEY and the saved key
@@ -328,7 +160,10 @@ json (default "table")
 \fB-q\fP, \fB--quiet\fP - Suppress the save-now warning; the created key
 remains on stdout
 
-.SS Examples and expected output
+.PP
+\fBExamples and expected output\fP
+
+.PP
 \fBSample 1\fP
 
 .PP
@@ -396,7 +231,7 @@ None.
 \fBNotes:\fP Save the returned secret immediately; it is representative here and
 never a real credential.
 
-.SH axilio api-keys delete
+.SS delete
 .EX
 axilio api-keys delete <key-id> [flags]
 .EE
@@ -410,12 +245,14 @@ Without --yes, table mode reads confirmation from stdin, including
 redirected input. JSON and quiet modes do not prompt and require --yes.
 JSON success reports the deleted key ID.
 
-.SS Command options
+.PP
+\fBCommand options\fP
 .IP \(bu 2
 \fB-y\fP, \fB--yes\fP - Delete without prompting; required in JSON or
 quiet mode
 
-.SS Global-option behavior
+.PP
+\fBGlobal-option behavior\fP
 .IP \(bu 2
 \fB--api-key\fP=\fIvalue\fP - API key for API-key deletion; overrides
 AXILIO_API_KEY and the saved key
@@ -435,7 +272,10 @@ API-key deletion result (default "table")
 \fB-q\fP, \fB--quiet\fP - Suppress the API-key deletion prompt and human
 result; --yes is still required; JSON still prints
 
-.SS Examples and expected output
+.PP
+\fBExamples and expected output\fP
+
+.PP
 \fBSample 1\fP
 
 .PP
@@ -547,7 +387,7 @@ Deleted <key-id>
 .PP
 \fBExit status:\fP 0.
 
-.SH axilio api-keys list
+.SS list
 .EX
 axilio api-keys list
 .EE
@@ -560,7 +400,8 @@ Results include key ID, name, masked preview, last-used time, and
 creation time. Full secret values are never returned; use the ID with
 \fBapi-keys delete\fR\&.
 
-.SS Global-option behavior
+.PP
+\fBGlobal-option behavior\fP
 .IP \(bu 2
 \fB--api-key\fP=\fIvalue\fP - API key for the API-key list request;
 overrides AXILIO_API_KEY and the saved key
@@ -580,7 +421,10 @@ json (default "table")
 \fB-q\fP, \fB--quiet\fP - Suppress stderr notes for the API-key list
 request; the API-key list remains on stdout
 
-.SS Examples and expected output
+.PP
+\fBExamples and expected output\fP
+
+.PP
 \fBSample 1\fP
 
 .PP
@@ -652,7 +496,7 @@ None.
 .PP
 \fBNotes:\fP Key IDs and timestamps vary; full secrets are never listed.
 
-.SH axilio completion
+.SH completion
 .EX
 axilio completion
 .EE
@@ -664,7 +508,8 @@ Generate the autocompletion script for axilio for the specified shell.
 See each sub-command's help for details on how to use the generated
 script.
 
-.SS Global-option behavior
+.PP
+\fBGlobal-option behavior\fP
 .IP \(bu 2
 \fB--api-key\fP=\fIvalue\fP - No effect on completion command
 .IP \(bu 2
@@ -679,7 +524,9 @@ script.
 .IP \(bu 2
 \fB-q\fP, \fB--quiet\fP - No effect on completion command
 
-.SS Workflow examples
+.PP
+\fBWorkflow examples\fP
+
 .EX
 axilio completion bash
 axilio completion zsh
@@ -687,7 +534,7 @@ axilio completion fish
 axilio completion powershell
 .EE
 
-.SH axilio completion bash
+.SS bash
 .EX
 axilio completion bash
 .EE
@@ -717,11 +564,13 @@ axilio completion bash > $(brew --prefix)/etc/bash_completion.d/axilio
 .PP
 You will need to start a new shell for this setup to take effect.
 
-.SS Command options
+.PP
+\fBCommand options\fP
 .IP \(bu 2
 \fB--no-descriptions\fP - disable completion descriptions
 
-.SS Global-option behavior
+.PP
+\fBGlobal-option behavior\fP
 .IP \(bu 2
 \fB--api-key\fP=\fIvalue\fP - No effect on bash completion generation
 .IP \(bu 2
@@ -738,7 +587,10 @@ JSON; the shell script remains on stdout (default "table")
 \fB-q\fP, \fB--quiet\fP - Does not suppress the bash completion script;
 only stderr notices
 
-.SS Examples and expected output
+.PP
+\fBExamples and expected output\fP
+
+.PP
 \fBInvocation\fP
 
 .EX
@@ -766,7 +618,7 @@ None.
 .PP
 \fBNotes:\fP The sample is shortened; stdout is a complete Bash completion script.
 
-.SH axilio completion fish
+.SS fish
 .EX
 axilio completion fish [flags]
 .EE
@@ -789,11 +641,13 @@ axilio completion fish > ~/.config/fish/completions/axilio.fish
 .PP
 You will need to start a new shell for this setup to take effect.
 
-.SS Command options
+.PP
+\fBCommand options\fP
 .IP \(bu 2
 \fB--no-descriptions\fP - disable completion descriptions
 
-.SS Global-option behavior
+.PP
+\fBGlobal-option behavior\fP
 .IP \(bu 2
 \fB--api-key\fP=\fIvalue\fP - No effect on fish completion generation
 .IP \(bu 2
@@ -810,7 +664,10 @@ JSON; the shell script remains on stdout (default "table")
 \fB-q\fP, \fB--quiet\fP - Does not suppress the fish completion script;
 only stderr notices
 
-.SS Examples and expected output
+.PP
+\fBExamples and expected output\fP
+
+.PP
 \fBInvocation\fP
 
 .EX
@@ -838,7 +695,7 @@ None.
 .PP
 \fBNotes:\fP The sample is shortened; stdout is a complete Fish completion script.
 
-.SH axilio completion powershell
+.SS powershell
 .EX
 axilio completion powershell [flags]
 .EE
@@ -856,11 +713,13 @@ axilio completion powershell | Out-String | Invoke-Expression
 To load completions for every new session, add the output of the above
 command to your powershell profile.
 
-.SS Command options
+.PP
+\fBCommand options\fP
 .IP \(bu 2
 \fB--no-descriptions\fP - disable completion descriptions
 
-.SS Global-option behavior
+.PP
+\fBGlobal-option behavior\fP
 .IP \(bu 2
 \fB--api-key\fP=\fIvalue\fP - No effect on powershell completion generation
 .IP \(bu 2
@@ -877,7 +736,10 @@ as JSON; the shell script remains on stdout (default "table")
 \fB-q\fP, \fB--quiet\fP - Does not suppress the powershell completion
 script; only stderr notices
 
-.SS Examples and expected output
+.PP
+\fBExamples and expected output\fP
+
+.PP
 \fBInvocation\fP
 
 .EX
@@ -906,7 +768,7 @@ None.
 \fBNotes:\fP The sample is shortened; stdout is a complete PowerShell completion
 script.
 
-.SH axilio completion zsh
+.SS zsh
 .EX
 axilio completion zsh [flags]
 .EE
@@ -940,11 +802,13 @@ axilio completion zsh > $(brew
 .PP
 You will need to start a new shell for this setup to take effect.
 
-.SS Command options
+.PP
+\fBCommand options\fP
 .IP \(bu 2
 \fB--no-descriptions\fP - disable completion descriptions
 
-.SS Global-option behavior
+.PP
+\fBGlobal-option behavior\fP
 .IP \(bu 2
 \fB--api-key\fP=\fIvalue\fP - No effect on zsh completion generation
 .IP \(bu 2
@@ -961,7 +825,10 @@ JSON; the shell script remains on stdout (default "table")
 \fB-q\fP, \fB--quiet\fP - Does not suppress the zsh completion script;
 only stderr notices
 
-.SS Examples and expected output
+.PP
+\fBExamples and expected output\fP
+
+.PP
 \fBInvocation\fP
 
 .EX
@@ -990,7 +857,7 @@ None.
 .PP
 \fBNotes:\fP The sample is shortened; stdout is a complete Zsh completion script.
 
-.SH axilio config
+.SH config
 .EX
 axilio config
 .EE
@@ -1019,7 +886,8 @@ Sessions dir     set XDG_CONFIG_HOME; directory is [value]/axilio/sessions
                  (default ~/.config/axilio/sessions)
 .EE
 
-.SS Global-option behavior
+.PP
+\fBGlobal-option behavior\fP
 .IP \(bu 2
 \fB--api-key\fP=\fIvalue\fP - No actual effect. Ephemerally shows this as
 the effective API key source; does not persist the new key. Use axilio
@@ -1042,7 +910,10 @@ table or json (default "table")
 \fB-q\fP, \fB--quiet\fP - Suppress stderr update notices; the
 configuration summary remains on stdout
 
-.SS Examples and expected output
+.PP
+\fBExamples and expected output\fP
+
+.PP
 \fBSample 1\fP
 
 .PP
@@ -1124,7 +995,7 @@ Unset base-url in <config-path>
 .PP
 \fBExit status:\fP 0.
 
-.SH axilio config set
+.SS set
 .EX
 axilio config set <key> <value>
 .EE
@@ -1139,7 +1010,8 @@ scheme and host, so a different scheme or path is saved even though
 requests may then fail. Requests resolve the host from --base-url,
 AXILIO_BASE_URL, this saved value, then https://api.axilio.ai.
 
-.SS Global-option behavior
+.PP
+\fBGlobal-option behavior\fP
 .IP \(bu 2
 \fB--api-key\fP=\fIvalue\fP - No effect on config set command; only the
 named config value is saved
@@ -1159,7 +1031,10 @@ value, and config-path result (default "table")
 \fB-q\fP, \fB--quiet\fP - Suppress the human config set confirmation; JSON
 still prints
 
-.SS Examples and expected output
+.PP
+\fBExamples and expected output\fP
+
+.PP
 \fBSample 1\fP
 
 .PP
@@ -1215,7 +1090,7 @@ None.
 .PP
 \fBExit status:\fP 0.
 
-.SH axilio config unset
+.SS unset
 .EX
 axilio config unset <key>
 .EE
@@ -1227,7 +1102,8 @@ Remove the saved base-url from the shared config file.
 Subsequent requests fall back to --base-url, AXILIO_BASE_URL, then
 https://api.axilio.ai. This does not remove credentials.
 
-.SS Global-option behavior
+.PP
+\fBGlobal-option behavior\fP
 .IP \(bu 2
 \fB--api-key\fP=\fIvalue\fP - No effect on config unset command; credentials
 are not removed
@@ -1247,7 +1123,10 @@ unset, and config-path result (default "table")
 \fB-q\fP, \fB--quiet\fP - Suppress the human config unset confirmation;
 JSON still prints
 
-.SS Examples and expected output
+.PP
+\fBExamples and expected output\fP
+
+.PP
 \fBSample 1\fP
 
 .PP
@@ -1303,7 +1182,7 @@ None.
 .PP
 \fBExit status:\fP 0.
 
-.SH axilio doctor
+.SH doctor
 .EX
 axilio doctor
 .EE
@@ -1321,7 +1200,8 @@ connectivity is also informational. Each network probe is bounded to 8
 seconds. Use -o json for an overall ok value and the complete checks
 array.
 
-.SS Global-option behavior
+.PP
+\fBGlobal-option behavior\fP
 .IP \(bu 2
 \fB--api-key\fP=\fIvalue\fP - API key for doctor's authenticated checks;
 overrides AXILIO_API_KEY and the saved key
@@ -1341,7 +1221,10 @@ json (default "table")
 \fB-q\fP, \fB--quiet\fP - Suppress stderr notes for doctor's authenticated
 checks; the doctor report remains on stdout
 
-.SS Examples and expected output
+.PP
+\fBExamples and expected output\fP
+
+.PP
 \fBSample 1\fP
 
 .PP
@@ -1452,7 +1335,7 @@ doctor: API key rejected (HTTP 401); run `axilio login`
 Fang adds ERROR framing and may add ANSI styling at the process
 boundary; the stderr sample shows the underlying message.
 
-.SH axilio help
+.SH help
 .EX
 axilio help [command]
 .EE
@@ -1463,7 +1346,8 @@ Help provides help for any command in the application.
 .PP
 Simply type axilio help [path to command] for full details.
 
-.SS Global-option behavior
+.PP
+\fBGlobal-option behavior\fP
 .IP \(bu 2
 \fB--api-key\fP=\fIvalue\fP - No effect on help command or the help content
 it renders
@@ -1483,7 +1367,10 @@ only suppresses the update notice (default "table")
 \fB-q\fP, \fB--quiet\fP - Does not hide help; only suppresses the
 post-command update notice
 
-.SS Examples and expected output
+.PP
+\fBExamples and expected output\fP
+
+.PP
 \fBInvocation\fP
 
 .EX
@@ -1514,7 +1401,7 @@ None.
 \fBNotes:\fP The complete help includes examples and command-effective flag
 descriptions.
 
-.SH axilio init
+.SH init
 .EX
 axilio init [flags]
 .EE
@@ -1549,7 +1436,8 @@ It finishes with a sign-in check: browser login is the one step an agent
 can't do itself, so init surfaces it while a human is likely at the
 keyboard.
 
-.SS Command options
+.PP
+\fBCommand options\fP
 .IP \(bu 2
 \fB--agent\fP=\fIvalue\fP - Target claude, codex, or cursor; omit to detect
 repository markers
@@ -1557,7 +1445,8 @@ repository markers
 \fB--force\fP - Refresh an existing skill; only the marked Axilio
 AGENTS.md block is replaced
 
-.SS Global-option behavior
+.PP
+\fBGlobal-option behavior\fP
 .IP \(bu 2
 \fB--api-key\fP=\fIvalue\fP - No effect on init command. A supplied value
 only changes the final sign-in message
@@ -1576,7 +1465,10 @@ written and skipped path lists (default "table")
 \fB-q\fP, \fB--quiet\fP - Suppress human init prompts and messages;
 --agent may be required; JSON still prints
 
-.SS Examples and expected output
+.PP
+\fBExamples and expected output\fP
+
+.PP
 \fBSample 1\fP
 
 .PP
@@ -1669,7 +1561,7 @@ Not signed in. A human must run `axilio login` (browser), or set AXILIO_API_KEY.
 \fBNotes:\fP Excerpt: --force replaces an existing Axilio-owned Claude skill before
 the suggested first agent prompt.
 
-.SH axilio login
+.SH login
 .EX
 axilio login
 .EE
@@ -1684,7 +1576,8 @@ session in the OS keychain, with a protected file fallback. Pass
 API and persist it in the shared Axilio config file. A --base-url
 supplied with API-key login is saved with the key.
 
-.SS Global-option behavior
+.PP
+\fBGlobal-option behavior\fP
 .IP \(bu 2
 \fB--api-key\fP=\fIvalue\fP - Verify and save this API key instead of
 opening browser OAuth
@@ -1704,7 +1597,10 @@ sign-in result (default "table")
 \fB-q\fP, \fB--quiet\fP - Suppress human login messages; browser OAuth
 still opens; JSON still prints
 
-.SS Examples and expected output
+.PP
+\fBExamples and expected output\fP
+
+.PP
 \fBSample 1\fP
 
 .PP
@@ -1795,7 +1691,7 @@ None.
 .PP
 \fBExit status:\fP 0.
 
-.SH axilio logout
+.SH logout
 .EX
 axilio logout
 .EE
@@ -1809,7 +1705,8 @@ The saved API key, OAuth session, and active organization are removed. A
 saved base URL, environment credentials, and local phone-session lease
 files are not removed.
 
-.SS Global-option behavior
+.PP
+\fBGlobal-option behavior\fP
 .IP \(bu 2
 \fB--api-key\fP=\fIvalue\fP - No effect on logout command; saved credentials
 are cleared regardless
@@ -1828,7 +1725,10 @@ sign-out result (default "table")
 \fB-q\fP, \fB--quiet\fP - Suppress human logout warnings and results; JSON
 still prints
 
-.SS Examples and expected output
+.PP
+\fBExamples and expected output\fP
+
+.PP
 \fBSample 1\fP
 
 .PP
@@ -1889,7 +1789,7 @@ keep status authenticated. Fang adds ERROR framing and may add ANSI
 styling at the process boundary; the stderr sample shows the underlying
 message.
 
-.SH axilio orgs
+.SH orgs
 .EX
 axilio orgs
 .EE
@@ -1903,7 +1803,8 @@ future commands, and \fB--org\fR / \fBAXILIO_ORG\fR override it for a single
 call. API keys are bound to one org, so this applies to \fBaxilio login\fR
 (OAuth) sessions.
 
-.SS Global-option behavior
+.PP
+\fBGlobal-option behavior\fP
 .IP \(bu 2
 \fB--api-key\fP=\fIvalue\fP - API-key auth cannot list OAuth memberships;
 use a saved OAuth session
@@ -1923,7 +1824,10 @@ selection as table or json (default "table")
 \fB-q\fP, \fB--quiet\fP - Suppress orgs stderr notes; the organization
 list remains on stdout
 
-.SS Examples and expected output
+.PP
+\fBExamples and expected output\fP
+
+.PP
 \fBSample 1\fP
 
 .PP
@@ -2056,7 +1960,7 @@ Cleared the active organization; using your session default.
 .PP
 \fBExit status:\fP 0.
 
-.SH axilio orgs clear
+.SS clear
 .EX
 axilio orgs clear
 .EE
@@ -2069,7 +1973,8 @@ OAuth-backed requests then use the organization from AXILIO_ORG or the
 OAuth session default unless --org is supplied for the call. This does
 not alter API-key scope.
 
-.SS Global-option behavior
+.PP
+\fBGlobal-option behavior\fP
 .IP \(bu 2
 \fB--api-key\fP=\fIvalue\fP - No effect on orgs clear command; it only
 clears the saved org selection
@@ -2089,7 +1994,10 @@ result (default "table")
 \fB-q\fP, \fB--quiet\fP - Suppress the human org-clear confirmation; JSON
 still prints
 
-.SS Examples and expected output
+.PP
+\fBExamples and expected output\fP
+
+.PP
 \fBSample 1\fP
 
 .PP
@@ -2150,7 +2058,7 @@ No active org set; using your session default.
 \fBNotes:\fP The full note suggests \fBaxilio orgs use \\<slug\\>\fR to persist a
 selection.
 
-.SH axilio orgs list
+.SS list
 .EX
 axilio orgs list
 .EE
@@ -2164,7 +2072,8 @@ organization when one is selected. Organization selection resolves from
 --org, AXILIO_ORG, \fBorgs use\fR, then the OAuth session default. API-key
 logins cannot switch organizations.
 
-.SS Global-option behavior
+.PP
+\fBGlobal-option behavior\fP
 .IP \(bu 2
 \fB--api-key\fP=\fIvalue\fP - API-key auth cannot list OAuth memberships;
 use a saved OAuth session
@@ -2184,7 +2093,10 @@ selection as table or json (default "table")
 \fB-q\fP, \fB--quiet\fP - Suppress orgs list stderr notes; the
 organization list remains on stdout
 
-.SS Examples and expected output
+.PP
+\fBExamples and expected output\fP
+
+.PP
 \fBSample 1\fP
 
 .PP
@@ -2245,7 +2157,7 @@ None.
 .PP
 \fBNotes:\fP Organization membership and the active selector vary by session.
 
-.SH axilio orgs use
+.SS use
 .EX
 axilio orgs use <slug-or-id>
 .EE
@@ -2258,7 +2170,8 @@ session, then store its slug as the active organization.
 --org and AXILIO_ORG override this stored selection. API keys remain
 bound to their own organization and cannot use this command.
 
-.SS Global-option behavior
+.PP
+\fBGlobal-option behavior\fP
 .IP \(bu 2
 \fB--api-key\fP=\fIvalue\fP - API-key auth cannot switch orgs; use a saved
 OAuth session
@@ -2278,7 +2191,10 @@ active-organization result (default "table")
 \fB-q\fP, \fB--quiet\fP - Suppress the human org-selection confirmation;
 JSON still prints
 
-.SS Examples and expected output
+.PP
+\fBExamples and expected output\fP
+
+.PP
 \fBSample 1\fP
 
 .PP
@@ -2331,7 +2247,7 @@ Active organization set to example-org (Example Inc.).
 .PP
 \fBExit status:\fP 0.
 
-.SH axilio phone
+.SH phone
 .EX
 axilio phone
 .EE
@@ -2360,12 +2276,14 @@ active local lease, the saved current-session pointer, then an ambiguity
 error. The verbs mirror the SDK MobileDriver so an explored interaction
 maps directly onto SDK code.
 
-.SS Command options
+.PP
+\fBCommand options\fP
 .IP \(bu 2
 \fB--session\fP=\fIvalue\fP - No effect on phone command; bare axilio phone
 only displays this help
 
-.SS Global-option behavior
+.PP
+\fBGlobal-option behavior\fP
 .IP \(bu 2
 \fB--api-key\fP=\fIvalue\fP - No effect on phone command; bare axilio phone
 only displays this help
@@ -2385,7 +2303,9 @@ phone only displays this help (default "table")
 \fB-q\fP, \fB--quiet\fP - No effect on phone command; bare axilio phone
 only displays this help
 
-.SS Workflow examples
+.PP
+\fBWorkflow examples\fP
+
 .EX
 axilio phone observe
 axilio phone tap --query "the search box"
@@ -2393,7 +2313,7 @@ axilio phone type "Axilio"
 axilio phone observe
 .EE
 
-.SH axilio phone find
+.SS find
 .EX
 axilio phone find <query> [flags]
 .EE
@@ -2408,7 +2328,8 @@ server, and the effective deadline is 10 seconds when --timeout is
 omitted. A missing target is an error; use \fBfind-text\fR for a successful
 empty result.
 
-.SS Command options
+.PP
+\fBCommand options\fP
 .IP \(bu 2
 \fB--model\fP=\fIvalue\fP - Vision model override; omitted lets the server
 select the model
@@ -2419,12 +2340,14 @@ free
 \fB--timeout\fP=\fIduration\fP - Vision deadline such as 15s; omitted uses
 10s (default "0s")
 
-.SS Parent options
+.PP
+\fBParent options\fP
 .IP \(bu 2
 \fB--session\fP=\fIvalue\fP - Session ID; overrides AXILIO_SESSION,
 sole-lease, and current-pointer selection
 
-.SS Global-option behavior
+.PP
+\fBGlobal-option behavior\fP
 .IP \(bu 2
 \fB--api-key\fP=\fIvalue\fP - No effect; the session's embedded control
 token in the websocket URL authenticates phone commands
@@ -2444,7 +2367,10 @@ table or json (default "table")
 \fB-q\fP, \fB--quiet\fP - Suppress stderr notes for vision search; the
 found-element result remains on stdout
 
-.SS Examples and expected output
+.PP
+\fBExamples and expected output\fP
+
+.PP
 \fBSample 1\fP
 
 .PP
@@ -2543,7 +2469,7 @@ None.
 .PP
 \fBNotes:\fP Element content and coordinates depend on the current frame.
 
-.SH axilio phone find-text
+.SS find-text
 .EX
 axilio phone find-text <text> [flags]
 .EE
@@ -2557,17 +2483,20 @@ element. --exact uses a case-sensitive exact match. No match is
 successful: table output prints \fBNo match.\fR and JSON output is null
 rather than a not-found error.
 
-.SS Command options
+.PP
+\fBCommand options\fP
 .IP \(bu 2
 \fB--exact\fP - Require a case-sensitive exact match instead of
 case-insensitive substring
 
-.SS Parent options
+.PP
+\fBParent options\fP
 .IP \(bu 2
 \fB--session\fP=\fIvalue\fP - Session ID; overrides AXILIO_SESSION,
 sole-lease, and current-pointer selection
 
-.SS Global-option behavior
+.PP
+\fBGlobal-option behavior\fP
 .IP \(bu 2
 \fB--api-key\fP=\fIvalue\fP - No effect; the session's embedded control
 token in the websocket URL authenticates phone commands
@@ -2587,7 +2516,10 @@ or json (default "table")
 \fB-q\fP, \fB--quiet\fP - Suppress stderr notes for OCR search; the
 text-match result remains on stdout
 
-.SS Examples and expected output
+.PP
+\fBExamples and expected output\fP
+
+.PP
 \fBSample 1\fP
 
 .PP
@@ -2711,7 +2643,7 @@ None.
 .PP
 \fBNotes:\fP No match is a successful literal JSON null.
 
-.SH axilio phone key
+.SS key
 .EX
 axilio phone key <name>
 .EE
@@ -2723,12 +2655,14 @@ Press a named key on the selected phone.
 The only named key currently supported by the CLI and pinned mobile
 driver is \fBenter\fR; back, home, and other key names are not available.
 
-.SS Parent options
+.PP
+\fBParent options\fP
 .IP \(bu 2
 \fB--session\fP=\fIvalue\fP - Session ID; overrides AXILIO_SESSION,
 sole-lease, and current-pointer selection
 
-.SS Global-option behavior
+.PP
+\fBGlobal-option behavior\fP
 .IP \(bu 2
 \fB--api-key\fP=\fIvalue\fP - No effect; the session's embedded control
 token in the websocket URL authenticates phone commands
@@ -2748,7 +2682,10 @@ press result (default "table")
 \fB-q\fP, \fB--quiet\fP - Suppress the human key press result; the phone
 action still runs; JSON still prints
 
-.SS Examples and expected output
+.PP
+\fBExamples and expected output\fP
+
+.PP
 \fBInvocation\fP
 
 .EX
@@ -2771,7 +2708,7 @@ Pressed enter
 .PP
 \fBExit status:\fP 0.
 
-.SH axilio phone long-press
+.SS long-press
 .EX
 axilio phone long-press <x> <y> [flags]
 .EE
@@ -2785,17 +2722,20 @@ This command is coordinate-only; use observe or find to inspect the
 current frame before choosing a point. The default hold duration is 800
 milliseconds.
 
-.SS Command options
+.PP
+\fBCommand options\fP
 .IP \(bu 2
 \fB--duration-ms\fP=\fInumber\fP - How long to hold the coordinate, in
 milliseconds (default "800")
 
-.SS Parent options
+.PP
+\fBParent options\fP
 .IP \(bu 2
 \fB--session\fP=\fIvalue\fP - Session ID; overrides AXILIO_SESSION,
 sole-lease, and current-pointer selection
 
-.SS Global-option behavior
+.PP
+\fBGlobal-option behavior\fP
 .IP \(bu 2
 \fB--api-key\fP=\fIvalue\fP - No effect; the session's embedded control
 token in the websocket URL authenticates phone commands
@@ -2815,7 +2755,10 @@ long-press result (default "table")
 \fB-q\fP, \fB--quiet\fP - Suppress the human long-press result; the phone
 action still runs; JSON still prints
 
-.SS Examples and expected output
+.PP
+\fBExamples and expected output\fP
+
+.PP
 \fBSample 1\fP
 
 .PP
@@ -2867,7 +2810,7 @@ Long-pressed 540,1080 for 1200ms
 .PP
 \fBExit status:\fP 0.
 
-.SH axilio phone observe
+.SS observe
 .EX
 axilio phone observe [flags]
 .EE
@@ -2882,17 +2825,20 @@ summarizes icons and screen dimensions. JSON returns the complete screen
 object, including texts, icons, dimensions, screen hash, and capture
 time.
 
-.SS Command options
+.PP
+\fBCommand options\fP
 .IP \(bu 2
 \fB--ocr-engine\fP=\fIvalue\fP - OCR engine: free or premium; omitted uses
 free
 
-.SS Parent options
+.PP
+\fBParent options\fP
 .IP \(bu 2
 \fB--session\fP=\fIvalue\fP - Session ID; overrides AXILIO_SESSION,
 sole-lease, and current-pointer selection
 
-.SS Global-option behavior
+.PP
+\fBGlobal-option behavior\fP
 .IP \(bu 2
 \fB--api-key\fP=\fIvalue\fP - No effect; the session's embedded control
 token in the websocket URL authenticates phone commands
@@ -2912,7 +2858,10 @@ or json (default "table")
 \fB-q\fP, \fB--quiet\fP - Suppress stderr notes for observation; the
 observation result remains on stdout
 
-.SS Examples and expected output
+.PP
+\fBExamples and expected output\fP
+
+.PP
 \fBSample 1\fP
 
 .PP
@@ -3015,7 +2964,9 @@ None.
 \fBNotes:\fP Shortened representative screen JSON; elements also include bounding
 boxes and sources.
 
-.SS Walkthrough
+.PP
+\fBWalkthrough\fP
+
 .EX
 +----------------------------+
 | Search                     |
@@ -3030,7 +2981,7 @@ reuse the observed Continue center:
 axilio phone tap 540 1120
 .EE
 
-.SH axilio phone screenshot
+.SS screenshot
 .EX
 axilio phone screenshot [flags]
 .EE
@@ -3045,17 +2996,20 @@ the destination already exists, its contents are overwritten without
 confirmation; the CLI does not create a backup. On success the human
 result reports the path and byte count.
 
-.SS Command options
+.PP
+\fBCommand options\fP
 .IP \(bu 2
 \fB--out\fP=\fIvalue\fP - PNG path to create; overwrite existing contents
 without confirmation (default "screenshot.png")
 
-.SS Parent options
+.PP
+\fBParent options\fP
 .IP \(bu 2
 \fB--session\fP=\fIvalue\fP - Session ID; overrides AXILIO_SESSION,
 sole-lease, and current-pointer selection
 
-.SS Global-option behavior
+.PP
+\fBGlobal-option behavior\fP
 .IP \(bu 2
 \fB--api-key\fP=\fIvalue\fP - No effect; the session's embedded control
 token in the websocket URL authenticates phone commands
@@ -3075,7 +3029,10 @@ screenshot write result (default "table")
 \fB-q\fP, \fB--quiet\fP - Suppress the human screenshot result; the phone
 action still runs; JSON still prints
 
-.SS Examples and expected output
+.PP
+\fBExamples and expected output\fP
+
+.PP
 \fBSample 1\fP
 
 .PP
@@ -3167,7 +3124,7 @@ screenshot does not create missing parent directories, so this target
 uses the existing current directory. A new file requests mode 0644
 subject to umask; overwrite preserves the existing mode.
 
-.SH axilio phone send
+.SS send
 .EX
 axilio phone send <path> [flags]
 .EE
@@ -3186,7 +3143,8 @@ deliveries up to 100 MiB. By default the command returns after dispatch;
 --wait. This combines \fBuploads add\fR and \fBuploads push\fR and therefore
 retains the upload in the org library.
 
-.SS Command options
+.PP
+\fBCommand options\fP
 .IP \(bu 2
 \fB--collection\fP=\fIvalue\fP - Target DCIM, Pictures, or Movies; omitted
 infers from media type
@@ -3197,12 +3155,14 @@ infers from media type
 \fB--wait\fP - Block until the phone reports delivered or failed instead
 of returning at dispatch
 
-.SS Parent options
+.PP
+\fBParent options\fP
 .IP \(bu 2
 \fB--session\fP=\fIvalue\fP - Session ID; overrides AXILIO_SESSION,
 sole-lease, and current-pointer selection
 
-.SS Global-option behavior
+.PP
+\fBGlobal-option behavior\fP
 .IP \(bu 2
 \fB--api-key\fP=\fIvalue\fP - API key for the upload-and-delivery request;
 overrides AXILIO_API_KEY and the saved key
@@ -3222,7 +3182,10 @@ json (default "table")
 \fB-q\fP, \fB--quiet\fP - Suppress upload progress and delivery notes; the
 delivery result remains on stdout
 
-.SS Examples and expected output
+.PP
+\fBExamples and expected output\fP
+
+.PP
 \fBSample 1\fP
 
 .PP
@@ -3322,7 +3285,7 @@ Status    delivered
 \fBNotes:\fP With --wait, the command returns only after delivered, failed, or the
 two-minute deadline.
 
-.SH axilio phone swipe
+.SS swipe
 .EX
 axilio phone swipe <x1> <y1> <x2> <y2> [flags]
 .EE
@@ -3335,17 +3298,20 @@ screen's top-left.
 This command is coordinate-only; use observe to inspect the current
 frame. The default gesture duration is 300 milliseconds.
 
-.SS Command options
+.PP
+\fBCommand options\fP
 .IP \(bu 2
 \fB--duration-ms\fP=\fInumber\fP - How long the swipe gesture takes, in
 milliseconds (default "300")
 
-.SS Parent options
+.PP
+\fBParent options\fP
 .IP \(bu 2
 \fB--session\fP=\fIvalue\fP - Session ID; overrides AXILIO_SESSION,
 sole-lease, and current-pointer selection
 
-.SS Global-option behavior
+.PP
+\fBGlobal-option behavior\fP
 .IP \(bu 2
 \fB--api-key\fP=\fIvalue\fP - No effect; the session's embedded control
 token in the websocket URL authenticates phone commands
@@ -3365,7 +3331,10 @@ result (default "table")
 \fB-q\fP, \fB--quiet\fP - Suppress the human swipe result; the phone
 action still runs; JSON still prints
 
-.SS Examples and expected output
+.PP
+\fBExamples and expected output\fP
+
+.PP
 \fBSample 1\fP
 
 .PP
@@ -3417,7 +3386,7 @@ Swiped 200,800 -> 900,800
 .PP
 \fBExit status:\fP 0.
 
-.SH axilio phone tap
+.SS tap
 .EX
 axilio phone tap [x y] [flags]
 .EE
@@ -3439,7 +3408,8 @@ Session selection precedence is --session, AXILIO_SESSION, the sole
 active lease, the saved current-session pointer, then an ambiguity
 error.
 
-.SS Command options
+.PP
+\fBCommand options\fP
 .IP \(bu 2
 \fB--model\fP=\fIvalue\fP - Vision model for --query only; omitted lets the
 server select
@@ -3450,12 +3420,14 @@ premium; omitted uses free
 \fB--query\fP=\fIvalue\fP - Recommended natural-language target; vision
 finds it and taps its center
 
-.SS Parent options
+.PP
+\fBParent options\fP
 .IP \(bu 2
 \fB--session\fP=\fIvalue\fP - Session ID; overrides AXILIO_SESSION,
 sole-lease, and current-pointer selection
 
-.SS Global-option behavior
+.PP
+\fBGlobal-option behavior\fP
 .IP \(bu 2
 \fB--api-key\fP=\fIvalue\fP - No effect; the session's embedded control
 token in the websocket URL authenticates phone commands
@@ -3475,7 +3447,10 @@ result (default "table")
 \fB-q\fP, \fB--quiet\fP - Suppress the human tap result; the phone action
 still runs; JSON still prints
 
-.SS Examples and expected output
+.PP
+\fBExamples and expected output\fP
+
+.PP
 \fBSample 1\fP
 
 .PP
@@ -3553,7 +3528,7 @@ Tapped "continue" at 540,1120
 .PP
 \fBExit status:\fP 0.
 
-.SH axilio phone type
+.SS type
 .EX
 axilio phone type <text>
 .EE
@@ -3567,12 +3542,14 @@ characters. Text is entered through a US-layout keyboard. Printable
 ASCII characters are supported; emoji and other non-ASCII characters are
 silently skipped.
 
-.SS Parent options
+.PP
+\fBParent options\fP
 .IP \(bu 2
 \fB--session\fP=\fIvalue\fP - Session ID; overrides AXILIO_SESSION,
 sole-lease, and current-pointer selection
 
-.SS Global-option behavior
+.PP
+\fBGlobal-option behavior\fP
 .IP \(bu 2
 \fB--api-key\fP=\fIvalue\fP - No effect; the session's embedded control
 token in the websocket URL authenticates phone commands
@@ -3592,7 +3569,10 @@ typing result (default "table")
 \fB-q\fP, \fB--quiet\fP - Suppress the human typing result; the phone
 action still runs; JSON still prints
 
-.SS Examples and expected output
+.PP
+\fBExamples and expected output\fP
+
+.PP
 \fBSample 1\fP
 
 .PP
@@ -3670,7 +3650,7 @@ Typed "don't split this text"
 .PP
 \fBExit status:\fP 0.
 
-.SH axilio phone wait-for
+.SS wait-for
 .EX
 axilio phone wait-for <text> [flags]
 .EE
@@ -3684,7 +3664,8 @@ case-sensitive exact match. The default timeout is 10 seconds. A timeout
 returns the CLI timeout exit code (5). Waiting for presence returns the
 matching element; waiting for absence is action-only.
 
-.SS Command options
+.PP
+\fBCommand options\fP
 .IP \(bu 2
 \fB--exact\fP - Require a case-sensitive exact match instead of
 substring
@@ -3694,12 +3675,14 @@ substring
 \fB--timeout\fP=\fIduration\fP - Maximum OCR polling time before exit code 5
 (default "10s")
 
-.SS Parent options
+.PP
+\fBParent options\fP
 .IP \(bu 2
 \fB--session\fP=\fIvalue\fP - Session ID; overrides AXILIO_SESSION,
 sole-lease, and current-pointer selection
 
-.SS Global-option behavior
+.PP
+\fBGlobal-option behavior\fP
 .IP \(bu 2
 \fB--api-key\fP=\fIvalue\fP - No effect; the session's embedded control
 token in the websocket URL authenticates phone commands
@@ -3719,7 +3702,10 @@ as table or json (default "table")
 \fB-q\fP, \fB--quiet\fP - Suppress human wait notes; table or JSON results
 remain on stdout
 
-.SS Examples and expected output
+.PP
+\fBExamples and expected output\fP
+
+.PP
 \fBSample 1\fP
 
 .PP
@@ -3839,7 +3825,7 @@ timeout: text not found within deadline: Results
 may add ANSI styling at the process boundary; the stderr sample shows
 the underlying message.
 
-.SH axilio phones
+.SH phones
 .EX
 axilio phones
 .EE
@@ -3857,7 +3843,8 @@ phones and currently free dedicated phones that can be allocated now.
 including busy and offline phones, and is the place to find a phone ID
 for \fBsessions start --phone-id\fR\&.
 
-.SS Global-option behavior
+.PP
+\fBGlobal-option behavior\fP
 .IP \(bu 2
 \fB--api-key\fP=\fIvalue\fP - No effect on phones command; bare axilio
 phones only displays this help
@@ -3877,13 +3864,15 @@ axilio phones only displays this help (default "table")
 \fB-q\fP, \fB--quiet\fP - No effect on phones command; bare axilio phones
 only displays this help
 
-.SS Workflow examples
+.PP
+\fBWorkflow examples\fP
+
 .EX
 axilio phones list
 axilio phones mine
 .EE
 
-.SH axilio phones list
+.SS list
 .EX
 axilio phones list
 .EE
@@ -3898,7 +3887,8 @@ Busy or offline dedicated phones do not appear here; use \fBaxilio phones
 mine\fR to see the full dedicated inventory. Results include phone ID,
 type, model, and status.
 
-.SS Global-option behavior
+.PP
+\fBGlobal-option behavior\fP
 .IP \(bu 2
 \fB--api-key\fP=\fIvalue\fP - API key for the available-phone request;
 overrides AXILIO_API_KEY and the saved key
@@ -3918,7 +3908,10 @@ table or json (default "table")
 \fB-q\fP, \fB--quiet\fP - Suppress stderr notes for the available-phone
 request; the available-phone result remains on stdout
 
-.SS Examples and expected output
+.PP
+\fBExamples and expected output\fP
+
+.PP
 \fBSample 1\fP
 
 .PP
@@ -3992,7 +3985,7 @@ None.
 \fBNotes:\fP Counts, inventory, and optional phone fields vary by organization and
 availability.
 
-.SH axilio phones mine
+.SS mine
 .EX
 axilio phones mine
 .EE
@@ -4006,7 +3999,8 @@ This is how you discover a phone_id to pin with \fBaxilio sessions start
 --phone-id\fR\&. Results include phone ID, nickname, type, model, status,
 and the session ID holding a busy phone.
 
-.SS Global-option behavior
+.PP
+\fBGlobal-option behavior\fP
 .IP \(bu 2
 \fB--api-key\fP=\fIvalue\fP - API key for the dedicated-phone request;
 overrides AXILIO_API_KEY and the saved key
@@ -4026,7 +4020,10 @@ table or json (default "table")
 \fB-q\fP, \fB--quiet\fP - Suppress stderr notes for the dedicated-phone
 request; the dedicated-phone result remains on stdout
 
-.SS Examples and expected output
+.PP
+\fBExamples and expected output\fP
+
+.PP
 \fBSample 1\fP
 
 .PP
@@ -4089,7 +4086,7 @@ Release it with:  axilio sessions stop <session-id>
 .PP
 \fBExit status:\fP 0.
 
-.SH axilio runs
+.SH runs
 .EX
 axilio runs
 .EE
@@ -4106,7 +4103,8 @@ workflow ID with \fBworkflows list\fR, start one or more runs, list recent
 run IDs and statuses, inspect a run in detail, or cancel queued and
 running work.
 
-.SS Global-option behavior
+.PP
+\fBGlobal-option behavior\fP
 .IP \(bu 2
 \fB--api-key\fP=\fIvalue\fP - No effect on runs command; bare axilio runs
 only displays this help
@@ -4126,7 +4124,9 @@ runs only displays this help (default "table")
 \fB-q\fP, \fB--quiet\fP - No effect on runs command; bare axilio runs only
 displays this help
 
-.SS Workflow examples
+.PP
+\fBWorkflow examples\fP
+
 .EX
 axilio workflows list
 axilio runs start wf_123
@@ -4137,7 +4137,7 @@ axilio runs get run_123
 axilio runs get <run-id>
 .EE
 
-.SH axilio runs cancel
+.SS cancel
 .EX
 axilio runs cancel <run-id> [flags]
 .EE
@@ -4150,12 +4150,14 @@ Without --yes, table mode reads confirmation from stdin, including
 redirected input. JSON and quiet modes do not prompt and require --yes.
 JSON success reports the canceled run ID.
 
-.SS Command options
+.PP
+\fBCommand options\fP
 .IP \(bu 2
 \fB-y\fP, \fB--yes\fP - Cancel without prompting; required in JSON or
 quiet mode
 
-.SS Global-option behavior
+.PP
+\fBGlobal-option behavior\fP
 .IP \(bu 2
 \fB--api-key\fP=\fIvalue\fP - API key for run cancellation; overrides
 AXILIO_API_KEY and the saved key
@@ -4175,7 +4177,10 @@ cancellation result (default "table")
 \fB-q\fP, \fB--quiet\fP - Suppress the run cancellation prompt and human
 result; --yes is still required; JSON still prints
 
-.SS Examples and expected output
+.PP
+\fBExamples and expected output\fP
+
+.PP
 \fBSample 1\fP
 
 .PP
@@ -4287,7 +4292,7 @@ Canceled <run-id>
 .PP
 \fBExit status:\fP 0.
 
-.SH axilio runs get
+.SS get
 .EX
 axilio runs get <run-id>
 .EE
@@ -4299,7 +4304,8 @@ Fetch one run by the ID returned from \fBruns list\fR or \fBruns start\fR\&.
 The result includes status, trigger, workflow, session, phone, created,
 started and completed times, error message, and video URL when present.
 
-.SS Global-option behavior
+.PP
+\fBGlobal-option behavior\fP
 .IP \(bu 2
 \fB--api-key\fP=\fIvalue\fP - API key for the run-detail request; overrides
 AXILIO_API_KEY and the saved key
@@ -4319,7 +4325,10 @@ or json (default "table")
 \fB-q\fP, \fB--quiet\fP - Suppress stderr notes for the run-detail
 request; the run-detail result remains on stdout
 
-.SS Examples and expected output
+.PP
+\fBExamples and expected output\fP
+
+.PP
 \fBSample 1\fP
 
 .PP
@@ -4458,7 +4467,7 @@ None.
 .PP
 \fBExit status:\fP 0.
 
-.SH axilio runs list
+.SS list
 .EX
 axilio runs list [flags]
 .EE
@@ -4471,14 +4480,16 @@ Filter by workflow ID and cap the result count with --limit. Table rows
 include run ID, status, trigger, workflow ID, and creation time; use a
 returned run ID with \fBruns get\fR or \fBruns cancel\fR\&.
 
-.SS Command options
+.PP
+\fBCommand options\fP
 .IP \(bu 2
 \fB--limit\fP=\fInumber\fP - Maximum number of most-recent runs to return
 (default "20")
 .IP \(bu 2
 \fB--workflow\fP=\fIvalue\fP - Return only runs for this workflow ID
 
-.SS Global-option behavior
+.PP
+\fBGlobal-option behavior\fP
 .IP \(bu 2
 \fB--api-key\fP=\fIvalue\fP - API key for the run-list request; overrides
 AXILIO_API_KEY and the saved key
@@ -4498,7 +4509,10 @@ json (default "table")
 \fB-q\fP, \fB--quiet\fP - Suppress stderr notes for the run-list request;
 the run-list result remains on stdout
 
-.SS Examples and expected output
+.PP
+\fBExamples and expected output\fP
+
+.PP
 \fBSample 1\fP
 
 .PP
@@ -4600,7 +4614,7 @@ None.
 \fBNotes:\fP Shortened representative SDK response; run records can include
 additional fields.
 
-.SH axilio runs start
+.SS start
 .EX
 axilio runs start <workflow-id> [flags]
 .EE
@@ -4624,7 +4638,8 @@ validation.
 .PP
 Successful output contains the created run IDs.
 
-.SS Command options
+.PP
+\fBCommand options\fP
 .IP \(bu 2
 \fB--count\fP=\fInumber\fP - Number of run configurations to create; v0.5.0
 does not validate the range (default "1")
@@ -4635,7 +4650,8 @@ run
 \fB--start-timeout\fP=\fInumber\fP - Queued-phone wait in seconds; 0 uses
 the server default, nonzero is sent as-is
 
-.SS Global-option behavior
+.PP
+\fBGlobal-option behavior\fP
 .IP \(bu 2
 \fB--api-key\fP=\fIvalue\fP - API key for the run-create request; overrides
 AXILIO_API_KEY and the saved key
@@ -4655,7 +4671,10 @@ or json (default "table")
 \fB-q\fP, \fB--quiet\fP - Suppress table-mode run IDs and guidance; a JSON
 result remains on stdout
 
-.SS Examples and expected output
+.PP
+\fBExamples and expected output\fP
+
+.PP
 \fBSample 1\fP
 
 .PP
@@ -4790,7 +4809,7 @@ Started run <run-id>
 .PP
 \fBNotes:\fP -o json emits the complete run_ids response on stdout.
 
-.SH axilio sessions
+.SH sessions
 .EX
 axilio sessions
 .EE
@@ -4809,7 +4828,8 @@ AXILIO_SESSION, the sole active lease, the current-session pointer, then
 an ambiguity error. \fBsessions list --remote\fR instead asks the API for
 all active server sessions.
 
-.SS Global-option behavior
+.PP
+\fBGlobal-option behavior\fP
 .IP \(bu 2
 \fB--api-key\fP=\fIvalue\fP - No effect on sessions command; bare axilio
 sessions only displays this help
@@ -4829,7 +4849,9 @@ axilio sessions only displays this help (default "table")
 \fB-q\fP, \fB--quiet\fP - No effect on sessions command; bare axilio
 sessions only displays this help
 
-.SS Workflow examples
+.PP
+\fBWorkflow examples\fP
+
 .EX
 axilio sessions start
 axilio sessions list
@@ -4838,7 +4860,7 @@ axilio sessions stop sess_123
 axilio sessions stop <session-id>
 .EE
 
-.SH axilio sessions current
+.SS current
 .EX
 axilio sessions current
 .EE
@@ -4853,7 +4875,8 @@ ambiguity error. This command has no --session flag, so it starts at
 AXILIO_SESSION. If no session resolves, the current implementation
 prints a note and exits successfully.
 
-.SS Global-option behavior
+.PP
+\fBGlobal-option behavior\fP
 .IP \(bu 2
 \fB--api-key\fP=\fIvalue\fP - No effect on sessions current command; it uses
 local session data or its control URL
@@ -4873,7 +4896,10 @@ table or json (default "table")
 \fB-q\fP, \fB--quiet\fP - Suppress stderr notes for session resolution;
 the current-session result remains on stdout
 
-.SS Examples and expected output
+.PP
+\fBExamples and expected output\fP
+
+.PP
 \fBSample 1\fP
 
 .PP
@@ -4971,7 +4997,7 @@ None.
 .PP
 \fBNotes:\fP With no selected lease, the successful JSON result is null.
 
-.SH axilio sessions list
+.SS list
 .EX
 axilio sessions list [flags]
 .EE
@@ -4985,12 +5011,14 @@ this shell when resolution is not ambiguous. Use --remote to list active
 server sessions instead; remote rows include session ID, phone ID, phone
 type, and model but are not the local lease registry.
 
-.SS Command options
+.PP
+\fBCommand options\fP
 .IP \(bu 2
 \fB--remote\fP - List all active server sessions instead of this CLI's
 local lease files
 
-.SS Global-option behavior
+.PP
+\fBGlobal-option behavior\fP
 .IP \(bu 2
 \fB--api-key\fP=\fIvalue\fP - Authenticates only --remote listing; no effect
 on local lease files
@@ -5010,7 +5038,10 @@ table or json (default "table")
 \fB-q\fP, \fB--quiet\fP - Suppress stderr notes; the session listing
 remains on stdout
 
-.SS Examples and expected output
+.PP
+\fBExamples and expected output\fP
+
+.PP
 \fBSample 1\fP
 
 .PP
@@ -5109,7 +5140,7 @@ None.
 .PP
 \fBNotes:\fP Local lease JSON includes the stored control URL; IDs and URLs vary.
 
-.SH axilio sessions start
+.SS start
 .EX
 axilio sessions start [flags]
 .EE
@@ -5125,7 +5156,8 @@ workflow with --workflow. --export prints only \fBexport
 AXILIO_SESSION=\\<id\\>\fR for shell eval; that shell syntax also wins when
 -o json is supplied. The lease remains active until explicitly stopped.
 
-.SS Command options
+.PP
+\fBCommand options\fP
 .IP \(bu 2
 \fB--export\fP - Print only \fBexport AXILIO_SESSION=\\<id\\>\fR for shell
 eval
@@ -5139,7 +5171,8 @@ iphone (default "android")
 \fB--workflow\fP=\fIvalue\fP - Workflow ID to attach; omit for an
 interactive lease
 
-.SS Global-option behavior
+.PP
+\fBGlobal-option behavior\fP
 .IP \(bu 2
 \fB--api-key\fP=\fIvalue\fP - API key for the phone-allocation request;
 overrides AXILIO_API_KEY and the saved key
@@ -5159,7 +5192,10 @@ or json; --export always emits shell text (default "table")
 \fB-q\fP, \fB--quiet\fP - Suppress session guidance; the result or
 --export text remains on stdout
 
-.SS Examples and expected output
+.PP
+\fBExamples and expected output\fP
+
+.PP
 \fBSample 1\fP
 
 .PP
@@ -5349,7 +5385,7 @@ None.
 \fBNotes:\fP The shell consumes the nested command's export line and sets
 AXILIO_SESSION in the current shell.
 
-.SH axilio sessions stop
+.SS stop
 .EX
 axilio sessions stop <session-id|phone-id> [flags]
 .EE
@@ -5364,12 +5400,14 @@ current-session pointer are removed after release. Without --yes, table
 mode reads confirmation from stdin, including redirected input. JSON and
 quiet modes do not prompt and require --yes.
 
-.SS Command options
+.PP
+\fBCommand options\fP
 .IP \(bu 2
 \fB-y\fP, \fB--yes\fP - Release without prompting; required in JSON or
 quiet mode
 
-.SS Global-option behavior
+.PP
+\fBGlobal-option behavior\fP
 .IP \(bu 2
 \fB--api-key\fP=\fIvalue\fP - API key for session release; overrides
 AXILIO_API_KEY and the saved key
@@ -5389,7 +5427,10 @@ session release result (default "table")
 \fB-q\fP, \fB--quiet\fP - Suppress the session release prompt and human
 result; --yes is still required; JSON still prints
 
-.SS Examples and expected output
+.PP
+\fBExamples and expected output\fP
+
+.PP
 \fBSample 1\fP
 
 .PP
@@ -5501,7 +5542,7 @@ Released <phone-id>.
 .PP
 \fBExit status:\fP 0.
 
-.SH axilio status
+.SH status
 .EX
 axilio status
 .EE
@@ -5514,7 +5555,8 @@ active organization selector, and account balance.
 A valid API key or OAuth session is required. Use -o json for the
 structured status, api_host, active_org, and balance fields.
 
-.SS Global-option behavior
+.PP
+\fBGlobal-option behavior\fP
 .IP \(bu 2
 \fB--api-key\fP=\fIvalue\fP - API key for the status request; overrides
 AXILIO_API_KEY and the saved key
@@ -5534,7 +5576,10 @@ json (default "table")
 \fB-q\fP, \fB--quiet\fP - Suppress stderr notes for the status request;
 the status result remains on stdout
 
-.SS Examples and expected output
+.PP
+\fBExamples and expected output\fP
+
+.PP
 \fBSample 1\fP
 
 .PP
@@ -5597,7 +5642,7 @@ None.
 .PP
 \fBNotes:\fP Balance and active organization vary by account.
 
-.SH axilio upgrade
+.SH upgrade
 .EX
 axilio upgrade [flags]
 .EE
@@ -5613,12 +5658,14 @@ install\fR builds are left to the Go toolchain. On a standalone release,
 Homebrew invocation currently prints \fBbrew upgrade axilio\fR guidance and
 returns before checking, even when --check is supplied.
 
-.SS Command options
+.PP
+\fBCommand options\fP
 .IP \(bu 2
 \fB--check\fP - Check a standalone release without installing; Homebrew
 currently prints upgrade guidance
 
-.SS Global-option behavior
+.PP
+\fBGlobal-option behavior\fP
 .IP \(bu 2
 \fB--api-key\fP=\fIvalue\fP - No effect on upgrade command; release checks
 use GitHub without Axilio auth
@@ -5638,7 +5685,10 @@ upgrade-status result (default "table")
 \fB-q\fP, \fB--quiet\fP - Suppress human upgrade guidance and status; JSON
 still prints
 
-.SS Examples and expected output
+.PP
+\fBExamples and expected output\fP
+
+.PP
 \fBSample 1\fP
 
 .PP
@@ -5716,7 +5766,7 @@ brew upgrade axilio
 .PP
 Output and exit status are owned by Homebrew, not the axilio CLI.
 
-.SH axilio uploads
+.SH uploads
 .EX
 axilio uploads
 .EE
@@ -5734,7 +5784,8 @@ pushed to any phone the org holds, so one upload serves many phones.
 delivers a stored upload, and \fBdelete\fR frees library quota. \fBphone send\fR
 combines add and push for the selected session's phone.
 
-.SS Global-option behavior
+.PP
+\fBGlobal-option behavior\fP
 .IP \(bu 2
 \fB--api-key\fP=\fIvalue\fP - No effect on uploads command; bare axilio
 uploads only displays this help
@@ -5754,7 +5805,9 @@ axilio uploads only displays this help (default "table")
 \fB-q\fP, \fB--quiet\fP - No effect on uploads command; bare axilio
 uploads only displays this help
 
-.SS Workflow examples
+.PP
+\fBWorkflow examples\fP
+
 .EX
 axilio uploads add ./photo.jpg
 axilio uploads list
@@ -5764,7 +5817,7 @@ axilio uploads delete upl_123 --yes
 axilio uploads delete <upload-id> --yes
 .EE
 
-.SH axilio uploads add
+.SS add
 .EX
 axilio uploads add <path> [flags]
 .EE
@@ -5779,7 +5832,8 @@ to do both in one step. The stored filename defaults to the local
 basename and MIME type is inferred from the extension; --filename and
 --mime-type override those values.
 
-.SS Command options
+.PP
+\fBCommand options\fP
 .IP \(bu 2
 \fB--filename\fP=\fIvalue\fP - Stored filename; omitted uses the local
 file's basename
@@ -5787,7 +5841,8 @@ file's basename
 \fB--mime-type\fP=\fIvalue\fP - Stored MIME type; omitted infers it from the
 file extension
 
-.SS Global-option behavior
+.PP
+\fBGlobal-option behavior\fP
 .IP \(bu 2
 \fB--api-key\fP=\fIvalue\fP - API key for the file-upload request; overrides
 AXILIO_API_KEY and the saved key
@@ -5807,7 +5862,10 @@ table or json (default "table")
 \fB-q\fP, \fB--quiet\fP - Suppress upload progress; the stored-upload
 result remains on stdout
 
-.SS Examples and expected output
+.PP
+\fBExamples and expected output\fP
+
+.PP
 \fBSample 1\fP
 
 .PP
@@ -5872,7 +5930,7 @@ Status    ready
 .PP
 \fBNotes:\fP --filename and --mime-type override values inferred from the local path.
 
-.SH axilio uploads delete
+.SS delete
 .EX
 axilio uploads delete <upload-id> [flags]
 .EE
@@ -5888,12 +5946,14 @@ table mode reads confirmation from stdin, including redirected input.
 JSON and quiet modes do not prompt and require --yes. The alias \fBuploads
 rm\fR performs the same operation.
 
-.SS Command options
+.PP
+\fBCommand options\fP
 .IP \(bu 2
 \fB-y\fP, \fB--yes\fP - Delete without prompting; required in JSON or
 quiet mode
 
-.SS Global-option behavior
+.PP
+\fBGlobal-option behavior\fP
 .IP \(bu 2
 \fB--api-key\fP=\fIvalue\fP - API key for the upload-delete request;
 overrides AXILIO_API_KEY and the saved key
@@ -5913,7 +5973,10 @@ deletion result (default "table")
 \fB-q\fP, \fB--quiet\fP - Suppress the prompt and human confirmation;
 --yes is required; JSON still prints
 
-.SS Examples and expected output
+.PP
+\fBExamples and expected output\fP
+
+.PP
 \fBSample 1\fP
 
 .PP
@@ -6032,7 +6095,7 @@ Deleted <upload-id>
 phones holding or receiving a copy; the pinned helper discards the
 pending-phone count.
 
-.SH axilio uploads list
+.SS list
 .EX
 axilio uploads list [flags]
 .EE
@@ -6047,7 +6110,8 @@ case-insensitive substring, and sort by created_at, filename, or
 size_bytes in asc or desc order. Omitting sort/order uses server
 defaults.
 
-.SS Command options
+.PP
+\fBCommand options\fP
 .IP \(bu 2
 \fB--limit\fP=\fInumber\fP - Maximum files in this page (default "50")
 .IP \(bu 2
@@ -6062,7 +6126,8 @@ default
 \fB--sort\fP=\fIvalue\fP - Sort key: created_at, filename, or size_bytes;
 omitted uses server default
 
-.SS Global-option behavior
+.PP
+\fBGlobal-option behavior\fP
 .IP \(bu 2
 \fB--api-key\fP=\fIvalue\fP - API key for the upload-list request; overrides
 AXILIO_API_KEY and the saved key
@@ -6082,7 +6147,10 @@ or json (default "table")
 \fB-q\fP, \fB--quiet\fP - Suppress stderr notes for the upload-list
 request; the upload-list result remains on stdout
 
-.SS Examples and expected output
+.PP
+\fBExamples and expected output\fP
+
+.PP
 \fBSample 1\fP
 
 .PP
@@ -6225,7 +6293,7 @@ None.
 \fBNotes:\fP Representative response; files, result count, and bytes used vary by
 organization; limits are global.
 
-.SH axilio uploads push
+.SS push
 .EX
 axilio uploads push <upload-id> [flags]
 .EE
@@ -6242,7 +6310,8 @@ Pictures, or Movies is selected. By default the command returns after
 dispatch; --wait blocks for delivered or failed, and --timeout applies
 only with --wait.
 
-.SS Command options
+.PP
+\fBCommand options\fP
 .IP \(bu 2
 \fB--collection\fP=\fIvalue\fP - Target DCIM, Pictures, or Movies; omitted
 infers from media type
@@ -6256,7 +6325,8 @@ sessions (required)
 \fB--wait\fP - Block until the phone reports delivered or failed instead
 of returning at dispatch
 
-.SS Global-option behavior
+.PP
+\fBGlobal-option behavior\fP
 .IP \(bu 2
 \fB--api-key\fP=\fIvalue\fP - API key for the file-delivery request;
 overrides AXILIO_API_KEY and the saved key
@@ -6276,7 +6346,10 @@ json (default "table")
 \fB-q\fP, \fB--quiet\fP - Suppress delivery progress and notes; the
 delivery result remains on stdout
 
-.SS Examples and expected output
+.PP
+\fBExamples and expected output\fP
+
+.PP
 \fBSample 1\fP
 
 .PP
@@ -6402,7 +6475,7 @@ pushed; re-run with --wait to confirm delivery
 .PP
 \fBExit status:\fP 0.
 
-.SH axilio workflows
+.SH workflows
 .EX
 axilio workflows
 .EE
@@ -6418,7 +6491,8 @@ Inspect workflows in the active organization. Use \fBworkflows list\fR to
 discover a workflow ID, then pass that ID to \fBruns start\fR or \fBsessions
 start --workflow\fR\&.
 
-.SS Global-option behavior
+.PP
+\fBGlobal-option behavior\fP
 .IP \(bu 2
 \fB--api-key\fP=\fIvalue\fP - No effect on workflows command; bare axilio
 workflows only displays this help
@@ -6438,7 +6512,9 @@ axilio workflows only displays this help (default "table")
 \fB-q\fP, \fB--quiet\fP - No effect on workflows command; bare axilio
 workflows only displays this help
 
-.SS Workflow examples
+.PP
+\fBWorkflow examples\fP
+
 .EX
 axilio workflows list
 axilio workflows list --search checkout
@@ -6446,7 +6522,7 @@ axilio runs start wf_123
 axilio runs start <workflow-id>
 .EE
 
-.SH axilio workflows list
+.SS list
 .EX
 axilio workflows list [flags]
 .EE
@@ -6459,14 +6535,16 @@ Results include workflow ID, name, platform, status, and last-run time.
 Use --search for a name substring and --limit to control the number
 returned. A listed workflow ID can be passed directly to \fBruns start\fR\&.
 
-.SS Command options
+.PP
+\fBCommand options\fP
 .IP \(bu 2
 \fB--limit\fP=\fInumber\fP - Maximum number of most-recent workflows to
 return (default "20")
 .IP \(bu 2
 \fB--search\fP=\fIvalue\fP - Filter workflow names by substring
 
-.SS Global-option behavior
+.PP
+\fBGlobal-option behavior\fP
 .IP \(bu 2
 \fB--api-key\fP=\fIvalue\fP - API key for the workflow-list request;
 overrides AXILIO_API_KEY and the saved key
@@ -6486,7 +6564,10 @@ table or json (default "table")
 \fB-q\fP, \fB--quiet\fP - Suppress stderr notes for the workflow-list
 request; the workflow-list result remains on stdout
 
-.SS Examples and expected output
+.PP
+\fBExamples and expected output\fP
+
+.PP
 \fBSample 1\fP
 
 .PP
@@ -6711,6 +6792,38 @@ init --agent codex\fR\&.
 .PP
 \fB\&.cursor/rules/axilio.mdc\fP : Agent instructions written by \fBaxilio
 init --agent cursor\fR\&.
+
+
+.SH NOTES
+.SH Resolution precedence
+Credentials resolve in this order: --api-key, AXILIO_API_KEY, the saved
+config API key, then the saved OAuth session.
+
+.PP
+The organization resolves from --org, AXILIO_ORG, the saved active
+organization, then the OAuth session default. Note that each API key is
+scoped to the organization that created it and cannot switch
+organizations with --org.
+
+.PP
+API host resolves from --base-url, AXILIO_BASE_URL, saved base-url, then
+https://api.axilio.ai.
+
+.PP
+Phone command session selection precedence is --session, AXILIO_SESSION,
+the sole active lease, the saved current-session pointer, then an
+ambiguity error.
+
+.SH Output behavior
+Table output for human readability is the default. Every successful
+runnable application command emits valid JSON with -o json; action
+commands return a small acknowledgment. Built-in help, completion, and
+version output remains text. The sessions start --export command emits
+shell text for eval. Notes, prompts, and progress use stderr and are
+suppressed in JSON or quiet mode. Quiet and JSON modes do not confirm
+destructive actions; pass --yes where offered. API-key, base-URL, and
+organization flags affect API-backed commands; they do not select a
+local phone session.
 
 
 .SH EXAMPLES

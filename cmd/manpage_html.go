@@ -16,17 +16,18 @@ type manpageHTMLSection struct {
 }
 
 var manpageHTMLSections = []manpageHTMLSection{
-	{ID: "name", Label: "NAME"},
-	{ID: "synopsis", Label: "SYNOPSIS"},
-	{ID: "description", Label: "DESCRIPTION"},
-	{ID: "common-workflow", Label: "COMMON WORKFLOW"},
-	{ID: "global-options", Label: "GLOBAL OPTIONS"},
-	{ID: "commands", Label: "COMMANDS"},
-	{ID: "environment", Label: "ENVIRONMENT"},
-	{ID: "exit-status", Label: "EXIT STATUS"},
-	{ID: "files", Label: "FILES"},
-	{ID: "examples", Label: "EXAMPLES"},
-	{ID: "see-also", Label: "SEE ALSO"},
+	{ID: "NAME", Label: "NAME"},
+	{ID: "SYNOPSIS", Label: "SYNOPSIS"},
+	{ID: "DESCRIPTION", Label: "DESCRIPTION"},
+	{ID: "COMMON_WORKFLOW", Label: "COMMON WORKFLOW"},
+	{ID: "GLOBAL_OPTIONS", Label: "GLOBAL OPTIONS"},
+	{ID: "COMMANDS", Label: "COMMANDS"},
+	{ID: "ENVIRONMENT", Label: "ENVIRONMENT"},
+	{ID: "EXIT_STATUS", Label: "EXIT STATUS"},
+	{ID: "FILES", Label: "FILES"},
+	{ID: "NOTES", Label: "NOTES"},
+	{ID: "EXAMPLES", Label: "EXAMPLES"},
+	{ID: "SEE_ALSO", Label: "SEE ALSO"},
 }
 
 // GenerateManpageHTML renders a self-contained browser manual from the same
@@ -44,13 +45,15 @@ func GenerateManpageHTML(root *cobra.Command, version string) ([]byte, error) {
 		markdown = markdown[lineEnd+1:]
 	}
 	renderer := blackfriday.NewHTMLRenderer(blackfriday.HTMLRendererParameters{
-		Flags: blackfriday.SkipHTML | blackfriday.Safelink | blackfriday.NoreferrerLinks | blackfriday.NoopenerLinks,
+		HeadingLevelOffset: 1,
+		Flags:              blackfriday.SkipHTML | blackfriday.Safelink | blackfriday.NoreferrerLinks | blackfriday.NoopenerLinks,
 	})
 	body := blackfriday.Run(
 		[]byte(markdown),
 		blackfriday.WithRenderer(renderer),
-		blackfriday.WithExtensions(blackfriday.CommonExtensions|blackfriday.AutoHeadingIDs),
+		blackfriday.WithExtensions(blackfriday.CommonExtensions|blackfriday.AutoHeadingIDs|blackfriday.HeadingIDs),
 	)
+	body = addHTMLTopLinks(body)
 
 	var output bytes.Buffer
 	err = manpageHTMLTemplate.Execute(&output, struct {
@@ -72,76 +75,92 @@ func GenerateManpageHTML(root *cobra.Command, version string) ([]byte, error) {
 	return output.Bytes(), nil
 }
 
+func addHTMLTopLinks(body []byte) []byte {
+	page := string(body)
+	for _, section := range manpageHTMLSections {
+		heading := fmt.Sprintf(`<h2 id="%s">%s</h2>`, section.ID, section.Label)
+		withTopLink := fmt.Sprintf(`<h2 id="%s">%s &nbsp; &nbsp; &nbsp; &nbsp; <a href="#top_of_page"><span class="top-link">top</span></a></h2>`, section.ID, section.Label)
+		page = strings.Replace(page, heading, withTopLink, 1)
+	}
+	return []byte(page)
+}
+
 var manpageHTMLTemplate = template.Must(template.New("axilio-manpage").Parse(`<!doctype html>
-<html lang="en">
+<html lang="en-US">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="generator" content="axilio manpage generator">
-  <title>axilio(1) — CLI manual</title>
+  <title>axilio(1) - CLI manual page</title>
   <style>
-    :root { color-scheme: light; --ink: #111; --muted: #555; --rule: #b8b8b8; --link: #0645ad; --code: #f5f5f5; }
-    * { box-sizing: border-box; }
-    html { background: #fff; color: var(--ink); }
-    body { max-width: 112ch; margin: 0 auto; padding: 1.5rem 2rem 4rem; font: 15px/1.45 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; }
-    a { color: var(--link); text-decoration-thickness: 1px; text-underline-offset: 0.15em; }
-    a:hover { text-decoration-thickness: 2px; }
-    .breadcrumb, .page-title, .section-nav, footer { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
-    .breadcrumb { margin: 0 0 0.8rem; color: var(--muted); font-size: 0.9rem; }
-    .page-title { margin: 1.2rem 0 0.8rem; font-size: 1.65rem; line-height: 1.2; }
-    .section-nav { display: flex; flex-wrap: wrap; gap: 0.25rem 0.45rem; margin: 0 0 1.5rem; font-size: 0.82rem; }
-    .section-nav a { white-space: nowrap; }
-    .manual-head { display: grid; grid-template-columns: 1fr auto 1fr; gap: 1rem; padding: 0.55rem 0; border-block: 1px solid var(--rule); font-weight: 700; }
-    .manual-head span:nth-child(2) { text-align: center; }
-    .manual-head span:last-child { text-align: right; }
-    main { padding-top: 0.5rem; }
-    main h1, main h2, main h3 { font: inherit; font-weight: 700; scroll-margin-top: 1rem; }
-    main h1 { margin: 2.1rem 0 0.8rem; font-size: 1rem; text-transform: uppercase; }
-    main h2 { margin: 2rem 0 0.8rem; font-size: 1rem; }
-    main h3 { margin: 1.4rem 0 0.6rem 4ch; font-size: 0.95rem; }
-    main p, main ul, main ol, main dl, main pre { margin-left: 7ch; }
-    main p { margin-top: 0.45rem; margin-bottom: 0.75rem; }
-    main ul, main ol { padding-left: 3ch; }
-    main li { margin: 0.25rem 0; }
-    main pre { overflow-x: auto; padding: 0.7rem 1ch; background: var(--code); white-space: pre-wrap; overflow-wrap: anywhere; }
-    main code { font: inherit; }
-    main :not(pre) > code { padding: 0.05rem 0.3ch; background: var(--code); }
-    main dl dt { margin-top: 0.6rem; font-weight: 700; }
-    main dl dd { margin-left: 4ch; }
-    footer { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--rule); color: var(--muted); font-size: 0.8rem; }
-    @media (max-width: 720px) {
-      body { padding: 1rem; font-size: 13px; }
-      .manual-head { grid-template-columns: 1fr auto; }
-      .manual-head span:nth-child(2) { display: none; }
-      main p, main ul, main ol, main dl, main pre { margin-left: 2ch; }
-      main h3 { margin-left: 0; }
+    html, body { background-color: #fcfcfc; font-family: sans-serif; font-size: 100%; color: #181818; }
+    body { margin: 0; background-color: #fff; }
+    h1, h2, h3, h4, h5, h6 { font-family: helvetica, sans-serif; font-weight: normal; margin-left: 8px; margin-right: 8px; color: #008000; margin-top: 25px; }
+    h2 { color: #A00000; padding-top: 15px; font-size: 100%; font-weight: bold; }
+    h3 { color: #600000; font-size: 100%; padding-top: 10px; padding-left: 20px; font-style: italic; }
+    h4 { color: #502000; font-size: 100%; padding-top: 8px; padding-left: 40px; font-weight: bold; }
+    p { margin-left: 8px; margin-right: 8px; margin-bottom: 0.5em; max-width: 750px; }
+    table { max-width: 750px; }
+    hr { max-width: 750px; margin: 8px; }
+    pre { margin-left: 8px; font-family: monospace, courier; white-space: pre-wrap; overflow-wrap: anywhere; }
+    li { max-width: 710px; margin-left: 8px; margin-right: 8px; }
+    a { color: #1030ff; text-decoration: none; }
+    a:visited { color: #4080dd; }
+    a:hover, a:focus, a:active { color: red; background-color: #ffe0e0; text-decoration: underline; }
+    strong, b { font-weight: bold; color: #502000; }
+    em, i { color: #006000; }
+    code { font-family: monospace, courier; }
+    div.nav-bar, div.footer { padding: 3px 8px; background-color: #e8e8e8; }
+    table.nav-table { width: 100%; max-width: none; border-spacing: 0; border-width: 0; border-collapse: collapse; padding: 0; }
+    td.nav-cell, td.training-cell { padding: 0; border-width: 0; }
+    td.training-cell { text-align: right; }
+    p.nav-text, p.training-text { margin: 0; font-size: 15px; }
+    p.training-text { font-weight: bold; }
+    a.training-link:hover, a.training-link:visited, a.training-link:link, a.training-link:active { color: #008000; }
+    a.training-link:hover, a.training-link:active { text-decoration: underline; background-color: #ffd0d0; }
+    hr.nav-end { height: 0; margin-top: 0; color: #0000ff; border-color: #fff; width: 100%; max-width: none; }
+    table.sec-table { width: 100%; border: 1px; }
+    p.section-dir { margin-top: 6px; margin-bottom: 6px; padding: 5px; border-width: 1px; }
+    p.section-dir a { white-space: nowrap; }
+    span.headline, span.footline { font-weight: bold; }
+    span.top-link { font-size: 70%; }
+    main.manual-text { font-family: monospace, courier; }
+    main.manual-text > p, main.manual-text > ul, main.manual-text > ol, main.manual-text > dl, main.manual-text > pre { margin-left: 64px; max-width: 686px; }
+    main.manual-text h3 + p, main.manual-text h3 + pre, main.manual-text h4 + p, main.manual-text h4 + pre { margin-left: 64px; }
+    main.manual-text dl dt { margin-top: 0.6em; }
+    main.manual-text dl dd { margin-left: 32px; }
+    .footer p { margin-top: 0.7em; margin-bottom: 0.7em; }
+    @media (max-width: 760px) {
+      td.training-cell { display: none; }
+      main.manual-text > p, main.manual-text > ul, main.manual-text > ol, main.manual-text > dl, main.manual-text > pre { margin-left: 24px; max-width: calc(100% - 32px); }
+      h3 { padding-left: 8px; }
+      h4 { padding-left: 16px; }
     }
-    @media print {
-      body { max-width: none; padding: 0; }
-      .breadcrumb, .section-nav, footer { display: none; }
-      a { color: inherit; text-decoration: none; }
-    }
+    @media print { .nav-bar, .sec-table, .footer, .top-link { display: none; } a { color: inherit; } }
   </style>
 </head>
-<body id="top">
-  <header>
-    <p class="breadcrumb"><a href="https://axilio.ai">Axilio</a> &gt; CLI manual</p>
-    <hr>
-    <h1 class="page-title">axilio(1) — CLI manual</h1>
-    <nav class="section-nav" aria-label="Manual sections">
-      {{- range $index, $section := .Sections }}{{ if $index }}<span aria-hidden="true">|</span>{{ end }}<a href="#{{ $section.ID }}">{{ $section.Label }}</a>{{ end }}
-    </nav>
-    <div class="manual-head" aria-label="Manual title">
-      <span>AXILIO(1)</span>
-      <span>Axilio CLI Manual</span>
-      <span>AXILIO(1)</span>
-    </div>
-  </header>
-  <main id="manual">
+<body>
+  <div class="page-top"><a id="top_of_page"></a></div>
+  <div class="nav-bar">
+    <table class="nav-table">
+      <tr>
+        <td class="nav-cell"><p class="nav-text"><a href="https://axilio.ai">axilio.ai</a> &gt; CLI &gt; Manual</p></td>
+        <td class="training-cell"><p class="training-text"><a class="training-link" href="https://docs.axilio.ai">Axilio documentation</a></p></td>
+      </tr>
+    </table>
+  </div>
+  <hr class="nav-end">
+  <h1>axilio(1) &mdash; CLI manual page</h1>
+  <table class="sec-table">
+    <tr>
+      <td><p class="section-dir">{{ range $index, $section := .Sections }}{{ if $index }} | {{ end }}<a href="#{{ $section.ID }}">{{ $section.Label }}</a>{{ end }}</p></td>
+    </tr>
+  </table>
+  <pre><span class="headline"><i>AXILIO</i>(1)                     Axilio CLI Manual                     <i>AXILIO</i>(1)</span></pre>
+  <main id="manual" class="manual-text">
 {{ .Body }}  </main>
-  <footer>
-    <p>Generated from the axilio {{ .Version }} command tree · source date {{ .SourceDate }} · <a href="#top">top</a></p>
-  </footer>
+  <hr class="nav-end">
+  <div class="footer"><p>Generated from the axilio {{ .Version }} command tree · source date {{ .SourceDate }} · <a href="#top_of_page">top</a></p></div>
 </body>
 </html>
 `))

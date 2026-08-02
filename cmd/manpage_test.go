@@ -31,40 +31,60 @@ func TestGenerateManpageDeterministicAndComplete(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, section := range []string{
-		"# NAME\n",
-		"# SYNOPSIS\n",
-		"# DESCRIPTION\n",
-		"# COMMON WORKFLOW\n",
-		"# GLOBAL OPTIONS\n",
-		"# COMMANDS\n",
-		"# ENVIRONMENT\n",
-		"# EXIT STATUS\n",
-		"# FILES\n",
-		"# EXAMPLES\n",
-		"# SEE ALSO\n",
+		"# NAME {#NAME}\n",
+		"# SYNOPSIS {#SYNOPSIS}\n",
+		"# DESCRIPTION {#DESCRIPTION}\n",
+		"# COMMON WORKFLOW {#COMMON_WORKFLOW}\n",
+		"# GLOBAL OPTIONS {#GLOBAL_OPTIONS}\n",
+		"# COMMANDS {#COMMANDS}\n",
+		"# ENVIRONMENT {#ENVIRONMENT}\n",
+		"# EXIT STATUS {#EXIT_STATUS}\n",
+		"# FILES {#FILES}\n",
+		"# NOTES {#NOTES}\n",
+		"# EXAMPLES {#EXAMPLES}\n",
+		"# SEE ALSO {#SEE_ALSO}\n",
 	} {
 		if !strings.Contains(markdown, section) {
 			t.Errorf("generated Markdown missing %q", strings.TrimSpace(section))
 		}
 	}
 	for _, command := range publicCommands(root) {
-		heading := "## " + command.CommandPath() + "\n"
-		if !strings.Contains(markdown, heading) {
+		anchor := commandHTMLAnchor(root, command)
+		section, ok := commandMarkdownSection(markdown, anchor)
+		if !ok {
 			t.Errorf("generated Markdown missing public command %q", command.CommandPath())
+			continue
 		}
-		section := strings.SplitN(markdown, heading, 2)[1]
-		if next := strings.Index(section, "\n## "); next >= 0 {
-			section = section[:next]
+		useLine := command.UseLine()
+		if !strings.Contains(section, useLine) && !strings.Contains(section, strings.TrimSuffix(useLine, " [flags]")) {
+			t.Errorf("command section %q is missing use line %q", command.CommandPath(), useLine)
 		}
-		if command.Runnable() && !strings.Contains(section, "### Examples and expected output\n") {
+		if command.Runnable() && !strings.Contains(section, "**Examples and expected output**") {
 			t.Errorf("runnable command %q has no expected-output section", command.CommandPath())
 		}
-		if !command.Runnable() && strings.Contains(section, "### Examples and expected output\n") {
+		if !command.Runnable() && strings.Contains(section, "**Examples and expected output**") {
 			t.Errorf("non-runnable command %q claims expected output", command.CommandPath())
 		}
 	}
-	commonWorkflow := strings.SplitN(markdown, "# COMMON WORKFLOW\n", 2)[1]
-	commonWorkflow = strings.SplitN(commonWorkflow, "# GLOBAL OPTIONS\n", 2)[0]
+	for _, ordered := range [][]string{
+		{"## api-keys {#COMMAND_api-keys}", "### create {#COMMAND_api-keys-create}", "### delete {#COMMAND_api-keys-delete}", "### list {#COMMAND_api-keys-list}"},
+		{"## completion {#COMMAND_completion}", "### bash {#COMMAND_completion-bash}", "### fish {#COMMAND_completion-fish}", "### powershell {#COMMAND_completion-powershell}", "### zsh {#COMMAND_completion-zsh}"},
+	} {
+		last := -1
+		for _, heading := range ordered {
+			position := strings.Index(markdown, heading)
+			if position < 0 {
+				t.Errorf("generated Markdown missing grouped heading %q", heading)
+				continue
+			}
+			if position <= last {
+				t.Errorf("grouped heading %q is out of order", heading)
+			}
+			last = position
+		}
+	}
+	commonWorkflow := strings.SplitN(markdown, "# COMMON WORKFLOW {#COMMON_WORKFLOW}\n", 2)[1]
+	commonWorkflow = strings.SplitN(commonWorkflow, "# GLOBAL OPTIONS {#GLOBAL_OPTIONS}\n", 2)[0]
 	rootDocs, ok := CommandDocs(root)
 	if !ok {
 		t.Fatal("root command has no structured documentation")
@@ -80,6 +100,22 @@ func TestGenerateManpageDeterministicAndComplete(t *testing.T) {
 	}
 	if got := strings.Count(markdown, strings.TrimSpace(observeDocs.Walkthrough)); got != 1 {
 		t.Errorf("phone observe walkthrough occurs %d times, want exactly once", got)
+	}
+	description := strings.SplitN(markdown, "# DESCRIPTION {#DESCRIPTION}\n", 2)[1]
+	description = strings.SplitN(description, "# COMMON WORKFLOW {#COMMON_WORKFLOW}\n", 2)[0]
+	if strings.Contains(description, "Credentials resolve in this order") || strings.Contains(description, "Table output for human readability") {
+		t.Error("high-detail precedence or output behavior remains in DESCRIPTION")
+	}
+	notes := strings.SplitN(markdown, "# NOTES {#NOTES}\n", 2)[1]
+	notes = strings.SplitN(notes, "# EXAMPLES {#EXAMPLES}\n", 2)[0]
+	for _, want := range []string{
+		"Credentials resolve in this order",
+		"Phone command session selection precedence",
+		"Table output for human readability",
+	} {
+		if !strings.Contains(notes, want) {
+			t.Errorf("NOTES is missing moved behavior detail %q", want)
+		}
 	}
 	if strings.Contains(markdown, "```\nnone\n```") {
 		t.Error("an explicit none stream was rendered as literal command output")
@@ -113,6 +149,19 @@ func TestGenerateManpageDeterministicAndComplete(t *testing.T) {
 			t.Errorf("roff output lost literal %q", literal)
 		}
 	}
+}
+
+func commandMarkdownSection(markdown, anchor string) (string, bool) {
+	marker := "{#" + anchor + "}\n"
+	start := strings.Index(markdown, marker)
+	if start < 0 {
+		return "", false
+	}
+	section := markdown[start+len(marker):]
+	if next := strings.Index(section, "{#COMMAND_"); next >= 0 {
+		section = section[:next]
+	}
+	return section, true
 }
 
 func TestGeneratedManpageMatchesCheckedInPage(t *testing.T) {

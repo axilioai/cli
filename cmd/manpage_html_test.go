@@ -7,7 +7,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/russross/blackfriday/v2"
 	"github.com/spf13/cobra"
 )
 
@@ -28,16 +27,24 @@ func TestGenerateManpageHTMLDeterministicAndComplete(t *testing.T) {
 	page := string(first)
 	for _, want := range []string{
 		"<!doctype html>",
-		`<html lang="en">`,
-		"<title>axilio(1) — CLI manual</title>",
-		`<nav class="section-nav" aria-label="Manual sections">`,
-		`<div class="manual-head" aria-label="Manual title">`,
-		"AXILIO(1)",
+		`<html lang="en-US">`,
+		"<title>axilio(1) - CLI manual page</title>",
+		`<div class="nav-bar">`,
+		`<p class="section-dir">`,
+		`<span class="headline">`,
+		"<i>AXILIO</i>(1)",
 		"Axilio CLI Manual",
 		"axilio " + version + " command tree",
 		"https://docs.axilio.ai",
 		"https://github.com/axilioai/cli/issues",
 		"&lt;session-id&gt;",
+		"background-color: #fcfcfc",
+		"color: #008000",
+		"color: #A00000",
+		"color: #502000",
+		"color: #1030ff",
+		"background-color: #ffe0e0",
+		`<span class="top-link">top</span>`,
 	} {
 		if !strings.Contains(page, want) {
 			t.Errorf("generated HTML missing %q", want)
@@ -51,11 +58,19 @@ func TestGenerateManpageHTMLDeterministicAndComplete(t *testing.T) {
 			t.Errorf("generated HTML body missing anchor %q", section.ID)
 		}
 	}
-	for _, command := range publicCommands(Root()) {
-		anchor := blackfriday.SanitizedAnchorName(command.CommandPath())
+	root := Root()
+	for _, command := range publicCommands(root) {
+		anchor := commandHTMLAnchor(root, command)
 		if !strings.Contains(page, `id="`+anchor+`"`) {
 			t.Errorf("generated HTML missing public command anchor %q", anchor)
 		}
+	}
+	apiKeys := strings.Index(page, `<h3 id="COMMAND_api-keys">api-keys</h3>`)
+	create := strings.Index(page, `<h4 id="COMMAND_api-keys-create">create</h4>`)
+	deleteCommand := strings.Index(page, `<h4 id="COMMAND_api-keys-delete">delete</h4>`)
+	list := strings.Index(page, `<h4 id="COMMAND_api-keys-list">list</h4>`)
+	if apiKeys < 0 || create <= apiKeys || deleteCommand <= create || list <= deleteCommand {
+		t.Errorf("HTML command hierarchy is not api-keys -> create -> delete -> list")
 	}
 	for _, unwanted := range []string{
 		"<script",

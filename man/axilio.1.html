@@ -1,78 +1,86 @@
 <!doctype html>
-<html lang="en">
+<html lang="en-US">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="generator" content="axilio manpage generator">
-  <title>axilio(1) — CLI manual</title>
+  <title>axilio(1) - CLI manual page</title>
   <style>
-    :root { color-scheme: light; --ink: #111; --muted: #555; --rule: #b8b8b8; --link: #0645ad; --code: #f5f5f5; }
-    * { box-sizing: border-box; }
-    html { background: #fff; color: var(--ink); }
-    body { max-width: 112ch; margin: 0 auto; padding: 1.5rem 2rem 4rem; font: 15px/1.45 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; }
-    a { color: var(--link); text-decoration-thickness: 1px; text-underline-offset: 0.15em; }
-    a:hover { text-decoration-thickness: 2px; }
-    .breadcrumb, .page-title, .section-nav, footer { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
-    .breadcrumb { margin: 0 0 0.8rem; color: var(--muted); font-size: 0.9rem; }
-    .page-title { margin: 1.2rem 0 0.8rem; font-size: 1.65rem; line-height: 1.2; }
-    .section-nav { display: flex; flex-wrap: wrap; gap: 0.25rem 0.45rem; margin: 0 0 1.5rem; font-size: 0.82rem; }
-    .section-nav a { white-space: nowrap; }
-    .manual-head { display: grid; grid-template-columns: 1fr auto 1fr; gap: 1rem; padding: 0.55rem 0; border-block: 1px solid var(--rule); font-weight: 700; }
-    .manual-head span:nth-child(2) { text-align: center; }
-    .manual-head span:last-child { text-align: right; }
-    main { padding-top: 0.5rem; }
-    main h1, main h2, main h3 { font: inherit; font-weight: 700; scroll-margin-top: 1rem; }
-    main h1 { margin: 2.1rem 0 0.8rem; font-size: 1rem; text-transform: uppercase; }
-    main h2 { margin: 2rem 0 0.8rem; font-size: 1rem; }
-    main h3 { margin: 1.4rem 0 0.6rem 4ch; font-size: 0.95rem; }
-    main p, main ul, main ol, main dl, main pre { margin-left: 7ch; }
-    main p { margin-top: 0.45rem; margin-bottom: 0.75rem; }
-    main ul, main ol { padding-left: 3ch; }
-    main li { margin: 0.25rem 0; }
-    main pre { overflow-x: auto; padding: 0.7rem 1ch; background: var(--code); white-space: pre-wrap; overflow-wrap: anywhere; }
-    main code { font: inherit; }
-    main :not(pre) > code { padding: 0.05rem 0.3ch; background: var(--code); }
-    main dl dt { margin-top: 0.6rem; font-weight: 700; }
-    main dl dd { margin-left: 4ch; }
-    footer { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--rule); color: var(--muted); font-size: 0.8rem; }
-    @media (max-width: 720px) {
-      body { padding: 1rem; font-size: 13px; }
-      .manual-head { grid-template-columns: 1fr auto; }
-      .manual-head span:nth-child(2) { display: none; }
-      main p, main ul, main ol, main dl, main pre { margin-left: 2ch; }
-      main h3 { margin-left: 0; }
+    html, body { background-color: #fcfcfc; font-family: sans-serif; font-size: 100%; color: #181818; }
+    body { margin: 0; background-color: #fff; }
+    h1, h2, h3, h4, h5, h6 { font-family: helvetica, sans-serif; font-weight: normal; margin-left: 8px; margin-right: 8px; color: #008000; margin-top: 25px; }
+    h2 { color: #A00000; padding-top: 15px; font-size: 100%; font-weight: bold; }
+    h3 { color: #600000; font-size: 100%; padding-top: 10px; padding-left: 20px; font-style: italic; }
+    h4 { color: #502000; font-size: 100%; padding-top: 8px; padding-left: 40px; font-weight: bold; }
+    p { margin-left: 8px; margin-right: 8px; margin-bottom: 0.5em; max-width: 750px; }
+    table { max-width: 750px; }
+    hr { max-width: 750px; margin: 8px; }
+    pre { margin-left: 8px; font-family: monospace, courier; white-space: pre-wrap; overflow-wrap: anywhere; }
+    li { max-width: 710px; margin-left: 8px; margin-right: 8px; }
+    a { color: #1030ff; text-decoration: none; }
+    a:visited { color: #4080dd; }
+    a:hover, a:focus, a:active { color: red; background-color: #ffe0e0; text-decoration: underline; }
+    strong, b { font-weight: bold; color: #502000; }
+    em, i { color: #006000; }
+    code { font-family: monospace, courier; }
+    div.nav-bar, div.footer { padding: 3px 8px; background-color: #e8e8e8; }
+    table.nav-table { width: 100%; max-width: none; border-spacing: 0; border-width: 0; border-collapse: collapse; padding: 0; }
+    td.nav-cell, td.training-cell { padding: 0; border-width: 0; }
+    td.training-cell { text-align: right; }
+    p.nav-text, p.training-text { margin: 0; font-size: 15px; }
+    p.training-text { font-weight: bold; }
+    a.training-link:hover, a.training-link:visited, a.training-link:link, a.training-link:active { color: #008000; }
+    a.training-link:hover, a.training-link:active { text-decoration: underline; background-color: #ffd0d0; }
+    hr.nav-end { height: 0; margin-top: 0; color: #0000ff; border-color: #fff; width: 100%; max-width: none; }
+    table.sec-table { width: 100%; border: 1px; }
+    p.section-dir { margin-top: 6px; margin-bottom: 6px; padding: 5px; border-width: 1px; }
+    p.section-dir a { white-space: nowrap; }
+    span.headline, span.footline { font-weight: bold; }
+    span.top-link { font-size: 70%; }
+    main.manual-text { font-family: monospace, courier; }
+    main.manual-text > p, main.manual-text > ul, main.manual-text > ol, main.manual-text > dl, main.manual-text > pre { margin-left: 64px; max-width: 686px; }
+    main.manual-text h3 + p, main.manual-text h3 + pre, main.manual-text h4 + p, main.manual-text h4 + pre { margin-left: 64px; }
+    main.manual-text dl dt { margin-top: 0.6em; }
+    main.manual-text dl dd { margin-left: 32px; }
+    .footer p { margin-top: 0.7em; margin-bottom: 0.7em; }
+    @media (max-width: 760px) {
+      td.training-cell { display: none; }
+      main.manual-text > p, main.manual-text > ul, main.manual-text > ol, main.manual-text > dl, main.manual-text > pre { margin-left: 24px; max-width: calc(100% - 32px); }
+      h3 { padding-left: 8px; }
+      h4 { padding-left: 16px; }
     }
-    @media print {
-      body { max-width: none; padding: 0; }
-      .breadcrumb, .section-nav, footer { display: none; }
-      a { color: inherit; text-decoration: none; }
-    }
+    @media print { .nav-bar, .sec-table, .footer, .top-link { display: none; } a { color: inherit; } }
   </style>
 </head>
-<body id="top">
-  <header>
-    <p class="breadcrumb"><a href="https://axilio.ai">Axilio</a> &gt; CLI manual</p>
-    <hr>
-    <h1 class="page-title">axilio(1) — CLI manual</h1>
-    <nav class="section-nav" aria-label="Manual sections"><a href="#name">NAME</a><span aria-hidden="true">|</span><a href="#synopsis">SYNOPSIS</a><span aria-hidden="true">|</span><a href="#description">DESCRIPTION</a><span aria-hidden="true">|</span><a href="#common-workflow">COMMON WORKFLOW</a><span aria-hidden="true">|</span><a href="#global-options">GLOBAL OPTIONS</a><span aria-hidden="true">|</span><a href="#commands">COMMANDS</a><span aria-hidden="true">|</span><a href="#environment">ENVIRONMENT</a><span aria-hidden="true">|</span><a href="#exit-status">EXIT STATUS</a><span aria-hidden="true">|</span><a href="#files">FILES</a><span aria-hidden="true">|</span><a href="#examples">EXAMPLES</a><span aria-hidden="true">|</span><a href="#see-also">SEE ALSO</a>
-    </nav>
-    <div class="manual-head" aria-label="Manual title">
-      <span>AXILIO(1)</span>
-      <span>Axilio CLI Manual</span>
-      <span>AXILIO(1)</span>
-    </div>
-  </header>
-  <main id="manual">
-<h1 id="name">NAME</h1>
+<body>
+  <div class="page-top"><a id="top_of_page"></a></div>
+  <div class="nav-bar">
+    <table class="nav-table">
+      <tr>
+        <td class="nav-cell"><p class="nav-text"><a href="https://axilio.ai">axilio.ai</a> &gt; CLI &gt; Manual</p></td>
+        <td class="training-cell"><p class="training-text"><a class="training-link" href="https://docs.axilio.ai">Axilio documentation</a></p></td>
+      </tr>
+    </table>
+  </div>
+  <hr class="nav-end">
+  <h1>axilio(1) &mdash; CLI manual page</h1>
+  <table class="sec-table">
+    <tr>
+      <td><p class="section-dir"><a href="#NAME">NAME</a> | <a href="#SYNOPSIS">SYNOPSIS</a> | <a href="#DESCRIPTION">DESCRIPTION</a> | <a href="#COMMON_WORKFLOW">COMMON WORKFLOW</a> | <a href="#GLOBAL_OPTIONS">GLOBAL OPTIONS</a> | <a href="#COMMANDS">COMMANDS</a> | <a href="#ENVIRONMENT">ENVIRONMENT</a> | <a href="#EXIT_STATUS">EXIT STATUS</a> | <a href="#FILES">FILES</a> | <a href="#NOTES">NOTES</a> | <a href="#EXAMPLES">EXAMPLES</a> | <a href="#SEE_ALSO">SEE ALSO</a></p></td>
+    </tr>
+  </table>
+  <pre><span class="headline"><i>AXILIO</i>(1)                     Axilio CLI Manual                     <i>AXILIO</i>(1)</span></pre>
+  <main id="manual" class="manual-text">
+<h2 id="NAME">NAME &nbsp; &nbsp; &nbsp; &nbsp; <a href="#top_of_page"><span class="top-link">top</span></a></h2>
 
 <p>axilio - Acquire and drive Axilio phones from the command line</p>
 
-<h1 id="synopsis">SYNOPSIS</h1>
+<h2 id="SYNOPSIS">SYNOPSIS &nbsp; &nbsp; &nbsp; &nbsp; <a href="#top_of_page"><span class="top-link">top</span></a></h2>
 
 <pre><code>axilio [global options] &lt;command&gt; [command options]
 </code></pre>
 
-<h1 id="description">DESCRIPTION</h1>
+<h2 id="DESCRIPTION">DESCRIPTION &nbsp; &nbsp; &nbsp; &nbsp; <a href="#top_of_page"><span class="top-link">top</span></a></h2>
 
 <p>Acquire Axilio phones, drive live sessions, run workflows, and manage
 the resources that support them.</p>
@@ -89,34 +97,9 @@ uploads             store media and deliver it to phones
 api-keys            manage organization-scoped API keys
 </code></pre>
 
-<p>Precedence rules:</p>
+<p>Resolution precedence and output-mode details are collected under NOTES.</p>
 
-<p>Credentials resolve in this order: --api-key, AXILIO_API_KEY, the saved
-config API key, then the saved OAuth session.</p>
-
-<p>The organization resolves from --org, AXILIO_ORG, the saved active
-organization, then the OAuth session default. Note that each API key is
-scoped to the organization that created it and cannot switch
-organizations with --org.</p>
-
-<p>API host resolves from --base-url, AXILIO_BASE_URL, saved base-url, then
-<a href="https://api.axilio.ai" rel="noreferrer noopener">https://api.axilio.ai</a>.</p>
-
-<p>Phone command session selection precedence is --session, AXILIO_SESSION,
-the sole active lease, the saved current-session pointer, then an
-ambiguity error.</p>
-
-<p>Table output for human readability is the default. Every successful
-runnable application command emits valid JSON with -o json; action
-commands return a small acknowledgment. Built-in help, completion, and
-version output remains text. The sessions start --export command emits
-shell text for eval. Notes, prompts, and progress use stderr and are
-suppressed in JSON or quiet mode. Quiet and JSON modes do not confirm
-destructive actions; pass --yes where offered. API-key, base-URL, and
-organization flags affect API-backed commands; they do not select a
-local phone session.</p>
-
-<h1 id="common-workflow">COMMON WORKFLOW</h1>
+<h2 id="COMMON_WORKFLOW">COMMON WORKFLOW &nbsp; &nbsp; &nbsp; &nbsp; <a href="#top_of_page"><span class="top-link">top</span></a></h2>
 
 <p>A typical interactive session signs in, acquires a phone, observes it,
 performs an action, verifies the result, and releases the session:</p>
@@ -132,7 +115,7 @@ axilio sessions stop &lt;session-id&gt;
 <p>Use <code>axilio sessions start --export</code> with <code>eval</code> when separate shells or
 agents must pin different sessions through <code>AXILIO_SESSION</code>.</p>
 
-<h1 id="global-options">GLOBAL OPTIONS</h1>
+<h2 id="GLOBAL_OPTIONS">GLOBAL OPTIONS &nbsp; &nbsp; &nbsp; &nbsp; <a href="#top_of_page"><span class="top-link">top</span></a></h2>
 
 <ul>
 <li><p><strong>--api-key</strong>=<em>value</em> - API key for API-backed commands; overrides
@@ -154,157 +137,13 @@ sessions start --export stays shell (default &quot;table&quot;)</p></li>
 commands still require --yes</p></li>
 </ul>
 
-<h1 id="commands">COMMANDS</h1>
+<h2 id="COMMANDS">COMMANDS &nbsp; &nbsp; &nbsp; &nbsp; <a href="#top_of_page"><span class="top-link">top</span></a></h2>
 
-<p>The following inventory is generated from the public Cobra command tree.
-Parent commands describe workflows; runnable commands include
-representative output and exit behavior from their structured
+<p>Commands are grouped by their top-level family. Each runnable command
+includes representative output and exit behavior from its structured
 documentation.</p>
 
-<ul>
-<li><p><strong>axilio api-keys</strong> - List, create, and delete organization API keys</p></li>
-
-<li><p><strong>axilio api-keys create</strong> - Create a new API key; the secret is shown
-once</p></li>
-
-<li><p><strong>axilio api-keys delete</strong> - Delete an API key by id</p></li>
-
-<li><p><strong>axilio api-keys list</strong> - List the API keys on your organization</p></li>
-
-<li><p><strong>axilio completion</strong> - Generate the autocompletion script for the
-specified shell</p></li>
-
-<li><p><strong>axilio completion bash</strong> - Generate the autocompletion script for
-bash</p></li>
-
-<li><p><strong>axilio completion fish</strong> - Generate the autocompletion script for
-fish</p></li>
-
-<li><p><strong>axilio completion powershell</strong> - Generate the autocompletion script
-for powershell</p></li>
-
-<li><p><strong>axilio completion zsh</strong> - Generate the autocompletion script for zsh</p></li>
-
-<li><p><strong>axilio config</strong> - Show and edit CLI configuration (API host, paths,
-auth)</p></li>
-
-<li><p><strong>axilio config set</strong> - Set a config value. Supported keys: base-url</p></li>
-
-<li><p><strong>axilio config unset</strong> - Clear a config value. Supported keys:
-base-url</p></li>
-
-<li><p><strong>axilio doctor</strong> - Check that your setup is sane: auth, connectivity,
-and environment</p></li>
-
-<li><p><strong>axilio help</strong> - Help about any command</p></li>
-
-<li><p><strong>axilio init</strong> - Drop an agent skill into this repo so a coding agent
-can drive phones via the CLI</p></li>
-
-<li><p><strong>axilio login</strong> - Sign in: browser OAuth by default, or store an API
-key</p></li>
-
-<li><p><strong>axilio logout</strong> - Remove stored credentials (API key and OAuth
-session)</p></li>
-
-<li><p><strong>axilio orgs</strong> - List and switch the active organization (OAuth
-sessions)</p></li>
-
-<li><p><strong>axilio orgs clear</strong> - Clear the active organization (revert to your
-session default)</p></li>
-
-<li><p><strong>axilio orgs list</strong> - List the organizations you belong to</p></li>
-
-<li><p><strong>axilio orgs use</strong> - Set the active organization for future commands</p></li>
-
-<li><p><strong>axilio phone</strong> - Observe and control the selected session's phone</p></li>
-
-<li><p><strong>axilio phone find</strong> - Locate an element by natural-language query
-(vision)</p></li>
-
-<li><p><strong>axilio phone find-text</strong> - Return the first OCR text match, or an
-empty successful result</p></li>
-
-<li><p><strong>axilio phone key</strong> - Press the supported named key: enter</p></li>
-
-<li><p><strong>axilio phone long-press</strong> - Press and hold at coordinates</p></li>
-
-<li><p><strong>axilio phone observe</strong> - Capture the screen: text + icon elements
-with coordinates</p></li>
-
-<li><p><strong>axilio phone screenshot</strong> - Capture the screen as a PNG file</p></li>
-
-<li><p><strong>axilio phone send</strong> - Upload a local image/video and push it to the
-phone's gallery</p></li>
-
-<li><p><strong>axilio phone swipe</strong> - Swipe from one point to another</p></li>
-
-<li><p><strong>axilio phone tap</strong> - Tap at coordinates, or at a natural-language
-target with --query</p></li>
-
-<li><p><strong>axilio phone type</strong> - Type a string of text</p></li>
-
-<li><p><strong>axilio phone wait-for</strong> - Poll until text appears (or disappears
-with --gone)</p></li>
-
-<li><p><strong>axilio phones</strong> - Discover shared and dedicated phones</p></li>
-
-<li><p><strong>axilio phones list</strong> - List phones you can start a session on right
-now (shared pool + your free dedicated phones)</p></li>
-
-<li><p><strong>axilio phones mine</strong> - List your org's dedicated phones, including
-ones currently in use</p></li>
-
-<li><p><strong>axilio runs</strong> - Start, inspect, and cancel workflow runs</p></li>
-
-<li><p><strong>axilio runs cancel</strong> - Cancel a queued or running run</p></li>
-
-<li><p><strong>axilio runs get</strong> - Show a single run in detail</p></li>
-
-<li><p><strong>axilio runs list</strong> - List recent runs, most recent first</p></li>
-
-<li><p><strong>axilio runs start</strong> - Start one or more runs of a workflow</p></li>
-
-<li><p><strong>axilio sessions</strong> - Acquire, list, select, and release phone
-sessions</p></li>
-
-<li><p><strong>axilio sessions current</strong> - Show the session currently selected for
-phone commands</p></li>
-
-<li><p><strong>axilio sessions list</strong> - List the phone leases this CLI holds
-(--remote for all server sessions)</p></li>
-
-<li><p><strong>axilio sessions start</strong> - Acquire a phone and open a session; the
-lease persists until you stop it</p></li>
-
-<li><p><strong>axilio sessions stop</strong> - Release a session by session id or phone id</p></li>
-
-<li><p><strong>axilio status</strong> - Check your credentials and reach the API</p></li>
-
-<li><p><strong>axilio upgrade</strong> - Update axilio to the latest release</p></li>
-
-<li><p><strong>axilio uploads</strong> - Add, list, push, and delete files in your
-organization's library</p></li>
-
-<li><p><strong>axilio uploads add</strong> - Upload a local file into the library without
-pushing it anywhere</p></li>
-
-<li><p><strong>axilio uploads delete</strong> - Delete a file from the library and free
-its quota</p></li>
-
-<li><p><strong>axilio uploads list</strong> - List the files in your organization's
-library</p></li>
-
-<li><p><strong>axilio uploads push</strong> - Push a file already in the library to a
-phone</p></li>
-
-<li><p><strong>axilio workflows</strong> - Discover workflows that can be run</p></li>
-
-<li><p><strong>axilio workflows list</strong> - List workflows in your org, most recent
-first</p></li>
-</ul>
-
-<h2 id="axilio-api-keys">axilio api-keys</h2>
+<h3 id="COMMAND_api-keys">api-keys</h3>
 
 <pre><code>axilio api-keys
 </code></pre>
@@ -319,7 +158,7 @@ their IDs, create a named key whose secret is shown once, or delete a
 key by ID. Organization access and API-key management permissions are
 enforced by the API.</p>
 
-<h3 id="global-option-behavior">Global-option behavior</h3>
+<p><strong>Global-option behavior</strong></p>
 
 <ul>
 <li><p><strong>--api-key</strong>=<em>value</em> - No effect on api-keys command; bare axilio
@@ -341,7 +180,7 @@ axilio api-keys only displays this help (default &quot;table&quot;)</p></li>
 api-keys only displays this help</p></li>
 </ul>
 
-<h3 id="workflow-examples">Workflow examples</h3>
+<p><strong>Workflow examples</strong></p>
 
 <pre><code>axilio api-keys list
 axilio api-keys create ci
@@ -349,7 +188,7 @@ axilio api-keys delete key_123 --yes
 axilio api-keys delete &lt;key-id&gt; --yes
 </code></pre>
 
-<h2 id="axilio-api-keys-create">axilio api-keys create</h2>
+<h4 id="COMMAND_api-keys-create">create</h4>
 
 <pre><code>axilio api-keys create &lt;name&gt;
 </code></pre>
@@ -360,7 +199,7 @@ axilio api-keys delete &lt;key-id&gt; --yes
 the secret immediately: later list calls show only a preview and the
 full value cannot be retrieved.</p>
 
-<h3 id="global-option-behavior-1">Global-option behavior</h3>
+<p><strong>Global-option behavior</strong></p>
 
 <ul>
 <li><p><strong>--api-key</strong>=<em>value</em> - API key for the API-key create request;
@@ -382,7 +221,7 @@ json (default &quot;table&quot;)</p></li>
 remains on stdout</p></li>
 </ul>
 
-<h3 id="examples-and-expected-output">Examples and expected output</h3>
+<p><strong>Examples and expected output</strong></p>
 
 <p><strong>Sample 1</strong></p>
 
@@ -434,7 +273,7 @@ Created  &lt;timestamp&gt;
 <p><strong>Notes:</strong> Save the returned secret immediately; it is representative here and
 never a real credential.</p>
 
-<h2 id="axilio-api-keys-delete">axilio api-keys delete</h2>
+<h4 id="COMMAND_api-keys-delete">delete</h4>
 
 <pre><code>axilio api-keys delete &lt;key-id&gt; [flags]
 </code></pre>
@@ -446,14 +285,14 @@ never a real credential.</p>
 redirected input. JSON and quiet modes do not prompt and require --yes.
 JSON success reports the deleted key ID.</p>
 
-<h3 id="command-options">Command options</h3>
+<p><strong>Command options</strong></p>
 
 <ul>
 <li><strong>-y</strong>, <strong>--yes</strong> - Delete without prompting; required in JSON or
 quiet mode</li>
 </ul>
 
-<h3 id="global-option-behavior-2">Global-option behavior</h3>
+<p><strong>Global-option behavior</strong></p>
 
 <ul>
 <li><p><strong>--api-key</strong>=<em>value</em> - API key for API-key deletion; overrides
@@ -475,7 +314,7 @@ API-key deletion result (default &quot;table&quot;)</p></li>
 result; --yes is still required; JSON still prints</p></li>
 </ul>
 
-<h3 id="examples-and-expected-output-1">Examples and expected output</h3>
+<p><strong>Examples and expected output</strong></p>
 
 <p><strong>Sample 1</strong></p>
 
@@ -555,7 +394,7 @@ redirected input. JSON and quiet modes require --yes.</p>
 
 <p><strong>Exit status:</strong> 0.</p>
 
-<h2 id="axilio-api-keys-list">axilio api-keys list</h2>
+<h4 id="COMMAND_api-keys-list">list</h4>
 
 <pre><code>axilio api-keys list
 </code></pre>
@@ -566,7 +405,7 @@ redirected input. JSON and quiet modes require --yes.</p>
 creation time. Full secret values are never returned; use the ID with
 <code>api-keys delete</code>.</p>
 
-<h3 id="global-option-behavior-3">Global-option behavior</h3>
+<p><strong>Global-option behavior</strong></p>
 
 <ul>
 <li><p><strong>--api-key</strong>=<em>value</em> - API key for the API-key list request;
@@ -588,7 +427,7 @@ json (default &quot;table&quot;)</p></li>
 request; the API-key list remains on stdout</p></li>
 </ul>
 
-<h3 id="examples-and-expected-output-2">Examples and expected output</h3>
+<p><strong>Examples and expected output</strong></p>
 
 <p><strong>Sample 1</strong></p>
 
@@ -644,7 +483,7 @@ found.</p>
 
 <p><strong>Notes:</strong> Key IDs and timestamps vary; full secrets are never listed.</p>
 
-<h2 id="axilio-completion">axilio completion</h2>
+<h3 id="COMMAND_completion">completion</h3>
 
 <pre><code>axilio completion
 </code></pre>
@@ -654,7 +493,7 @@ found.</p>
 <p>See each sub-command's help for details on how to use the generated
 script.</p>
 
-<h3 id="global-option-behavior-4">Global-option behavior</h3>
+<p><strong>Global-option behavior</strong></p>
 
 <ul>
 <li><p><strong>--api-key</strong>=<em>value</em> - No effect on completion command</p></li>
@@ -671,7 +510,7 @@ script.</p>
 <li><p><strong>-q</strong>, <strong>--quiet</strong> - No effect on completion command</p></li>
 </ul>
 
-<h3 id="workflow-examples-1">Workflow examples</h3>
+<p><strong>Workflow examples</strong></p>
 
 <pre><code>axilio completion bash
 axilio completion zsh
@@ -679,7 +518,7 @@ axilio completion fish
 axilio completion powershell
 </code></pre>
 
-<h2 id="axilio-completion-bash">axilio completion bash</h2>
+<h4 id="COMMAND_completion-bash">bash</h4>
 
 <pre><code>axilio completion bash
 </code></pre>
@@ -695,23 +534,23 @@ installed already, you can install it via your OS's package manager.</p>
 
 <p>To load completions for every new session, execute once:</p>
 
-<h4 id="linux">Linux:</h4>
+<h5 id="linux">Linux:</h5>
 
 <p>axilio completion bash &gt; /etc/bash_completion.d/axilio</p>
 
-<h4 id="macos">macOS:</h4>
+<h5 id="macos">macOS:</h5>
 
 <p>axilio completion bash &gt; $(brew --prefix)/etc/bash_completion.d/axilio</p>
 
 <p>You will need to start a new shell for this setup to take effect.</p>
 
-<h3 id="command-options-1">Command options</h3>
+<p><strong>Command options</strong></p>
 
 <ul>
 <li><strong>--no-descriptions</strong> - disable completion descriptions</li>
 </ul>
 
-<h3 id="global-option-behavior-5">Global-option behavior</h3>
+<p><strong>Global-option behavior</strong></p>
 
 <ul>
 <li><p><strong>--api-key</strong>=<em>value</em> - No effect on bash completion generation</p></li>
@@ -730,7 +569,7 @@ JSON; the shell script remains on stdout (default &quot;table&quot;)</p></li>
 only stderr notices</p></li>
 </ul>
 
-<h3 id="examples-and-expected-output-3">Examples and expected output</h3>
+<p><strong>Examples and expected output</strong></p>
 
 <p><strong>Invocation</strong></p>
 
@@ -752,7 +591,7 @@ __axilio_debug()
 
 <p><strong>Notes:</strong> The sample is shortened; stdout is a complete Bash completion script.</p>
 
-<h2 id="axilio-completion-fish">axilio completion fish</h2>
+<h4 id="COMMAND_completion-fish">fish</h4>
 
 <pre><code>axilio completion fish [flags]
 </code></pre>
@@ -769,13 +608,13 @@ __axilio_debug()
 
 <p>You will need to start a new shell for this setup to take effect.</p>
 
-<h3 id="command-options-2">Command options</h3>
+<p><strong>Command options</strong></p>
 
 <ul>
 <li><strong>--no-descriptions</strong> - disable completion descriptions</li>
 </ul>
 
-<h3 id="global-option-behavior-6">Global-option behavior</h3>
+<p><strong>Global-option behavior</strong></p>
 
 <ul>
 <li><p><strong>--api-key</strong>=<em>value</em> - No effect on fish completion generation</p></li>
@@ -794,7 +633,7 @@ JSON; the shell script remains on stdout (default &quot;table&quot;)</p></li>
 only stderr notices</p></li>
 </ul>
 
-<h3 id="examples-and-expected-output-4">Examples and expected output</h3>
+<p><strong>Examples and expected output</strong></p>
 
 <p><strong>Invocation</strong></p>
 
@@ -816,7 +655,7 @@ function __axilio_debug
 
 <p><strong>Notes:</strong> The sample is shortened; stdout is a complete Fish completion script.</p>
 
-<h2 id="axilio-completion-powershell">axilio completion powershell</h2>
+<h4 id="COMMAND_completion-powershell">powershell</h4>
 
 <pre><code>axilio completion powershell [flags]
 </code></pre>
@@ -830,13 +669,13 @@ function __axilio_debug
 <p>To load completions for every new session, add the output of the above
 command to your powershell profile.</p>
 
-<h3 id="command-options-3">Command options</h3>
+<p><strong>Command options</strong></p>
 
 <ul>
 <li><strong>--no-descriptions</strong> - disable completion descriptions</li>
 </ul>
 
-<h3 id="global-option-behavior-7">Global-option behavior</h3>
+<p><strong>Global-option behavior</strong></p>
 
 <ul>
 <li><p><strong>--api-key</strong>=<em>value</em> - No effect on powershell completion generation</p></li>
@@ -855,7 +694,7 @@ as JSON; the shell script remains on stdout (default &quot;table&quot;)</p></li>
 script; only stderr notices</p></li>
 </ul>
 
-<h3 id="examples-and-expected-output-5">Examples and expected output</h3>
+<p><strong>Examples and expected output</strong></p>
 
 <p><strong>Invocation</strong></p>
 
@@ -878,7 +717,7 @@ function __axilio_debug {
 <p><strong>Notes:</strong> The sample is shortened; stdout is a complete PowerShell completion
 script.</p>
 
-<h2 id="axilio-completion-zsh">axilio completion zsh</h2>
+<h4 id="COMMAND_completion-zsh">zsh</h4>
 
 <pre><code>axilio completion zsh [flags]
 </code></pre>
@@ -896,24 +735,24 @@ need to enable it. You can execute the following once:</p>
 
 <p>To load completions for every new session, execute once:</p>
 
-<h4 id="linux-1">Linux:</h4>
+<h5 id="linux-1">Linux:</h5>
 
 <p>axilio completion zsh &gt; &quot;${fpath[1]}/_axilio&quot;</p>
 
-<h4 id="macos-1">macOS:</h4>
+<h5 id="macos-1">macOS:</h5>
 
 <p>axilio completion zsh &gt; $(brew
 --prefix)/share/zsh/site-functions/_axilio</p>
 
 <p>You will need to start a new shell for this setup to take effect.</p>
 
-<h3 id="command-options-4">Command options</h3>
+<p><strong>Command options</strong></p>
 
 <ul>
 <li><strong>--no-descriptions</strong> - disable completion descriptions</li>
 </ul>
 
-<h3 id="global-option-behavior-8">Global-option behavior</h3>
+<p><strong>Global-option behavior</strong></p>
 
 <ul>
 <li><p><strong>--api-key</strong>=<em>value</em> - No effect on zsh completion generation</p></li>
@@ -932,7 +771,7 @@ JSON; the shell script remains on stdout (default &quot;table&quot;)</p></li>
 only stderr notices</p></li>
 </ul>
 
-<h3 id="examples-and-expected-output-6">Examples and expected output</h3>
+<p><strong>Examples and expected output</strong></p>
 
 <p><strong>Invocation</strong></p>
 
@@ -955,7 +794,7 @@ compdef _axilio axilio
 
 <p><strong>Notes:</strong> The sample is shortened; stdout is a complete Zsh completion script.</p>
 
-<h2 id="axilio-config">axilio config</h2>
+<h3 id="COMMAND_config">config</h3>
 
 <pre><code>axilio config
 </code></pre>
@@ -981,7 +820,7 @@ Sessions dir     set XDG_CONFIG_HOME; directory is [value]/axilio/sessions
                  (default ~/.config/axilio/sessions)
 </code></pre>
 
-<h3 id="global-option-behavior-9">Global-option behavior</h3>
+<p><strong>Global-option behavior</strong></p>
 
 <ul>
 <li><p><strong>--api-key</strong>=<em>value</em> - No actual effect. Ephemerally shows this as
@@ -1006,7 +845,7 @@ table or json (default &quot;table&quot;)</p></li>
 configuration summary remains on stdout</p></li>
 </ul>
 
-<h3 id="examples-and-expected-output-7">Examples and expected output</h3>
+<p><strong>Examples and expected output</strong></p>
 
 <p><strong>Sample 1</strong></p>
 
@@ -1066,7 +905,7 @@ Sessions dir &lt;sessions-directory&gt;
 
 <p><strong>Exit status:</strong> 0.</p>
 
-<h2 id="axilio-config-set">axilio config set</h2>
+<h4 id="COMMAND_config-set">set</h4>
 
 <pre><code>axilio config set &lt;key&gt; &lt;value&gt;
 </code></pre>
@@ -1079,7 +918,7 @@ scheme and host, so a different scheme or path is saved even though
 requests may then fail. Requests resolve the host from --base-url,
 AXILIO_BASE_URL, this saved value, then <a href="https://api.axilio.ai" rel="noreferrer noopener">https://api.axilio.ai</a>.</p>
 
-<h3 id="global-option-behavior-10">Global-option behavior</h3>
+<p><strong>Global-option behavior</strong></p>
 
 <ul>
 <li><p><strong>--api-key</strong>=<em>value</em> - No effect on config set command; only the
@@ -1101,7 +940,7 @@ value, and config-path result (default &quot;table&quot;)</p></li>
 still prints</p></li>
 </ul>
 
-<h3 id="examples-and-expected-output-8">Examples and expected output</h3>
+<p><strong>Examples and expected output</strong></p>
 
 <p><strong>Sample 1</strong></p>
 
@@ -1143,7 +982,7 @@ Sessions dir &lt;sessions-directory&gt;
 
 <p><strong>Exit status:</strong> 0.</p>
 
-<h2 id="axilio-config-unset">axilio config unset</h2>
+<h4 id="COMMAND_config-unset">unset</h4>
 
 <pre><code>axilio config unset &lt;key&gt;
 </code></pre>
@@ -1153,7 +992,7 @@ Sessions dir &lt;sessions-directory&gt;
 <p>Subsequent requests fall back to --base-url, AXILIO_BASE_URL, then
 <a href="https://api.axilio.ai" rel="noreferrer noopener">https://api.axilio.ai</a>. This does not remove credentials.</p>
 
-<h3 id="global-option-behavior-11">Global-option behavior</h3>
+<p><strong>Global-option behavior</strong></p>
 
 <ul>
 <li><p><strong>--api-key</strong>=<em>value</em> - No effect on config unset command; credentials
@@ -1175,7 +1014,7 @@ unset, and config-path result (default &quot;table&quot;)</p></li>
 JSON still prints</p></li>
 </ul>
 
-<h3 id="examples-and-expected-output-9">Examples and expected output</h3>
+<p><strong>Examples and expected output</strong></p>
 
 <p><strong>Sample 1</strong></p>
 
@@ -1217,7 +1056,7 @@ Sessions dir &lt;sessions-directory&gt;
 
 <p><strong>Exit status:</strong> 0.</p>
 
-<h2 id="axilio-doctor">axilio doctor</h2>
+<h3 id="COMMAND_doctor">doctor</h3>
 
 <pre><code>axilio doctor
 </code></pre>
@@ -1233,7 +1072,7 @@ connectivity is also informational. Each network probe is bounded to 8
 seconds. Use -o json for an overall ok value and the complete checks
 array.</p>
 
-<h3 id="global-option-behavior-12">Global-option behavior</h3>
+<p><strong>Global-option behavior</strong></p>
 
 <ul>
 <li><p><strong>--api-key</strong>=<em>value</em> - API key for doctor's authenticated checks;
@@ -1255,7 +1094,7 @@ json (default &quot;table&quot;)</p></li>
 checks; the doctor report remains on stdout</p></li>
 </ul>
 
-<h3 id="examples-and-expected-output-10">Examples and expected output</h3>
+<p><strong>Examples and expected output</strong></p>
 
 <p><strong>Sample 1</strong></p>
 
@@ -1341,7 +1180,7 @@ Authentication fail    API key rejected (HTTP 401); run `axilio login`
 Fang adds ERROR framing and may add ANSI styling at the process
 boundary; the stderr sample shows the underlying message.</p>
 
-<h2 id="axilio-help">axilio help</h2>
+<h3 id="COMMAND_help">help</h3>
 
 <pre><code>axilio help [command]
 </code></pre>
@@ -1350,7 +1189,7 @@ boundary; the stderr sample shows the underlying message.</p>
 
 <p>Simply type axilio help [path to command] for full details.</p>
 
-<h3 id="global-option-behavior-13">Global-option behavior</h3>
+<p><strong>Global-option behavior</strong></p>
 
 <ul>
 <li><p><strong>--api-key</strong>=<em>value</em> - No effect on help command or the help content
@@ -1372,7 +1211,7 @@ only suppresses the update notice (default &quot;table&quot;)</p></li>
 post-command update notice</p></li>
 </ul>
 
-<h3 id="examples-and-expected-output-11">Examples and expected output</h3>
+<p><strong>Examples and expected output</strong></p>
 
 <p><strong>Invocation</strong></p>
 
@@ -1397,7 +1236,7 @@ USAGE
 <p><strong>Notes:</strong> The complete help includes examples and command-effective flag
 descriptions.</p>
 
-<h2 id="axilio-init">axilio init</h2>
+<h3 id="COMMAND_init">init</h3>
 
 <pre><code>axilio init [flags]
 </code></pre>
@@ -1426,7 +1265,7 @@ quiet, or redirected use requires --agent.</p>
 can't do itself, so init surfaces it while a human is likely at the
 keyboard.</p>
 
-<h3 id="command-options-5">Command options</h3>
+<p><strong>Command options</strong></p>
 
 <ul>
 <li><p><strong>--agent</strong>=<em>value</em> - Target claude, codex, or cursor; omit to detect
@@ -1436,7 +1275,7 @@ repository markers</p></li>
 AGENTS.md block is replaced</p></li>
 </ul>
 
-<h3 id="global-option-behavior-14">Global-option behavior</h3>
+<p><strong>Global-option behavior</strong></p>
 
 <ul>
 <li><p><strong>--api-key</strong>=<em>value</em> - No effect on init command. A supplied value
@@ -1457,7 +1296,7 @@ written and skipped path lists (default &quot;table&quot;)</p></li>
 --agent may be required; JSON still prints</p></li>
 </ul>
 
-<h3 id="examples-and-expected-output-12">Examples and expected output</h3>
+<p><strong>Examples and expected output</strong></p>
 
 <p><strong>Sample 1</strong></p>
 
@@ -1525,7 +1364,7 @@ Not signed in. A human must run `axilio login` (browser), or set AXILIO_API_KEY.
 <p><strong>Notes:</strong> Excerpt: --force replaces an existing Axilio-owned Claude skill before
 the suggested first agent prompt.</p>
 
-<h2 id="axilio-login">axilio login</h2>
+<h3 id="COMMAND_login">login</h3>
 
 <pre><code>axilio login
 </code></pre>
@@ -1538,7 +1377,7 @@ session in the OS keychain, with a protected file fallback. Pass
 API and persist it in the shared Axilio config file. A --base-url
 supplied with API-key login is saved with the key.</p>
 
-<h3 id="global-option-behavior-15">Global-option behavior</h3>
+<p><strong>Global-option behavior</strong></p>
 
 <ul>
 <li><p><strong>--api-key</strong>=<em>value</em> - Verify and save this API key instead of
@@ -1560,7 +1399,7 @@ sign-in result (default &quot;table&quot;)</p></li>
 still opens; JSON still prints</p></li>
 </ul>
 
-<h3 id="examples-and-expected-output-13">Examples and expected output</h3>
+<p><strong>Examples and expected output</strong></p>
 
 <p><strong>Sample 1</strong></p>
 
@@ -1627,7 +1466,7 @@ before running the command.</p>
 
 <p><strong>Exit status:</strong> 0.</p>
 
-<h2 id="axilio-logout">axilio logout</h2>
+<h3 id="COMMAND_logout">logout</h3>
 
 <pre><code>axilio logout
 </code></pre>
@@ -1639,7 +1478,7 @@ family server-side.</p>
 saved base URL, environment credentials, and local phone-session lease
 files are not removed.</p>
 
-<h3 id="global-option-behavior-16">Global-option behavior</h3>
+<p><strong>Global-option behavior</strong></p>
 
 <ul>
 <li><p><strong>--api-key</strong>=<em>value</em> - No effect on logout command; saved credentials
@@ -1660,7 +1499,7 @@ sign-out result (default &quot;table&quot;)</p></li>
 still prints</p></li>
 </ul>
 
-<h3 id="examples-and-expected-output-14">Examples and expected output</h3>
+<p><strong>Examples and expected output</strong></p>
 
 <p><strong>Sample 1</strong></p>
 
@@ -1705,7 +1544,7 @@ keep status authenticated. Fang adds ERROR framing and may add ANSI
 styling at the process boundary; the stderr sample shows the underlying
 message.</p>
 
-<h2 id="axilio-orgs">axilio orgs</h2>
+<h3 id="COMMAND_orgs">orgs</h3>
 
 <pre><code>axilio orgs
 </code></pre>
@@ -1717,7 +1556,7 @@ future commands, and <code>--org</code> / <code>AXILIO_ORG</code> override it fo
 call. API keys are bound to one org, so this applies to <code>axilio login</code>
 (OAuth) sessions.</p>
 
-<h3 id="global-option-behavior-17">Global-option behavior</h3>
+<p><strong>Global-option behavior</strong></p>
 
 <ul>
 <li><p><strong>--api-key</strong>=<em>value</em> - API-key auth cannot list OAuth memberships;
@@ -1739,7 +1578,7 @@ selection as table or json (default &quot;table&quot;)</p></li>
 list remains on stdout</p></li>
 </ul>
 
-<h3 id="examples-and-expected-output-15">Examples and expected output</h3>
+<p><strong>Examples and expected output</strong></p>
 
 <p><strong>Sample 1</strong></p>
 
@@ -1834,7 +1673,7 @@ list remains on stdout</p></li>
 
 <p><strong>Exit status:</strong> 0.</p>
 
-<h2 id="axilio-orgs-clear">axilio orgs clear</h2>
+<h4 id="COMMAND_orgs-clear">clear</h4>
 
 <pre><code>axilio orgs clear
 </code></pre>
@@ -1845,7 +1684,7 @@ list remains on stdout</p></li>
 OAuth session default unless --org is supplied for the call. This does
 not alter API-key scope.</p>
 
-<h3 id="global-option-behavior-18">Global-option behavior</h3>
+<p><strong>Global-option behavior</strong></p>
 
 <ul>
 <li><p><strong>--api-key</strong>=<em>value</em> - No effect on orgs clear command; it only
@@ -1867,7 +1706,7 @@ result (default &quot;table&quot;)</p></li>
 still prints</p></li>
 </ul>
 
-<h3 id="examples-and-expected-output-16">Examples and expected output</h3>
+<p><strong>Examples and expected output</strong></p>
 
 <p><strong>Sample 1</strong></p>
 
@@ -1912,7 +1751,7 @@ still prints</p></li>
 <p><strong>Notes:</strong> The full note suggests <code>axilio orgs use \&lt;slug\&gt;</code> to persist a
 selection.</p>
 
-<h2 id="axilio-orgs-list">axilio orgs list</h2>
+<h4 id="COMMAND_orgs-list">list</h4>
 
 <pre><code>axilio orgs list
 </code></pre>
@@ -1924,7 +1763,7 @@ organization when one is selected. Organization selection resolves from
 --org, AXILIO_ORG, <code>orgs use</code>, then the OAuth session default. API-key
 logins cannot switch organizations.</p>
 
-<h3 id="global-option-behavior-19">Global-option behavior</h3>
+<p><strong>Global-option behavior</strong></p>
 
 <ul>
 <li><p><strong>--api-key</strong>=<em>value</em> - API-key auth cannot list OAuth memberships;
@@ -1946,7 +1785,7 @@ selection as table or json (default &quot;table&quot;)</p></li>
 organization list remains on stdout</p></li>
 </ul>
 
-<h3 id="examples-and-expected-output-17">Examples and expected output</h3>
+<p><strong>Examples and expected output</strong></p>
 
 <p><strong>Sample 1</strong></p>
 
@@ -1992,7 +1831,7 @@ organization list remains on stdout</p></li>
 
 <p><strong>Notes:</strong> Organization membership and the active selector vary by session.</p>
 
-<h2 id="axilio-orgs-use">axilio orgs use</h2>
+<h4 id="COMMAND_orgs-use">use</h4>
 
 <pre><code>axilio orgs use &lt;slug-or-id&gt;
 </code></pre>
@@ -2003,7 +1842,7 @@ session, then store its slug as the active organization.</p>
 <p>--org and AXILIO_ORG override this stored selection. API keys remain
 bound to their own organization and cannot use this command.</p>
 
-<h3 id="global-option-behavior-20">Global-option behavior</h3>
+<p><strong>Global-option behavior</strong></p>
 
 <ul>
 <li><p><strong>--api-key</strong>=<em>value</em> - API-key auth cannot switch orgs; use a saved
@@ -2025,7 +1864,7 @@ active-organization result (default &quot;table&quot;)</p></li>
 JSON still prints</p></li>
 </ul>
 
-<h3 id="examples-and-expected-output-18">Examples and expected output</h3>
+<p><strong>Examples and expected output</strong></p>
 
 <p><strong>Sample 1</strong></p>
 
@@ -2064,7 +1903,7 @@ JSON still prints</p></li>
 
 <p><strong>Exit status:</strong> 0.</p>
 
-<h2 id="axilio-phone">axilio phone</h2>
+<h3 id="COMMAND_phone">phone</h3>
 
 <pre><code>axilio phone
 </code></pre>
@@ -2088,14 +1927,14 @@ active local lease, the saved current-session pointer, then an ambiguity
 error. The verbs mirror the SDK MobileDriver so an explored interaction
 maps directly onto SDK code.</p>
 
-<h3 id="command-options-6">Command options</h3>
+<p><strong>Command options</strong></p>
 
 <ul>
 <li><strong>--session</strong>=<em>value</em> - No effect on phone command; bare axilio phone
 only displays this help</li>
 </ul>
 
-<h3 id="global-option-behavior-21">Global-option behavior</h3>
+<p><strong>Global-option behavior</strong></p>
 
 <ul>
 <li><p><strong>--api-key</strong>=<em>value</em> - No effect on phone command; bare axilio phone
@@ -2117,7 +1956,7 @@ phone only displays this help (default &quot;table&quot;)</p></li>
 only displays this help</p></li>
 </ul>
 
-<h3 id="workflow-examples-2">Workflow examples</h3>
+<p><strong>Workflow examples</strong></p>
 
 <pre><code>axilio phone observe
 axilio phone tap --query &quot;the search box&quot;
@@ -2125,7 +1964,7 @@ axilio phone type &quot;Axilio&quot;
 axilio phone observe
 </code></pre>
 
-<h2 id="axilio-phone-find">axilio phone find</h2>
+<h4 id="COMMAND_phone-find">find</h4>
 
 <pre><code>axilio phone find &lt;query&gt; [flags]
 </code></pre>
@@ -2138,7 +1977,7 @@ server, and the effective deadline is 10 seconds when --timeout is
 omitted. A missing target is an error; use <code>find-text</code> for a successful
 empty result.</p>
 
-<h3 id="command-options-7">Command options</h3>
+<p><strong>Command options</strong></p>
 
 <ul>
 <li><p><strong>--model</strong>=<em>value</em> - Vision model override; omitted lets the server
@@ -2151,14 +1990,14 @@ free</p></li>
 10s (default &quot;0s&quot;)</p></li>
 </ul>
 
-<h3 id="parent-options">Parent options</h3>
+<p><strong>Parent options</strong></p>
 
 <ul>
 <li><strong>--session</strong>=<em>value</em> - Session ID; overrides AXILIO_SESSION,
 sole-lease, and current-pointer selection</li>
 </ul>
 
-<h3 id="global-option-behavior-22">Global-option behavior</h3>
+<p><strong>Global-option behavior</strong></p>
 
 <ul>
 <li><p><strong>--api-key</strong>=<em>value</em> - No effect; the session's embedded control
@@ -2180,7 +2019,7 @@ table or json (default &quot;table&quot;)</p></li>
 found-element result remains on stdout</p></li>
 </ul>
 
-<h3 id="examples-and-expected-output-19">Examples and expected output</h3>
+<p><strong>Examples and expected output</strong></p>
 
 <p><strong>Sample 1</strong></p>
 
@@ -2255,7 +2094,7 @@ current frame.</p>
 
 <p><strong>Notes:</strong> Element content and coordinates depend on the current frame.</p>
 
-<h2 id="axilio-phone-find-text">axilio phone find-text</h2>
+<h4 id="COMMAND_phone-find-text">find-text</h4>
 
 <pre><code>axilio phone find-text &lt;text&gt; [flags]
 </code></pre>
@@ -2267,21 +2106,21 @@ element. --exact uses a case-sensitive exact match. No match is
 successful: table output prints <code>No match.</code> and JSON output is null
 rather than a not-found error.</p>
 
-<h3 id="command-options-8">Command options</h3>
+<p><strong>Command options</strong></p>
 
 <ul>
 <li><strong>--exact</strong> - Require a case-sensitive exact match instead of
 case-insensitive substring</li>
 </ul>
 
-<h3 id="parent-options-1">Parent options</h3>
+<p><strong>Parent options</strong></p>
 
 <ul>
 <li><strong>--session</strong>=<em>value</em> - Session ID; overrides AXILIO_SESSION,
 sole-lease, and current-pointer selection</li>
 </ul>
 
-<h3 id="global-option-behavior-23">Global-option behavior</h3>
+<p><strong>Global-option behavior</strong></p>
 
 <ul>
 <li><p><strong>--api-key</strong>=<em>value</em> - No effect; the session's embedded control
@@ -2303,7 +2142,7 @@ or json (default &quot;table&quot;)</p></li>
 text-match result remains on stdout</p></li>
 </ul>
 
-<h3 id="examples-and-expected-output-20">Examples and expected output</h3>
+<p><strong>Examples and expected output</strong></p>
 
 <p><strong>Sample 1</strong></p>
 
@@ -2393,7 +2232,7 @@ Source      ocr
 
 <p><strong>Notes:</strong> No match is a successful literal JSON null.</p>
 
-<h2 id="axilio-phone-key">axilio phone key</h2>
+<h4 id="COMMAND_phone-key">key</h4>
 
 <pre><code>axilio phone key &lt;name&gt;
 </code></pre>
@@ -2403,14 +2242,14 @@ Source      ocr
 <p>The only named key currently supported by the CLI and pinned mobile
 driver is <code>enter</code>; back, home, and other key names are not available.</p>
 
-<h3 id="parent-options-2">Parent options</h3>
+<p><strong>Parent options</strong></p>
 
 <ul>
 <li><strong>--session</strong>=<em>value</em> - Session ID; overrides AXILIO_SESSION,
 sole-lease, and current-pointer selection</li>
 </ul>
 
-<h3 id="global-option-behavior-24">Global-option behavior</h3>
+<p><strong>Global-option behavior</strong></p>
 
 <ul>
 <li><p><strong>--api-key</strong>=<em>value</em> - No effect; the session's embedded control
@@ -2432,7 +2271,7 @@ press result (default &quot;table&quot;)</p></li>
 action still runs; JSON still prints</p></li>
 </ul>
 
-<h3 id="examples-and-expected-output-21">Examples and expected output</h3>
+<p><strong>Examples and expected output</strong></p>
 
 <p><strong>Invocation</strong></p>
 
@@ -2450,7 +2289,7 @@ action still runs; JSON still prints</p></li>
 
 <p><strong>Exit status:</strong> 0.</p>
 
-<h2 id="axilio-phone-long-press">axilio phone long-press</h2>
+<h4 id="COMMAND_phone-long-press">long-press</h4>
 
 <pre><code>axilio phone long-press &lt;x&gt; &lt;y&gt; [flags]
 </code></pre>
@@ -2462,21 +2301,21 @@ screen's top-left.</p>
 current frame before choosing a point. The default hold duration is 800
 milliseconds.</p>
 
-<h3 id="command-options-9">Command options</h3>
+<p><strong>Command options</strong></p>
 
 <ul>
 <li><strong>--duration-ms</strong>=<em>number</em> - How long to hold the coordinate, in
 milliseconds (default &quot;800&quot;)</li>
 </ul>
 
-<h3 id="parent-options-3">Parent options</h3>
+<p><strong>Parent options</strong></p>
 
 <ul>
 <li><strong>--session</strong>=<em>value</em> - Session ID; overrides AXILIO_SESSION,
 sole-lease, and current-pointer selection</li>
 </ul>
 
-<h3 id="global-option-behavior-25">Global-option behavior</h3>
+<p><strong>Global-option behavior</strong></p>
 
 <ul>
 <li><p><strong>--api-key</strong>=<em>value</em> - No effect; the session's embedded control
@@ -2498,7 +2337,7 @@ long-press result (default &quot;table&quot;)</p></li>
 action still runs; JSON still prints</p></li>
 </ul>
 
-<h3 id="examples-and-expected-output-22">Examples and expected output</h3>
+<p><strong>Examples and expected output</strong></p>
 
 <p><strong>Sample 1</strong></p>
 
@@ -2536,7 +2375,7 @@ action still runs; JSON still prints</p></li>
 
 <p><strong>Exit status:</strong> 0.</p>
 
-<h2 id="axilio-phone-observe">axilio phone observe</h2>
+<h4 id="COMMAND_phone-observe">observe</h4>
 
 <pre><code>axilio phone observe [flags]
 </code></pre>
@@ -2549,21 +2388,21 @@ summarizes icons and screen dimensions. JSON returns the complete screen
 object, including texts, icons, dimensions, screen hash, and capture
 time.</p>
 
-<h3 id="command-options-10">Command options</h3>
+<p><strong>Command options</strong></p>
 
 <ul>
 <li><strong>--ocr-engine</strong>=<em>value</em> - OCR engine: free or premium; omitted uses
 free</li>
 </ul>
 
-<h3 id="parent-options-4">Parent options</h3>
+<p><strong>Parent options</strong></p>
 
 <ul>
 <li><strong>--session</strong>=<em>value</em> - Session ID; overrides AXILIO_SESSION,
 sole-lease, and current-pointer selection</li>
 </ul>
 
-<h3 id="global-option-behavior-26">Global-option behavior</h3>
+<p><strong>Global-option behavior</strong></p>
 
 <ul>
 <li><p><strong>--api-key</strong>=<em>value</em> - No effect; the session's embedded control
@@ -2585,7 +2424,7 @@ or json (default &quot;table&quot;)</p></li>
 observation result remains on stdout</p></li>
 </ul>
 
-<h3 id="examples-and-expected-output-23">Examples and expected output</h3>
+<p><strong>Examples and expected output</strong></p>
 
 <p><strong>Sample 1</strong></p>
 
@@ -2663,7 +2502,7 @@ Continue      540  1120  0.98
 <p><strong>Notes:</strong> Shortened representative screen JSON; elements also include bounding
 boxes and sources.</p>
 
-<h3 id="walkthrough">Walkthrough</h3>
+<p><strong>Walkthrough</strong></p>
 
 <pre><code>+----------------------------+
 | Search                     |
@@ -2678,7 +2517,7 @@ reuse the observed Continue center:
 axilio phone tap 540 1120
 </code></pre>
 
-<h2 id="axilio-phone-screenshot">axilio phone screenshot</h2>
+<h4 id="COMMAND_phone-screenshot">screenshot</h4>
 
 <pre><code>axilio phone screenshot [flags]
 </code></pre>
@@ -2691,21 +2530,21 @@ the destination already exists, its contents are overwritten without
 confirmation; the CLI does not create a backup. On success the human
 result reports the path and byte count.</p>
 
-<h3 id="command-options-11">Command options</h3>
+<p><strong>Command options</strong></p>
 
 <ul>
 <li><strong>--out</strong>=<em>value</em> - PNG path to create; overwrite existing contents
 without confirmation (default &quot;screenshot.png&quot;)</li>
 </ul>
 
-<h3 id="parent-options-5">Parent options</h3>
+<p><strong>Parent options</strong></p>
 
 <ul>
 <li><strong>--session</strong>=<em>value</em> - Session ID; overrides AXILIO_SESSION,
 sole-lease, and current-pointer selection</li>
 </ul>
 
-<h3 id="global-option-behavior-27">Global-option behavior</h3>
+<p><strong>Global-option behavior</strong></p>
 
 <ul>
 <li><p><strong>--api-key</strong>=<em>value</em> - No effect; the session's embedded control
@@ -2727,7 +2566,7 @@ screenshot write result (default &quot;table&quot;)</p></li>
 action still runs; JSON still prints</p></li>
 </ul>
 
-<h3 id="examples-and-expected-output-24">Examples and expected output</h3>
+<p><strong>Examples and expected output</strong></p>
 
 <p><strong>Sample 1</strong></p>
 
@@ -2794,7 +2633,7 @@ screenshot does not create missing parent directories, so this target
 uses the existing current directory. A new file requests mode 0644
 subject to umask; overwrite preserves the existing mode.</p>
 
-<h2 id="axilio-phone-send">axilio phone send</h2>
+<h4 id="COMMAND_phone-send">send</h4>
 
 <pre><code>axilio phone send &lt;path&gt; [flags]
 </code></pre>
@@ -2811,7 +2650,7 @@ deliveries up to 100 MiB. By default the command returns after dispatch;
 --wait. This combines <code>uploads add</code> and <code>uploads push</code> and therefore
 retains the upload in the org library.</p>
 
-<h3 id="command-options-12">Command options</h3>
+<p><strong>Command options</strong></p>
 
 <ul>
 <li><p><strong>--collection</strong>=<em>value</em> - Target DCIM, Pictures, or Movies; omitted
@@ -2824,14 +2663,14 @@ infers from media type</p></li>
 of returning at dispatch</p></li>
 </ul>
 
-<h3 id="parent-options-6">Parent options</h3>
+<p><strong>Parent options</strong></p>
 
 <ul>
 <li><strong>--session</strong>=<em>value</em> - Session ID; overrides AXILIO_SESSION,
 sole-lease, and current-pointer selection</li>
 </ul>
 
-<h3 id="global-option-behavior-28">Global-option behavior</h3>
+<p><strong>Global-option behavior</strong></p>
 
 <ul>
 <li><p><strong>--api-key</strong>=<em>value</em> - API key for the upload-and-delivery request;
@@ -2853,7 +2692,7 @@ json (default &quot;table&quot;)</p></li>
 delivery result remains on stdout</p></li>
 </ul>
 
-<h3 id="examples-and-expected-output-25">Examples and expected output</h3>
+<p><strong>Examples and expected output</strong></p>
 
 <p><strong>Sample 1</strong></p>
 
@@ -2928,7 +2767,7 @@ Status    delivered
 <p><strong>Notes:</strong> With --wait, the command returns only after delivered, failed, or the
 two-minute deadline.</p>
 
-<h2 id="axilio-phone-swipe">axilio phone swipe</h2>
+<h4 id="COMMAND_phone-swipe">swipe</h4>
 
 <pre><code>axilio phone swipe &lt;x1&gt; &lt;y1&gt; &lt;x2&gt; &lt;y2&gt; [flags]
 </code></pre>
@@ -2939,21 +2778,21 @@ screen's top-left.</p>
 <p>This command is coordinate-only; use observe to inspect the current
 frame. The default gesture duration is 300 milliseconds.</p>
 
-<h3 id="command-options-13">Command options</h3>
+<p><strong>Command options</strong></p>
 
 <ul>
 <li><strong>--duration-ms</strong>=<em>number</em> - How long the swipe gesture takes, in
 milliseconds (default &quot;300&quot;)</li>
 </ul>
 
-<h3 id="parent-options-7">Parent options</h3>
+<p><strong>Parent options</strong></p>
 
 <ul>
 <li><strong>--session</strong>=<em>value</em> - Session ID; overrides AXILIO_SESSION,
 sole-lease, and current-pointer selection</li>
 </ul>
 
-<h3 id="global-option-behavior-29">Global-option behavior</h3>
+<p><strong>Global-option behavior</strong></p>
 
 <ul>
 <li><p><strong>--api-key</strong>=<em>value</em> - No effect; the session's embedded control
@@ -2975,7 +2814,7 @@ result (default &quot;table&quot;)</p></li>
 action still runs; JSON still prints</p></li>
 </ul>
 
-<h3 id="examples-and-expected-output-26">Examples and expected output</h3>
+<p><strong>Examples and expected output</strong></p>
 
 <p><strong>Sample 1</strong></p>
 
@@ -3013,7 +2852,7 @@ action still runs; JSON still prints</p></li>
 
 <p><strong>Exit status:</strong> 0.</p>
 
-<h2 id="axilio-phone-tap">axilio phone tap</h2>
+<h4 id="COMMAND_phone-tap">tap</h4>
 
 <pre><code>axilio phone tap [x y] [flags]
 </code></pre>
@@ -3031,7 +2870,7 @@ precedence.</p>
 active lease, the saved current-session pointer, then an ambiguity
 error.</p>
 
-<h3 id="command-options-14">Command options</h3>
+<p><strong>Command options</strong></p>
 
 <ul>
 <li><p><strong>--model</strong>=<em>value</em> - Vision model for --query only; omitted lets the
@@ -3044,14 +2883,14 @@ premium; omitted uses free</p></li>
 finds it and taps its center</p></li>
 </ul>
 
-<h3 id="parent-options-8">Parent options</h3>
+<p><strong>Parent options</strong></p>
 
 <ul>
 <li><strong>--session</strong>=<em>value</em> - Session ID; overrides AXILIO_SESSION,
 sole-lease, and current-pointer selection</li>
 </ul>
 
-<h3 id="global-option-behavior-30">Global-option behavior</h3>
+<p><strong>Global-option behavior</strong></p>
 
 <ul>
 <li><p><strong>--api-key</strong>=<em>value</em> - No effect; the session's embedded control
@@ -3073,7 +2912,7 @@ result (default &quot;table&quot;)</p></li>
 still runs; JSON still prints</p></li>
 </ul>
 
-<h3 id="examples-and-expected-output-27">Examples and expected output</h3>
+<p><strong>Examples and expected output</strong></p>
 
 <p><strong>Sample 1</strong></p>
 
@@ -3129,7 +2968,7 @@ still runs; JSON still prints</p></li>
 
 <p><strong>Exit status:</strong> 0.</p>
 
-<h2 id="axilio-phone-type">axilio phone type</h2>
+<h4 id="COMMAND_phone-type">type</h4>
 
 <pre><code>axilio phone type &lt;text&gt;
 </code></pre>
@@ -3141,14 +2980,14 @@ characters. Text is entered through a US-layout keyboard. Printable
 ASCII characters are supported; emoji and other non-ASCII characters are
 silently skipped.</p>
 
-<h3 id="parent-options-9">Parent options</h3>
+<p><strong>Parent options</strong></p>
 
 <ul>
 <li><strong>--session</strong>=<em>value</em> - Session ID; overrides AXILIO_SESSION,
 sole-lease, and current-pointer selection</li>
 </ul>
 
-<h3 id="global-option-behavior-31">Global-option behavior</h3>
+<p><strong>Global-option behavior</strong></p>
 
 <ul>
 <li><p><strong>--api-key</strong>=<em>value</em> - No effect; the session's embedded control
@@ -3170,7 +3009,7 @@ typing result (default &quot;table&quot;)</p></li>
 action still runs; JSON still prints</p></li>
 </ul>
 
-<h3 id="examples-and-expected-output-28">Examples and expected output</h3>
+<p><strong>Examples and expected output</strong></p>
 
 <p><strong>Sample 1</strong></p>
 
@@ -3226,7 +3065,7 @@ action still runs; JSON still prints</p></li>
 
 <p><strong>Exit status:</strong> 0.</p>
 
-<h2 id="axilio-phone-wait-for">axilio phone wait-for</h2>
+<h4 id="COMMAND_phone-wait-for">wait-for</h4>
 
 <pre><code>axilio phone wait-for &lt;text&gt; [flags]
 </code></pre>
@@ -3238,7 +3077,7 @@ case-sensitive exact match. The default timeout is 10 seconds. A timeout
 returns the CLI timeout exit code (5). Waiting for presence returns the
 matching element; waiting for absence is action-only.</p>
 
-<h3 id="command-options-15">Command options</h3>
+<p><strong>Command options</strong></p>
 
 <ul>
 <li><p><strong>--exact</strong> - Require a case-sensitive exact match instead of
@@ -3250,14 +3089,14 @@ substring</p></li>
 (default &quot;10s&quot;)</p></li>
 </ul>
 
-<h3 id="parent-options-10">Parent options</h3>
+<p><strong>Parent options</strong></p>
 
 <ul>
 <li><strong>--session</strong>=<em>value</em> - Session ID; overrides AXILIO_SESSION,
 sole-lease, and current-pointer selection</li>
 </ul>
 
-<h3 id="global-option-behavior-32">Global-option behavior</h3>
+<p><strong>Global-option behavior</strong></p>
 
 <ul>
 <li><p><strong>--api-key</strong>=<em>value</em> - No effect; the session's embedded control
@@ -3279,7 +3118,7 @@ as table or json (default &quot;table&quot;)</p></li>
 remain on stdout</p></li>
 </ul>
 
-<h3 id="examples-and-expected-output-29">Examples and expected output</h3>
+<p><strong>Examples and expected output</strong></p>
 
 <p><strong>Sample 1</strong></p>
 
@@ -3367,7 +3206,7 @@ Source      ocr
 may add ANSI styling at the process boundary; the stderr sample shows
 the underlying message.</p>
 
-<h2 id="axilio-phones">axilio phones</h2>
+<h3 id="COMMAND_phones">phones</h3>
 
 <pre><code>axilio phones
 </code></pre>
@@ -3383,7 +3222,7 @@ phones and currently free dedicated phones that can be allocated now.
 including busy and offline phones, and is the place to find a phone ID
 for <code>sessions start --phone-id</code>.</p>
 
-<h3 id="global-option-behavior-33">Global-option behavior</h3>
+<p><strong>Global-option behavior</strong></p>
 
 <ul>
 <li><p><strong>--api-key</strong>=<em>value</em> - No effect on phones command; bare axilio
@@ -3405,13 +3244,13 @@ axilio phones only displays this help (default &quot;table&quot;)</p></li>
 only displays this help</p></li>
 </ul>
 
-<h3 id="workflow-examples-3">Workflow examples</h3>
+<p><strong>Workflow examples</strong></p>
 
 <pre><code>axilio phones list
 axilio phones mine
 </code></pre>
 
-<h2 id="axilio-phones-list">axilio phones list</h2>
+<h4 id="COMMAND_phones-list">list</h4>
 
 <pre><code>axilio phones list
 </code></pre>
@@ -3424,7 +3263,7 @@ that are currently free.</p>
 mine</code> to see the full dedicated inventory. Results include phone ID,
 type, model, and status.</p>
 
-<h3 id="global-option-behavior-34">Global-option behavior</h3>
+<p><strong>Global-option behavior</strong></p>
 
 <ul>
 <li><p><strong>--api-key</strong>=<em>value</em> - API key for the available-phone request;
@@ -3446,7 +3285,7 @@ table or json (default &quot;table&quot;)</p></li>
 request; the available-phone result remains on stdout</p></li>
 </ul>
 
-<h3 id="examples-and-expected-output-30">Examples and expected output</h3>
+<p><strong>Examples and expected output</strong></p>
 
 <p><strong>Sample 1</strong></p>
 
@@ -3504,7 +3343,7 @@ request; the available-phone result remains on stdout</p></li>
 <p><strong>Notes:</strong> Counts, inventory, and optional phone fields vary by organization and
 availability.</p>
 
-<h2 id="axilio-phones-mine">axilio phones mine</h2>
+<h4 id="COMMAND_phones-mine">mine</h4>
 
 <pre><code>axilio phones mine
 </code></pre>
@@ -3516,7 +3355,7 @@ in every state - free, busy in an active session, or offline.</p>
 --phone-id</code>. Results include phone ID, nickname, type, model, status,
 and the session ID holding a busy phone.</p>
 
-<h3 id="global-option-behavior-35">Global-option behavior</h3>
+<p><strong>Global-option behavior</strong></p>
 
 <ul>
 <li><p><strong>--api-key</strong>=<em>value</em> - API key for the dedicated-phone request;
@@ -3538,7 +3377,7 @@ table or json (default &quot;table&quot;)</p></li>
 request; the dedicated-phone result remains on stdout</p></li>
 </ul>
 
-<h3 id="examples-and-expected-output-31">Examples and expected output</h3>
+<p><strong>Examples and expected output</strong></p>
 
 <p><strong>Sample 1</strong></p>
 
@@ -3586,7 +3425,7 @@ Release it with:  axilio sessions stop &lt;session-id&gt;
 
 <p><strong>Exit status:</strong> 0.</p>
 
-<h2 id="axilio-runs">axilio runs</h2>
+<h3 id="COMMAND_runs">runs</h3>
 
 <pre><code>axilio runs
 </code></pre>
@@ -3601,7 +3440,7 @@ workflow ID with <code>workflows list</code>, start one or more runs, list recen
 run IDs and statuses, inspect a run in detail, or cancel queued and
 running work.</p>
 
-<h3 id="global-option-behavior-36">Global-option behavior</h3>
+<p><strong>Global-option behavior</strong></p>
 
 <ul>
 <li><p><strong>--api-key</strong>=<em>value</em> - No effect on runs command; bare axilio runs
@@ -3623,7 +3462,7 @@ runs only displays this help (default &quot;table&quot;)</p></li>
 displays this help</p></li>
 </ul>
 
-<h3 id="workflow-examples-4">Workflow examples</h3>
+<p><strong>Workflow examples</strong></p>
 
 <pre><code>axilio workflows list
 axilio runs start wf_123
@@ -3634,7 +3473,7 @@ axilio runs get run_123
 axilio runs get &lt;run-id&gt;
 </code></pre>
 
-<h2 id="axilio-runs-cancel">axilio runs cancel</h2>
+<h4 id="COMMAND_runs-cancel">cancel</h4>
 
 <pre><code>axilio runs cancel &lt;run-id&gt; [flags]
 </code></pre>
@@ -3645,14 +3484,14 @@ axilio runs get &lt;run-id&gt;
 redirected input. JSON and quiet modes do not prompt and require --yes.
 JSON success reports the canceled run ID.</p>
 
-<h3 id="command-options-16">Command options</h3>
+<p><strong>Command options</strong></p>
 
 <ul>
 <li><strong>-y</strong>, <strong>--yes</strong> - Cancel without prompting; required in JSON or
 quiet mode</li>
 </ul>
 
-<h3 id="global-option-behavior-37">Global-option behavior</h3>
+<p><strong>Global-option behavior</strong></p>
 
 <ul>
 <li><p><strong>--api-key</strong>=<em>value</em> - API key for run cancellation; overrides
@@ -3674,7 +3513,7 @@ cancellation result (default &quot;table&quot;)</p></li>
 result; --yes is still required; JSON still prints</p></li>
 </ul>
 
-<h3 id="examples-and-expected-output-32">Examples and expected output</h3>
+<p><strong>Examples and expected output</strong></p>
 
 <p><strong>Sample 1</strong></p>
 
@@ -3754,7 +3593,7 @@ redirected input. JSON and quiet modes require --yes.</p>
 
 <p><strong>Exit status:</strong> 0.</p>
 
-<h2 id="axilio-runs-get">axilio runs get</h2>
+<h4 id="COMMAND_runs-get">get</h4>
 
 <pre><code>axilio runs get &lt;run-id&gt;
 </code></pre>
@@ -3764,7 +3603,7 @@ redirected input. JSON and quiet modes require --yes.</p>
 <p>The result includes status, trigger, workflow, session, phone, created,
 started and completed times, error message, and video URL when present.</p>
 
-<h3 id="global-option-behavior-38">Global-option behavior</h3>
+<p><strong>Global-option behavior</strong></p>
 
 <ul>
 <li><p><strong>--api-key</strong>=<em>value</em> - API key for the run-detail request; overrides
@@ -3786,7 +3625,7 @@ or json (default &quot;table&quot;)</p></li>
 request; the run-detail result remains on stdout</p></li>
 </ul>
 
-<h3 id="examples-and-expected-output-33">Examples and expected output</h3>
+<p><strong>Examples and expected output</strong></p>
 
 <p><strong>Sample 1</strong></p>
 
@@ -3893,7 +3732,7 @@ Video      &lt;video-url&gt;
 
 <p><strong>Exit status:</strong> 0.</p>
 
-<h2 id="axilio-runs-list">axilio runs list</h2>
+<h4 id="COMMAND_runs-list">list</h4>
 
 <pre><code>axilio runs list [flags]
 </code></pre>
@@ -3904,7 +3743,7 @@ Video      &lt;video-url&gt;
 include run ID, status, trigger, workflow ID, and creation time; use a
 returned run ID with <code>runs get</code> or <code>runs cancel</code>.</p>
 
-<h3 id="command-options-17">Command options</h3>
+<p><strong>Command options</strong></p>
 
 <ul>
 <li><p><strong>--limit</strong>=<em>number</em> - Maximum number of most-recent runs to return
@@ -3913,7 +3752,7 @@ returned run ID with <code>runs get</code> or <code>runs cancel</code>.</p>
 <li><p><strong>--workflow</strong>=<em>value</em> - Return only runs for this workflow ID</p></li>
 </ul>
 
-<h3 id="global-option-behavior-39">Global-option behavior</h3>
+<p><strong>Global-option behavior</strong></p>
 
 <ul>
 <li><p><strong>--api-key</strong>=<em>value</em> - API key for the run-list request; overrides
@@ -3935,7 +3774,7 @@ json (default &quot;table&quot;)</p></li>
 the run-list result remains on stdout</p></li>
 </ul>
 
-<h3 id="examples-and-expected-output-34">Examples and expected output</h3>
+<p><strong>Examples and expected output</strong></p>
 
 <p><strong>Sample 1</strong></p>
 
@@ -4012,7 +3851,7 @@ the run-list result remains on stdout</p></li>
 <p><strong>Notes:</strong> Shortened representative SDK response; run records can include
 additional fields.</p>
 
-<h2 id="axilio-runs-start">axilio runs start</h2>
+<h4 id="COMMAND_runs-start">start</h4>
 
 <pre><code>axilio runs start &lt;workflow-id&gt; [flags]
 </code></pre>
@@ -4031,7 +3870,7 @@ validation.</p>
 
 <p>Successful output contains the created run IDs.</p>
 
-<h3 id="command-options-18">Command options</h3>
+<p><strong>Command options</strong></p>
 
 <ul>
 <li><p><strong>--count</strong>=<em>number</em> - Number of run configurations to create; v0.5.0
@@ -4044,7 +3883,7 @@ run</p></li>
 the server default, nonzero is sent as-is</p></li>
 </ul>
 
-<h3 id="global-option-behavior-40">Global-option behavior</h3>
+<p><strong>Global-option behavior</strong></p>
 
 <ul>
 <li><p><strong>--api-key</strong>=<em>value</em> - API key for the run-create request; overrides
@@ -4066,7 +3905,7 @@ or json (default &quot;table&quot;)</p></li>
 result remains on stdout</p></li>
 </ul>
 
-<h3 id="examples-and-expected-output-35">Examples and expected output</h3>
+<p><strong>Examples and expected output</strong></p>
 
 <p><strong>Sample 1</strong></p>
 
@@ -4162,7 +4001,7 @@ Started run &lt;run-id-3&gt;
 
 <p><strong>Notes:</strong> -o json emits the complete run_ids response on stdout.</p>
 
-<h2 id="axilio-sessions">axilio sessions</h2>
+<h3 id="COMMAND_sessions">sessions</h3>
 
 <pre><code>axilio sessions
 </code></pre>
@@ -4179,7 +4018,7 @@ AXILIO_SESSION, the sole active lease, the current-session pointer, then
 an ambiguity error. <code>sessions list --remote</code> instead asks the API for
 all active server sessions.</p>
 
-<h3 id="global-option-behavior-41">Global-option behavior</h3>
+<p><strong>Global-option behavior</strong></p>
 
 <ul>
 <li><p><strong>--api-key</strong>=<em>value</em> - No effect on sessions command; bare axilio
@@ -4201,7 +4040,7 @@ axilio sessions only displays this help (default &quot;table&quot;)</p></li>
 sessions only displays this help</p></li>
 </ul>
 
-<h3 id="workflow-examples-5">Workflow examples</h3>
+<p><strong>Workflow examples</strong></p>
 
 <pre><code>axilio sessions start
 axilio sessions list
@@ -4210,7 +4049,7 @@ axilio sessions stop sess_123
 axilio sessions stop &lt;session-id&gt;
 </code></pre>
 
-<h2 id="axilio-sessions-current">axilio sessions current</h2>
+<h4 id="COMMAND_sessions-current">current</h4>
 
 <pre><code>axilio sessions current
 </code></pre>
@@ -4223,7 +4062,7 @@ ambiguity error. This command has no --session flag, so it starts at
 AXILIO_SESSION. If no session resolves, the current implementation
 prints a note and exits successfully.</p>
 
-<h3 id="global-option-behavior-42">Global-option behavior</h3>
+<p><strong>Global-option behavior</strong></p>
 
 <ul>
 <li><p><strong>--api-key</strong>=<em>value</em> - No effect on sessions current command; it uses
@@ -4245,7 +4084,7 @@ table or json (default &quot;table&quot;)</p></li>
 the current-session result remains on stdout</p></li>
 </ul>
 
-<h3 id="examples-and-expected-output-36">Examples and expected output</h3>
+<p><strong>Examples and expected output</strong></p>
 
 <p><strong>Sample 1</strong></p>
 
@@ -4318,7 +4157,7 @@ sole-lease and current-pointer selection.</p>
 
 <p><strong>Notes:</strong> With no selected lease, the successful JSON result is null.</p>
 
-<h2 id="axilio-sessions-list">axilio sessions list</h2>
+<h4 id="COMMAND_sessions-list">list</h4>
 
 <pre><code>axilio sessions list [flags]
 </code></pre>
@@ -4330,14 +4169,14 @@ this shell when resolution is not ambiguous. Use --remote to list active
 server sessions instead; remote rows include session ID, phone ID, phone
 type, and model but are not the local lease registry.</p>
 
-<h3 id="command-options-19">Command options</h3>
+<p><strong>Command options</strong></p>
 
 <ul>
 <li><strong>--remote</strong> - List all active server sessions instead of this CLI's
 local lease files</li>
 </ul>
 
-<h3 id="global-option-behavior-43">Global-option behavior</h3>
+<p><strong>Global-option behavior</strong></p>
 
 <ul>
 <li><p><strong>--api-key</strong>=<em>value</em> - Authenticates only --remote listing; no effect
@@ -4359,7 +4198,7 @@ table or json (default &quot;table&quot;)</p></li>
 remains on stdout</p></li>
 </ul>
 
-<h3 id="examples-and-expected-output-37">Examples and expected output</h3>
+<p><strong>Examples and expected output</strong></p>
 
 <p><strong>Sample 1</strong></p>
 
@@ -4433,7 +4272,7 @@ lease.</p>
 
 <p><strong>Notes:</strong> Local lease JSON includes the stored control URL; IDs and URLs vary.</p>
 
-<h2 id="axilio-sessions-start">axilio sessions start</h2>
+<h4 id="COMMAND_sessions-start">start</h4>
 
 <pre><code>axilio sessions start [flags]
 </code></pre>
@@ -4447,7 +4286,7 @@ workflow with --workflow. --export prints only <code>export
 AXILIO_SESSION=\&lt;id\&gt;</code> for shell eval; that shell syntax also wins when
 -o json is supplied. The lease remains active until explicitly stopped.</p>
 
-<h3 id="command-options-20">Command options</h3>
+<p><strong>Command options</strong></p>
 
 <ul>
 <li><p><strong>--export</strong> - Print only <code>export AXILIO_SESSION=\&lt;id\&gt;</code> for shell
@@ -4463,7 +4302,7 @@ iphone (default &quot;android&quot;)</p></li>
 interactive lease</p></li>
 </ul>
 
-<h3 id="global-option-behavior-44">Global-option behavior</h3>
+<p><strong>Global-option behavior</strong></p>
 
 <ul>
 <li><p><strong>--api-key</strong>=<em>value</em> - API key for the phone-allocation request;
@@ -4485,7 +4324,7 @@ or json; --export always emits shell text (default &quot;table&quot;)</p></li>
 --export text remains on stdout</p></li>
 </ul>
 
-<h3 id="examples-and-expected-output-38">Examples and expected output</h3>
+<p><strong>Examples and expected output</strong></p>
 
 <p><strong>Sample 1</strong></p>
 
@@ -4627,7 +4466,7 @@ Release it with:  axilio sessions stop &lt;session-id&gt;
 <p><strong>Notes:</strong> The shell consumes the nested command's export line and sets
 AXILIO_SESSION in the current shell.</p>
 
-<h2 id="axilio-sessions-stop">axilio sessions stop</h2>
+<h4 id="COMMAND_sessions-stop">stop</h4>
 
 <pre><code>axilio sessions stop &lt;session-id|phone-id&gt; [flags]
 </code></pre>
@@ -4640,14 +4479,14 @@ current-session pointer are removed after release. Without --yes, table
 mode reads confirmation from stdin, including redirected input. JSON and
 quiet modes do not prompt and require --yes.</p>
 
-<h3 id="command-options-21">Command options</h3>
+<p><strong>Command options</strong></p>
 
 <ul>
 <li><strong>-y</strong>, <strong>--yes</strong> - Release without prompting; required in JSON or
 quiet mode</li>
 </ul>
 
-<h3 id="global-option-behavior-45">Global-option behavior</h3>
+<p><strong>Global-option behavior</strong></p>
 
 <ul>
 <li><p><strong>--api-key</strong>=<em>value</em> - API key for session release; overrides
@@ -4669,7 +4508,7 @@ session release result (default &quot;table&quot;)</p></li>
 result; --yes is still required; JSON still prints</p></li>
 </ul>
 
-<h3 id="examples-and-expected-output-39">Examples and expected output</h3>
+<p><strong>Examples and expected output</strong></p>
 
 <p><strong>Sample 1</strong></p>
 
@@ -4749,7 +4588,7 @@ redirected input. JSON and quiet modes require --yes.</p>
 
 <p><strong>Exit status:</strong> 0.</p>
 
-<h2 id="axilio-status">axilio status</h2>
+<h3 id="COMMAND_status">status</h3>
 
 <pre><code>axilio status
 </code></pre>
@@ -4760,7 +4599,7 @@ active organization selector, and account balance.</p>
 <p>A valid API key or OAuth session is required. Use -o json for the
 structured status, api_host, active_org, and balance fields.</p>
 
-<h3 id="global-option-behavior-46">Global-option behavior</h3>
+<p><strong>Global-option behavior</strong></p>
 
 <ul>
 <li><p><strong>--api-key</strong>=<em>value</em> - API key for the status request; overrides
@@ -4782,7 +4621,7 @@ json (default &quot;table&quot;)</p></li>
 the status result remains on stdout</p></li>
 </ul>
 
-<h3 id="examples-and-expected-output-40">Examples and expected output</h3>
+<p><strong>Examples and expected output</strong></p>
 
 <p><strong>Sample 1</strong></p>
 
@@ -4830,7 +4669,7 @@ Balance     $5.00
 
 <p><strong>Notes:</strong> Balance and active organization vary by account.</p>
 
-<h2 id="axilio-upgrade">axilio upgrade</h2>
+<h3 id="COMMAND_upgrade">upgrade</h3>
 
 <pre><code>axilio upgrade [flags]
 </code></pre>
@@ -4844,14 +4683,14 @@ install</code> builds are left to the Go toolchain. On a standalone release,
 Homebrew invocation currently prints <code>brew upgrade axilio</code> guidance and
 returns before checking, even when --check is supplied.</p>
 
-<h3 id="command-options-22">Command options</h3>
+<p><strong>Command options</strong></p>
 
 <ul>
 <li><strong>--check</strong> - Check a standalone release without installing; Homebrew
 currently prints upgrade guidance</li>
 </ul>
 
-<h3 id="global-option-behavior-47">Global-option behavior</h3>
+<p><strong>Global-option behavior</strong></p>
 
 <ul>
 <li><p><strong>--api-key</strong>=<em>value</em> - No effect on upgrade command; release checks
@@ -4873,7 +4712,7 @@ upgrade-status result (default &quot;table&quot;)</p></li>
 still prints</p></li>
 </ul>
 
-<h3 id="examples-and-expected-output-41">Examples and expected output</h3>
+<p><strong>Examples and expected output</strong></p>
 
 <p><strong>Sample 1</strong></p>
 
@@ -4930,7 +4769,7 @@ installs print their own package-manager guidance.</p>
 
 <p>Output and exit status are owned by Homebrew, not the axilio CLI.</p>
 
-<h2 id="axilio-uploads">axilio uploads</h2>
+<h3 id="COMMAND_uploads">uploads</h3>
 
 <pre><code>axilio uploads
 </code></pre>
@@ -4946,7 +4785,7 @@ pushed to any phone the org holds, so one upload serves many phones.
 delivers a stored upload, and <code>delete</code> frees library quota. <code>phone send</code>
 combines add and push for the selected session's phone.</p>
 
-<h3 id="global-option-behavior-48">Global-option behavior</h3>
+<p><strong>Global-option behavior</strong></p>
 
 <ul>
 <li><p><strong>--api-key</strong>=<em>value</em> - No effect on uploads command; bare axilio
@@ -4968,7 +4807,7 @@ axilio uploads only displays this help (default &quot;table&quot;)</p></li>
 uploads only displays this help</p></li>
 </ul>
 
-<h3 id="workflow-examples-6">Workflow examples</h3>
+<p><strong>Workflow examples</strong></p>
 
 <pre><code>axilio uploads add ./photo.jpg
 axilio uploads list
@@ -4978,7 +4817,7 @@ axilio uploads delete upl_123 --yes
 axilio uploads delete &lt;upload-id&gt; --yes
 </code></pre>
 
-<h2 id="axilio-uploads-add">axilio uploads add</h2>
+<h4 id="COMMAND_uploads-add">add</h4>
 
 <pre><code>axilio uploads add &lt;path&gt; [flags]
 </code></pre>
@@ -4991,7 +4830,7 @@ to do both in one step. The stored filename defaults to the local
 basename and MIME type is inferred from the extension; --filename and
 --mime-type override those values.</p>
 
-<h3 id="command-options-23">Command options</h3>
+<p><strong>Command options</strong></p>
 
 <ul>
 <li><p><strong>--filename</strong>=<em>value</em> - Stored filename; omitted uses the local
@@ -5001,7 +4840,7 @@ file's basename</p></li>
 file extension</p></li>
 </ul>
 
-<h3 id="global-option-behavior-49">Global-option behavior</h3>
+<p><strong>Global-option behavior</strong></p>
 
 <ul>
 <li><p><strong>--api-key</strong>=<em>value</em> - API key for the file-upload request; overrides
@@ -5023,7 +4862,7 @@ table or json (default &quot;table&quot;)</p></li>
 result remains on stdout</p></li>
 </ul>
 
-<h3 id="examples-and-expected-output-42">Examples and expected output</h3>
+<p><strong>Examples and expected output</strong></p>
 
 <p><strong>Sample 1</strong></p>
 
@@ -5073,7 +4912,7 @@ Status    ready
 
 <p><strong>Notes:</strong> --filename and --mime-type override values inferred from the local path.</p>
 
-<h2 id="axilio-uploads-delete">axilio uploads delete</h2>
+<h4 id="COMMAND_uploads-delete">delete</h4>
 
 <pre><code>axilio uploads delete &lt;upload-id&gt; [flags]
 </code></pre>
@@ -5087,14 +4926,14 @@ table mode reads confirmation from stdin, including redirected input.
 JSON and quiet modes do not prompt and require --yes. The alias <code>uploads
 rm</code> performs the same operation.</p>
 
-<h3 id="command-options-24">Command options</h3>
+<p><strong>Command options</strong></p>
 
 <ul>
 <li><strong>-y</strong>, <strong>--yes</strong> - Delete without prompting; required in JSON or
 quiet mode</li>
 </ul>
 
-<h3 id="global-option-behavior-50">Global-option behavior</h3>
+<p><strong>Global-option behavior</strong></p>
 
 <ul>
 <li><p><strong>--api-key</strong>=<em>value</em> - API key for the upload-delete request;
@@ -5116,7 +4955,7 @@ deletion result (default &quot;table&quot;)</p></li>
 --yes is required; JSON still prints</p></li>
 </ul>
 
-<h3 id="examples-and-expected-output-43">Examples and expected output</h3>
+<p><strong>Examples and expected output</strong></p>
 
 <p><strong>Sample 1</strong></p>
 
@@ -5202,7 +5041,7 @@ require --yes.</p>
 phones holding or receiving a copy; the pinned helper discards the
 pending-phone count.</p>
 
-<h2 id="axilio-uploads-list">axilio uploads list</h2>
+<h4 id="COMMAND_uploads-list">list</h4>
 
 <pre><code>axilio uploads list [flags]
 </code></pre>
@@ -5215,7 +5054,7 @@ case-insensitive substring, and sort by created_at, filename, or
 size_bytes in asc or desc order. Omitting sort/order uses server
 defaults.</p>
 
-<h3 id="command-options-25">Command options</h3>
+<p><strong>Command options</strong></p>
 
 <ul>
 <li><p><strong>--limit</strong>=<em>number</em> - Maximum files in this page (default &quot;50&quot;)</p></li>
@@ -5232,7 +5071,7 @@ default</p></li>
 omitted uses server default</p></li>
 </ul>
 
-<h3 id="global-option-behavior-51">Global-option behavior</h3>
+<p><strong>Global-option behavior</strong></p>
 
 <ul>
 <li><p><strong>--api-key</strong>=<em>value</em> - API key for the upload-list request; overrides
@@ -5254,7 +5093,7 @@ or json (default &quot;table&quot;)</p></li>
 request; the upload-list result remains on stdout</p></li>
 </ul>
 
-<h3 id="examples-and-expected-output-44">Examples and expected output</h3>
+<p><strong>Examples and expected output</strong></p>
 
 <p><strong>Sample 1</strong></p>
 
@@ -5363,7 +5202,7 @@ organization.</p>
 <p><strong>Notes:</strong> Representative response; files, result count, and bytes used vary by
 organization; limits are global.</p>
 
-<h2 id="axilio-uploads-push">axilio uploads push</h2>
+<h4 id="COMMAND_uploads-push">push</h4>
 
 <pre><code>axilio uploads push &lt;upload-id&gt; [flags]
 </code></pre>
@@ -5378,7 +5217,7 @@ Pictures, or Movies is selected. By default the command returns after
 dispatch; --wait blocks for delivered or failed, and --timeout applies
 only with --wait.</p>
 
-<h3 id="command-options-26">Command options</h3>
+<p><strong>Command options</strong></p>
 
 <ul>
 <li><p><strong>--collection</strong>=<em>value</em> - Target DCIM, Pictures, or Movies; omitted
@@ -5394,7 +5233,7 @@ sessions (required)</p></li>
 of returning at dispatch</p></li>
 </ul>
 
-<h3 id="global-option-behavior-52">Global-option behavior</h3>
+<p><strong>Global-option behavior</strong></p>
 
 <ul>
 <li><p><strong>--api-key</strong>=<em>value</em> - API key for the file-delivery request;
@@ -5416,7 +5255,7 @@ json (default &quot;table&quot;)</p></li>
 delivery result remains on stdout</p></li>
 </ul>
 
-<h3 id="examples-and-expected-output-45">Examples and expected output</h3>
+<p><strong>Examples and expected output</strong></p>
 
 <p><strong>Sample 1</strong></p>
 
@@ -5510,7 +5349,7 @@ pushed; re-run with --wait to confirm delivery
 
 <p><strong>Exit status:</strong> 0.</p>
 
-<h2 id="axilio-workflows">axilio workflows</h2>
+<h3 id="COMMAND_workflows">workflows</h3>
 
 <pre><code>axilio workflows
 </code></pre>
@@ -5524,7 +5363,7 @@ to <code>workflows list</code> instead.</p>
 discover a workflow ID, then pass that ID to <code>runs start</code> or <code>sessions
 start --workflow</code>.</p>
 
-<h3 id="global-option-behavior-53">Global-option behavior</h3>
+<p><strong>Global-option behavior</strong></p>
 
 <ul>
 <li><p><strong>--api-key</strong>=<em>value</em> - No effect on workflows command; bare axilio
@@ -5546,7 +5385,7 @@ axilio workflows only displays this help (default &quot;table&quot;)</p></li>
 workflows only displays this help</p></li>
 </ul>
 
-<h3 id="workflow-examples-7">Workflow examples</h3>
+<p><strong>Workflow examples</strong></p>
 
 <pre><code>axilio workflows list
 axilio workflows list --search checkout
@@ -5554,7 +5393,7 @@ axilio runs start wf_123
 axilio runs start &lt;workflow-id&gt;
 </code></pre>
 
-<h2 id="axilio-workflows-list">axilio workflows list</h2>
+<h4 id="COMMAND_workflows-list">list</h4>
 
 <pre><code>axilio workflows list [flags]
 </code></pre>
@@ -5565,7 +5404,7 @@ axilio runs start &lt;workflow-id&gt;
 Use --search for a name substring and --limit to control the number
 returned. A listed workflow ID can be passed directly to <code>runs start</code>.</p>
 
-<h3 id="command-options-27">Command options</h3>
+<p><strong>Command options</strong></p>
 
 <ul>
 <li><p><strong>--limit</strong>=<em>number</em> - Maximum number of most-recent workflows to
@@ -5574,7 +5413,7 @@ return (default &quot;20&quot;)</p></li>
 <li><p><strong>--search</strong>=<em>value</em> - Filter workflow names by substring</p></li>
 </ul>
 
-<h3 id="global-option-behavior-54">Global-option behavior</h3>
+<p><strong>Global-option behavior</strong></p>
 
 <ul>
 <li><p><strong>--api-key</strong>=<em>value</em> - API key for the workflow-list request;
@@ -5596,7 +5435,7 @@ table or json (default &quot;table&quot;)</p></li>
 request; the workflow-list result remains on stdout</p></li>
 </ul>
 
-<h3 id="examples-and-expected-output-46">Examples and expected output</h3>
+<p><strong>Examples and expected output</strong></p>
 
 <p><strong>Sample 1</strong></p>
 
@@ -5675,7 +5514,7 @@ request; the workflow-list result remains on stdout</p></li>
 <p><strong>Notes:</strong> Shortened representative SDK response; workflow records can include
 additional fields and stats.</p>
 
-<h1 id="environment">ENVIRONMENT</h1>
+<h2 id="ENVIRONMENT">ENVIRONMENT &nbsp; &nbsp; &nbsp; &nbsp; <a href="#top_of_page"><span class="top-link">top</span></a></h2>
 
 <p><strong>AXILIO_API_KEY</strong> : API credential. Precedence: --api-key,
 AXILIO_API_KEY, saved config key, then the saved OAuth session.</p>
@@ -5712,7 +5551,7 @@ pinned dependency, this also overrides NO_COLOR.</p>
 <p><strong>TERM</strong> : TERM=dumb disables Fang help styling unless CLICOLOR_FORCE=1
 is set.</p>
 
-<h1 id="exit-status">EXIT STATUS</h1>
+<h2 id="EXIT_STATUS">EXIT STATUS &nbsp; &nbsp; &nbsp; &nbsp; <a href="#top_of_page"><span class="top-link">top</span></a></h2>
 
 <p><strong>0 (ok)</strong> : Success.</p>
 
@@ -5736,7 +5575,7 @@ device_offline, or HTTP 429 or 5xx.</p>
 
 <p><strong>7 (canceled)</strong> : Explicit, mobile, or context cancellation.</p>
 
-<h1 id="files">FILES</h1>
+<h2 id="FILES">FILES &nbsp; &nbsp; &nbsp; &nbsp; <a href="#top_of_page"><span class="top-link">top</span></a></h2>
 
 <p><strong>${XDG_CONFIG_HOME:-$HOME/.config}/axilio/config.json</strong> : Saved API
 key, API host, and active organization. A new file requests mode 0600;
@@ -5775,7 +5614,38 @@ init --agent codex</code>.</p>
 <p><strong>.cursor/rules/axilio.mdc</strong> : Agent instructions written by <code>axilio
 init --agent cursor</code>.</p>
 
-<h1 id="examples">EXAMPLES</h1>
+<h2 id="NOTES">NOTES &nbsp; &nbsp; &nbsp; &nbsp; <a href="#top_of_page"><span class="top-link">top</span></a></h2>
+
+<h3 id="NOTES_resolution_precedence">Resolution precedence</h3>
+
+<p>Credentials resolve in this order: --api-key, AXILIO_API_KEY, the saved
+config API key, then the saved OAuth session.</p>
+
+<p>The organization resolves from --org, AXILIO_ORG, the saved active
+organization, then the OAuth session default. Note that each API key is
+scoped to the organization that created it and cannot switch
+organizations with --org.</p>
+
+<p>API host resolves from --base-url, AXILIO_BASE_URL, saved base-url, then
+<a href="https://api.axilio.ai" rel="noreferrer noopener">https://api.axilio.ai</a>.</p>
+
+<p>Phone command session selection precedence is --session, AXILIO_SESSION,
+the sole active lease, the saved current-session pointer, then an
+ambiguity error.</p>
+
+<h3 id="NOTES_output_behavior">Output behavior</h3>
+
+<p>Table output for human readability is the default. Every successful
+runnable application command emits valid JSON with -o json; action
+commands return a small acknowledgment. Built-in help, completion, and
+version output remains text. The sessions start --export command emits
+shell text for eval. Notes, prompts, and progress use stderr and are
+suppressed in JSON or quiet mode. Quiet and JSON modes do not confirm
+destructive actions; pass --yes where offered. API-key, base-URL, and
+organization flags affect API-backed commands; they do not select a
+local phone session.</p>
+
+<h2 id="EXAMPLES">EXAMPLES &nbsp; &nbsp; &nbsp; &nbsp; <a href="#top_of_page"><span class="top-link">top</span></a></h2>
 
 <p>Observe and act on a selected phone session:</p>
 
@@ -5798,7 +5668,7 @@ axilio phone screenshot --out screenshot.png
 axilio runs start &lt;workflow-id&gt; --count 2 -o json
 </code></pre>
 
-<h1 id="see-also">SEE ALSO</h1>
+<h2 id="SEE_ALSO">SEE ALSO &nbsp; &nbsp; &nbsp; &nbsp; <a href="#top_of_page"><span class="top-link">top</span></a></h2>
 
 <p>Axilio documentation: <a href="https://docs.axilio.ai" rel="noreferrer noopener">https://docs.axilio.ai</a></p>
 
@@ -5806,8 +5676,7 @@ axilio runs start &lt;workflow-id&gt; --count 2 -o json
 
 <p>Axilio product site: <a href="https://axilio.ai" rel="noreferrer noopener">https://axilio.ai</a></p>
   </main>
-  <footer>
-    <p>Generated from the axilio 0.6.1 command tree · source date 2026-08-02 · <a href="#top">top</a></p>
-  </footer>
+  <hr class="nav-end">
+  <div class="footer"><p>Generated from the axilio 0.6.1 command tree · source date 2026-08-02 · <a href="#top_of_page">top</a></p></div>
 </body>
 </html>
