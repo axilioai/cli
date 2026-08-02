@@ -198,8 +198,8 @@ func runsCancelCmd() *cobra.Command {
 		Short: "Cancel a queued or running run.",
 		Long: "Cancel a queued or running run by an ID discovered with `runs list`. " +
 			"Interactive use asks for confirmation. JSON, quiet, or redirected use " +
-			"cannot confirm, so pass --yes for non-interactive cancellation. The " +
-			"current action-only success path does not emit a JSON result body.",
+			"cannot confirm, so pass --yes for non-interactive cancellation. JSON " +
+			"success reports the canceled run ID.",
 		Example: `  axilio runs list
   axilio runs cancel run_123
   axilio runs cancel run_123 --yes`,

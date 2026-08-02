@@ -31,9 +31,9 @@ Perform a tap action on the selected phone.
 
   GLOBAL FLAGS
 
-    --api-key    No effect on phone tap command; it uses the selected session's control URL
+    --api-key    No effect; the session's embedded control token in the websocket URL authenticates phone commands
     --base-url   No effect on phone tap command; it does not call the Axilio API
     --no-color   No effect on phone tap command; its runtime message is unstyled
     --org        No effect on phone tap command; the target is selected by session, not org
-    -o --output  No JSON success result for tap; json suppresses the success message (table)
-    -q --quiet   Suppress the tap success message; the phone action still runs
+    -o --output  Emit a human confirmation or JSON tap result (table)
+    -q --quiet   Suppress the human tap result; the phone action still runs; JSON still prints

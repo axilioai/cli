@@ -145,6 +145,7 @@ func TestRenderedHelpContracts(t *testing.T) {
 				"API host resolves from --base-url, AXILIO_BASE_URL",
 				"Phone command session selection precedence is --session, AXILIO_SESSION",
 				"Table output for human readability is the default",
+				"Every successful command emits valid JSON with -o json",
 			},
 		},
 		{

@@ -109,7 +109,7 @@ func apiKeysDeleteCmd() *cobra.Command {
 		Long: "Permanently delete an organization API key using an ID discovered with " +
 			"`api-keys list`. Interactive use asks for confirmation. JSON, quiet, " +
 			"or redirected use cannot confirm, so pass --yes for non-interactive " +
-			"deletion. The current action-only success path does not emit a JSON body.",
+			"deletion. JSON success reports the deleted key ID.",
 		Example: `  axilio api-keys list
   axilio api-keys delete key_123
   axilio api-keys delete key_123 --yes`,

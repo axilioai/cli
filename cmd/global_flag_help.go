@@ -77,16 +77,16 @@ func apiResultHelp(action, result string) commandGlobalFlagHelp {
 }
 
 func apiActionHelp(action string, destructive bool) commandGlobalFlagHelp {
-	quiet := fmt.Sprintf("Suppress %s success messages", action)
+	quiet := fmt.Sprintf("Suppress the human %s result; JSON still prints", action)
 	if destructive {
-		quiet = fmt.Sprintf("Suppress the %s prompt and result; --yes is still required", action)
+		quiet = fmt.Sprintf("Suppress the %s prompt and human result; --yes is still required; JSON still prints", action)
 	}
 	return commandGlobalFlagHelp{
 		apiKey:  fmt.Sprintf("API key for %s; %s", action, apiKeyPrecedence),
 		baseURL: fmt.Sprintf("API host for %s; %s", action, baseURLPrecedence),
 		noColor: fmt.Sprintf("No effect on %s; its runtime messages are unstyled", action),
 		org:     fmt.Sprintf("OAuth org for %s; %s", action, orgPrecedence),
-		output:  fmt.Sprintf("No JSON success result for %s; json suppresses its messages", action),
+		output:  fmt.Sprintf("Emit a human confirmation or JSON %s result", action),
 		quiet:   quiet,
 	}
 }
@@ -114,8 +114,8 @@ func localActionHelp(command, action, outcome string) commandGlobalFlagHelp {
 		baseURL: fmt.Sprintf("No effect on %s command; it does not call the Axilio API", command),
 		noColor: fmt.Sprintf("No effect on %s command; its runtime message is unstyled", command),
 		org:     fmt.Sprintf("No effect on %s command; the target is selected by session, not org", command),
-		output:  fmt.Sprintf("No JSON success result for %s; json suppresses the success message", outcome),
-		quiet:   fmt.Sprintf("Suppress the %s success message; the phone action still runs", action),
+		output:  fmt.Sprintf("Emit a human confirmation or JSON %s result", outcome),
+		quiet:   fmt.Sprintf("Suppress the human %s result; the phone action still runs; JSON still prints", action),
 	}
 }
 
@@ -150,16 +150,16 @@ func buildGlobalFlagHelp() map[string]commandGlobalFlagHelp {
 			baseURL: "API host for login; also saved when API-key login succeeds",
 			noColor: "Disable ANSI color in login progress and success messages",
 			org:     "Does not choose the login org; only scopes the post-login OAuth balance request",
-			output:  "Suppress login messages in json mode; no JSON result is emitted",
-			quiet:   "Suppress login messages; browser OAuth still opens when selected",
+			output:  "Emit human login messages or a JSON sign-in result",
+			quiet:   "Suppress human login messages; browser OAuth still opens; JSON still prints",
 		},
 		"logout": {
 			apiKey:  "No effect on logout command; saved credentials are cleared regardless",
 			baseURL: "No effect on logout command; OAuth revocation uses the session's saved host",
 			noColor: "Disable ANSI color in the signed-out success message",
 			org:     "No effect on logout command; the saved active org is cleared regardless",
-			output:  "Suppress logout messages in json mode; no JSON result is emitted",
-			quiet:   "Suppress logout warnings and the signed-out result",
+			output:  "Emit a human sign-out message or JSON sign-out result",
+			quiet:   "Suppress human logout warnings and results; JSON still prints",
 		},
 		"config": {
 			apiKey: "No actual effect. Ephemerally shows this as the effective API key source;\n" +
@@ -178,16 +178,16 @@ func buildGlobalFlagHelp() map[string]commandGlobalFlagHelp {
 			baseURL: "No effect on config set command; the positional value is saved instead",
 			noColor: "No effect on config set command; its confirmation is unstyled",
 			org:     "No effect on config set command; active org is not an editable key",
-			output:  "No JSON success result for config set; json suppresses the confirmation",
-			quiet:   "Suppress the config set confirmation",
+			output:  "Emit a human confirmation or JSON key, value, and config-path result",
+			quiet:   "Suppress the human config set confirmation; JSON still prints",
 		},
 		"config unset": {
 			apiKey:  "No effect on config unset command; credentials are not removed",
 			baseURL: "No effect on config unset command; it removes the saved base-url",
 			noColor: "No effect on config unset command; its confirmation is unstyled",
 			org:     "No effect on config unset command; active org is not removed",
-			output:  "No JSON success result for config unset; json suppresses the confirmation",
-			quiet:   "Suppress the config unset confirmation",
+			output:  "Emit a human confirmation or JSON key, unset, and config-path result",
+			quiet:   "Suppress the human config unset confirmation; JSON still prints",
 		},
 		"orgs":      orgListHelp("orgs"),
 		"orgs list": orgListHelp("orgs list"),
@@ -196,32 +196,32 @@ func buildGlobalFlagHelp() map[string]commandGlobalFlagHelp {
 			baseURL: fmt.Sprintf("API host for the membership check; %s", baseURLPrecedence),
 			noColor: "No effect on orgs use command; its confirmation is unstyled",
 			org:     "Does not choose the org to save; the positional slug or ID does",
-			output:  "No JSON success result for orgs use; json suppresses the confirmation",
-			quiet:   "Suppress the org-selection confirmation",
+			output:  "Emit a human confirmation or JSON active-organization result",
+			quiet:   "Suppress the human org-selection confirmation; JSON still prints",
 		},
 		"orgs clear": {
 			apiKey:  "No effect on orgs clear command; it only clears the saved org selection",
 			baseURL: "No effect on orgs clear command; it makes no API request",
 			noColor: "No effect on orgs clear command; its confirmation is unstyled",
 			org:     "No effect on orgs clear command; the supplied override is not saved",
-			output:  "No JSON success result for orgs clear; json suppresses the confirmation",
-			quiet:   "Suppress the org-clear confirmation",
+			output:  "Emit a human confirmation or JSON clear result",
+			quiet:   "Suppress the human org-clear confirmation; JSON still prints",
 		},
 		"upgrade": {
 			apiKey:  "No effect on upgrade command; release checks use GitHub without Axilio auth",
 			baseURL: "No effect on upgrade command; release checks use GitHub",
 			noColor: "No effect on upgrade command; its runtime messages are unstyled",
 			org:     "No effect on upgrade command; releases are not organization-scoped",
-			output:  "No JSON success result for upgrade; json suppresses upgrade messages",
-			quiet:   "Suppress upgrade guidance and status messages",
+			output:  "Emit human upgrade guidance or a JSON upgrade-status result",
+			quiet:   "Suppress human upgrade guidance and status; JSON still prints",
 		},
 		"init": {
 			apiKey:  "No effect on init command. A supplied value only changes the final sign-in message",
 			baseURL: fmt.Sprintf("Host for the skill download and sign-in check; %s", baseURLPrecedence),
 			noColor: "Disable ANSI color in init success messages",
 			org:     "No effect on init command. Skill download and generated files are not org-scoped",
-			output:  "Suppress init prompts and messages in json mode; no JSON result is emitted",
-			quiet:   "Suppress init prompts and messages; --agent is required when no markers exist",
+			output:  "Emit human init messages or JSON written and skipped path lists",
+			quiet:   "Suppress human init prompts and messages; --agent may be required; JSON still prints",
 		},
 		"sessions":  helpOnlyCommandHelp("sessions"),
 		"phones":    helpOnlyCommandHelp("phones"),
@@ -273,8 +273,8 @@ func buildGlobalFlagHelp() map[string]commandGlobalFlagHelp {
 	help["phone screenshot"] = localActionHelp("phone screenshot", "screenshot", "screenshot write")
 	help["phone wait-for"] = phoneResultHelp("phone wait-for", "OCR polling", "the matched-element result")
 	help["phone wait-for"] = withOutput(help["phone wait-for"],
-		"Render a present match as table or json; --gone has no JSON success result",
-		"Suppress wait notes; a present-match result remains on stdout")
+		"Render a present match or --gone result as table or json",
+		"Suppress human wait notes; table or JSON results remain on stdout")
 	help["phone send"] = apiResultHelp("the upload-and-delivery request", "the delivery result")
 	help["phone send"] = withQuiet(help["phone send"],
 		"Suppress upload progress and delivery notes; the delivery result remains on stdout")

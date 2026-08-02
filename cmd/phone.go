@@ -29,8 +29,7 @@ func phoneCmd() *cobra.Command {
 			"observe again to verify.\n\n" +
 			"Available verbs are observe, find, find-text, " +
 			"tap, long-press, swipe, type, key, screenshot, wait-for, and send. " +
-			"Vision commands can return structured JSON; action-only commands do not " +
-			"all emit a JSON success body.\n\n" +
+			"Every successful verb emits a structured result with -o json.\n\n" +
 			"Session selection precedence is --session, AXILIO_SESSION, the sole active " +
 			"local lease, the saved current-session pointer, then an ambiguity error. " +
 			"The verbs mirror the SDK MobileDriver so an explored interaction maps " +
