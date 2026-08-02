@@ -28,23 +28,26 @@ const (
 // constructed Cobra command tree. The output depends only on the tree and the
 // supplied source version; it never includes the wall clock or host state.
 func GenerateManpage(root *cobra.Command, version string) ([]byte, error) {
-	if root == nil {
-		return nil, errors.New("generate manpage: nil root command")
-	}
-	version = strings.TrimSpace(version)
-	if version == "" {
-		return nil, errors.New("generate manpage: empty version")
-	}
-	if strings.ContainsAny(version, "\r\n\"") {
-		return nil, fmt.Errorf("generate manpage: invalid version %q", version)
-	}
-
-	markdown, err := generateManpageMarkdown(root, version)
+	markdown, err := generateValidatedManpageMarkdown(root, version)
 	if err != nil {
 		return nil, err
 	}
 	roff := bytes.TrimRight(md2man.Render([]byte(markdown)), "\n")
 	return append(roff, '\n'), nil
+}
+
+func generateValidatedManpageMarkdown(root *cobra.Command, version string) (string, error) {
+	if root == nil {
+		return "", errors.New("generate manpage: nil root command")
+	}
+	version = strings.TrimSpace(version)
+	if version == "" {
+		return "", errors.New("generate manpage: empty version")
+	}
+	if strings.ContainsAny(version, "\r\n\"") {
+		return "", fmt.Errorf("generate manpage: invalid version %q", version)
+	}
+	return generateManpageMarkdown(root, version)
 }
 
 func generateManpageMarkdown(root *cobra.Command, version string) (string, error) {

@@ -1,4 +1,4 @@
-// Command manpage writes or verifies the checked-in axilio(1) page.
+// Command manpage writes or verifies the checked-in axilio(1) roff and HTML pages.
 package main
 
 import (
@@ -33,27 +33,43 @@ func main() {
 	if err != nil {
 		fatalf("read version file %s: %v", versionFile, err)
 	}
-	generated, err := cmd.GenerateManpage(cmd.Root(), strings.TrimSpace(string(versionBytes)))
+	version := strings.TrimSpace(string(versionBytes))
+	generated, err := cmd.GenerateManpage(cmd.Root(), version)
 	if err != nil {
 		fatalf("generate %s: %v", output, err)
 	}
+	htmlOutput := output + ".html"
+	generatedHTML, err := cmd.GenerateManpageHTML(cmd.Root(), version)
+	if err != nil {
+		fatalf("generate %s: %v", htmlOutput, err)
+	}
 
 	if check {
-		checkedIn, err := os.ReadFile(output)
-		if err != nil {
-			fatalf("read %s: %v; run `go generate ./...`", output, err)
-		}
-		if !bytes.Equal(generated, checkedIn) {
-			fatalf("%s is stale; run `go generate ./...`", output)
-		}
+		checkGenerated(output, generated)
+		checkGenerated(htmlOutput, generatedHTML)
 		return
 	}
 
 	if err := os.MkdirAll(filepath.Dir(output), 0o755); err != nil {
 		fatalf("create manpage directory: %v", err)
 	}
-	if err := os.WriteFile(output, generated, 0o644); err != nil {
-		fatalf("write %s: %v", output, err)
+	writeGenerated(output, generated)
+	writeGenerated(htmlOutput, generatedHTML)
+}
+
+func checkGenerated(path string, generated []byte) {
+	checkedIn, err := os.ReadFile(path)
+	if err != nil {
+		fatalf("read %s: %v; run `go generate ./...`", path, err)
+	}
+	if !bytes.Equal(generated, checkedIn) {
+		fatalf("%s is stale; run `go generate ./...`", path)
+	}
+}
+
+func writeGenerated(path string, generated []byte) {
+	if err := os.WriteFile(path, generated, 0o644); err != nil {
+		fatalf("write %s: %v", path, err)
 	}
 }
 

@@ -79,9 +79,18 @@ man axilio
 
 Homebrew and compatible curl-prefix installs make `axilio(1)` discoverable by
 `man`. Every GitHub release archive also contains the source page at
-`man/axilio.1`. Windows archives carry the same file for reference, but Windows
-and `go install` do not integrate it with a system manual-page viewer. If you
-choose a custom `MAN_DIR`, ensure that directory is on your `MANPATH`.
+`man/axilio.1` and a self-contained browser edition at `man/axilio.1.html`:
+
+```bash
+open man/axilio.1.html       # macOS
+xdg-open man/axilio.1.html   # Linux
+```
+
+The HTML page is generated from the same versioned command documentation as
+the roff page and needs no remote stylesheet or JavaScript. Windows archives
+carry both files for reference, but Windows and `go install` do not integrate
+the roff file with a system manual-page viewer. If you choose a custom
+`MAN_DIR`, ensure that directory is on your `MANPATH`.
 
 ## Contributing
 

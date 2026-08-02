@@ -1,9 +1,9 @@
 #!/bin/sh
-# Verify that the checked-in axilio(1) is current and has no mandoc diagnostics.
+# Verify that the checked-in axilio(1) outputs are current and roff is lint-clean.
 set -eu
 
 command -v go >/dev/null 2>&1 || {
-	printf 'error: go is required to verify man/axilio.1\n' >&2
+	printf 'error: go is required to verify the generated manual pages\n' >&2
 	exit 1
 }
 command -v mandoc >/dev/null 2>&1 || {

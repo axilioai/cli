@@ -36,10 +36,11 @@ archives:
         formats: [zip]
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     # A non-empty files list replaces GoReleaser's implicit README/license
-    # globs, so keep README explicit alongside the generated manual.
+    # globs, so keep README explicit alongside both generated manual formats.
     files:
       - README.md
       - man/axilio.1
+      - man/axilio.1.html
 
 checksum:
   name_template: checksums.txt

@@ -42,22 +42,28 @@ while IFS= read -r archive; do
 	*.tar.gz)
 		tar -tzf "$archive" >"$inventory.raw"
 		tar -xOzf "$archive" man/axilio.1 >"$tmp/archived-manpage"
+		tar -xOzf "$archive" man/axilio.1.html >"$tmp/archived-html-manpage"
 		binary=axilio
 		;;
 	*.zip)
 		unzip -Z1 "$archive" >"$inventory.raw"
 		unzip -p "$archive" man/axilio.1 >"$tmp/archived-manpage"
+		unzip -p "$archive" man/axilio.1.html >"$tmp/archived-html-manpage"
 		binary=axilio.exe
 		;;
 	esac
 	sed -e '/\/$/d' -e 's#^\./##' "$inventory.raw" | LC_ALL=C sort >"$inventory"
-	printf '%s\n' README.md "$binary" man/axilio.1 | LC_ALL=C sort >"$expected"
+	printf '%s\n' README.md "$binary" man/axilio.1 man/axilio.1.html | LC_ALL=C sort >"$expected"
 	if ! diff -u "$expected" "$inventory"; then
 		printf 'FAIL: unexpected archive inventory: %s\n' "$archive" >&2
 		exit 1
 	fi
 	if ! cmp man/axilio.1 "$tmp/archived-manpage"; then
 		printf 'FAIL: archived manpage differs from man/axilio.1: %s\n' "$archive" >&2
+		exit 1
+	fi
+	if ! cmp man/axilio.1.html "$tmp/archived-html-manpage"; then
+		printf 'FAIL: archived HTML manual differs from man/axilio.1.html: %s\n' "$archive" >&2
 		exit 1
 	fi
 done <"$archives"

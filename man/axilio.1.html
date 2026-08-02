@@ -1,0 +1,5813 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="generator" content="axilio manpage generator">
+  <title>axilio(1) — CLI manual</title>
+  <style>
+    :root { color-scheme: light; --ink: #111; --muted: #555; --rule: #b8b8b8; --link: #0645ad; --code: #f5f5f5; }
+    * { box-sizing: border-box; }
+    html { background: #fff; color: var(--ink); }
+    body { max-width: 112ch; margin: 0 auto; padding: 1.5rem 2rem 4rem; font: 15px/1.45 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; }
+    a { color: var(--link); text-decoration-thickness: 1px; text-underline-offset: 0.15em; }
+    a:hover { text-decoration-thickness: 2px; }
+    .breadcrumb, .page-title, .section-nav, footer { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    .breadcrumb { margin: 0 0 0.8rem; color: var(--muted); font-size: 0.9rem; }
+    .page-title { margin: 1.2rem 0 0.8rem; font-size: 1.65rem; line-height: 1.2; }
+    .section-nav { display: flex; flex-wrap: wrap; gap: 0.25rem 0.45rem; margin: 0 0 1.5rem; font-size: 0.82rem; }
+    .section-nav a { white-space: nowrap; }
+    .manual-head { display: grid; grid-template-columns: 1fr auto 1fr; gap: 1rem; padding: 0.55rem 0; border-block: 1px solid var(--rule); font-weight: 700; }
+    .manual-head span:nth-child(2) { text-align: center; }
+    .manual-head span:last-child { text-align: right; }
+    main { padding-top: 0.5rem; }
+    main h1, main h2, main h3 { font: inherit; font-weight: 700; scroll-margin-top: 1rem; }
+    main h1 { margin: 2.1rem 0 0.8rem; font-size: 1rem; text-transform: uppercase; }
+    main h2 { margin: 2rem 0 0.8rem; font-size: 1rem; }
+    main h3 { margin: 1.4rem 0 0.6rem 4ch; font-size: 0.95rem; }
+    main p, main ul, main ol, main dl, main pre { margin-left: 7ch; }
+    main p { margin-top: 0.45rem; margin-bottom: 0.75rem; }
+    main ul, main ol { padding-left: 3ch; }
+    main li { margin: 0.25rem 0; }
+    main pre { overflow-x: auto; padding: 0.7rem 1ch; background: var(--code); white-space: pre-wrap; overflow-wrap: anywhere; }
+    main code { font: inherit; }
+    main :not(pre) > code { padding: 0.05rem 0.3ch; background: var(--code); }
+    main dl dt { margin-top: 0.6rem; font-weight: 700; }
+    main dl dd { margin-left: 4ch; }
+    footer { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--rule); color: var(--muted); font-size: 0.8rem; }
+    @media (max-width: 720px) {
+      body { padding: 1rem; font-size: 13px; }
+      .manual-head { grid-template-columns: 1fr auto; }
+      .manual-head span:nth-child(2) { display: none; }
+      main p, main ul, main ol, main dl, main pre { margin-left: 2ch; }
+      main h3 { margin-left: 0; }
+    }
+    @media print {
+      body { max-width: none; padding: 0; }
+      .breadcrumb, .section-nav, footer { display: none; }
+      a { color: inherit; text-decoration: none; }
+    }
+  </style>
+</head>
+<body id="top">
+  <header>
+    <p class="breadcrumb"><a href="https://axilio.ai">Axilio</a> &gt; CLI manual</p>
+    <hr>
+    <h1 class="page-title">axilio(1) — CLI manual</h1>
+    <nav class="section-nav" aria-label="Manual sections"><a href="#name">NAME</a><span aria-hidden="true">|</span><a href="#synopsis">SYNOPSIS</a><span aria-hidden="true">|</span><a href="#description">DESCRIPTION</a><span aria-hidden="true">|</span><a href="#common-workflow">COMMON WORKFLOW</a><span aria-hidden="true">|</span><a href="#global-options">GLOBAL OPTIONS</a><span aria-hidden="true">|</span><a href="#commands">COMMANDS</a><span aria-hidden="true">|</span><a href="#environment">ENVIRONMENT</a><span aria-hidden="true">|</span><a href="#exit-status">EXIT STATUS</a><span aria-hidden="true">|</span><a href="#files">FILES</a><span aria-hidden="true">|</span><a href="#examples">EXAMPLES</a><span aria-hidden="true">|</span><a href="#see-also">SEE ALSO</a>
+    </nav>
+    <div class="manual-head" aria-label="Manual title">
+      <span>AXILIO(1)</span>
+      <span>Axilio CLI Manual</span>
+      <span>AXILIO(1)</span>
+    </div>
+  </header>
+  <main id="manual">
+<h1 id="name">NAME</h1>
+
+<p>axilio - Acquire and drive Axilio phones from the command line</p>
+
+<h1 id="synopsis">SYNOPSIS</h1>
+
+<pre><code>axilio [global options] &lt;command&gt; [command options]
+</code></pre>
+
+<h1 id="description">DESCRIPTION</h1>
+
+<p>Acquire Axilio phones, drive live sessions, run workflows, and manage
+the resources that support them.</p>
+
+<p>Start with login, acquire a session, observe its phone, then act on what
+is visible. Sessions persist locally until stopped.</p>
+
+<p>The main command families are:</p>
+
+<pre><code>phones / sessions   discover phones and manage interactive leases
+phone               observe and control the selected session's phone
+workflows / runs    discover workflows and create or inspect runs
+uploads             store media and deliver it to phones
+api-keys            manage organization-scoped API keys
+</code></pre>
+
+<p>Precedence rules:</p>
+
+<p>Credentials resolve in this order: --api-key, AXILIO_API_KEY, the saved
+config API key, then the saved OAuth session.</p>
+
+<p>The organization resolves from --org, AXILIO_ORG, the saved active
+organization, then the OAuth session default. Note that each API key is
+scoped to the organization that created it and cannot switch
+organizations with --org.</p>
+
+<p>API host resolves from --base-url, AXILIO_BASE_URL, saved base-url, then
+<a href="https://api.axilio.ai" rel="noreferrer noopener">https://api.axilio.ai</a>.</p>
+
+<p>Phone command session selection precedence is --session, AXILIO_SESSION,
+the sole active lease, the saved current-session pointer, then an
+ambiguity error.</p>
+
+<p>Table output for human readability is the default. Every successful
+runnable application command emits valid JSON with -o json; action
+commands return a small acknowledgment. Built-in help, completion, and
+version output remains text. The sessions start --export command emits
+shell text for eval. Notes, prompts, and progress use stderr and are
+suppressed in JSON or quiet mode. Quiet and JSON modes do not confirm
+destructive actions; pass --yes where offered. API-key, base-URL, and
+organization flags affect API-backed commands; they do not select a
+local phone session.</p>
+
+<h1 id="common-workflow">COMMON WORKFLOW</h1>
+
+<p>A typical interactive session signs in, acquires a phone, observes it,
+performs an action, verifies the result, and releases the session:</p>
+
+<pre><code>axilio login
+eval &quot;$(axilio sessions start --export)&quot;
+axilio phone observe
+axilio phone tap --query &quot;the search box&quot;
+axilio phone observe
+axilio sessions stop &lt;session-id&gt;
+</code></pre>
+
+<p>Use <code>axilio sessions start --export</code> with <code>eval</code> when separate shells or
+agents must pin different sessions through <code>AXILIO_SESSION</code>.</p>
+
+<h1 id="global-options">GLOBAL OPTIONS</h1>
+
+<ul>
+<li><p><strong>--api-key</strong>=<em>value</em> - API key for API-backed commands; overrides
+AXILIO_API_KEY and the saved key</p></li>
+
+<li><p><strong>--base-url</strong>=<em>value</em> - API host for API-backed commands; overrides
+AXILIO_BASE_URL and saved base-url</p></li>
+
+<li><p><strong>--no-color</strong> - Disable ANSI color in human-oriented output</p></li>
+
+<li><p><strong>--org</strong>=<em>value</em> - OAuth organization slug or id; overrides
+AXILIO_ORG and the saved active org</p></li>
+
+<li><p><strong>-o</strong>, <strong>--output</strong>=<em>value</em> - Result format for runnable application
+commands: table or json; help, completion, and version stay text, and
+sessions start --export stays shell (default &quot;table&quot;)</p></li>
+
+<li><p><strong>-q</strong>, <strong>--quiet</strong> - Suppress stderr notes and prompts; destructive
+commands still require --yes</p></li>
+</ul>
+
+<h1 id="commands">COMMANDS</h1>
+
+<p>The following inventory is generated from the public Cobra command tree.
+Parent commands describe workflows; runnable commands include
+representative output and exit behavior from their structured
+documentation.</p>
+
+<ul>
+<li><p><strong>axilio api-keys</strong> - List, create, and delete organization API keys</p></li>
+
+<li><p><strong>axilio api-keys create</strong> - Create a new API key; the secret is shown
+once</p></li>
+
+<li><p><strong>axilio api-keys delete</strong> - Delete an API key by id</p></li>
+
+<li><p><strong>axilio api-keys list</strong> - List the API keys on your organization</p></li>
+
+<li><p><strong>axilio completion</strong> - Generate the autocompletion script for the
+specified shell</p></li>
+
+<li><p><strong>axilio completion bash</strong> - Generate the autocompletion script for
+bash</p></li>
+
+<li><p><strong>axilio completion fish</strong> - Generate the autocompletion script for
+fish</p></li>
+
+<li><p><strong>axilio completion powershell</strong> - Generate the autocompletion script
+for powershell</p></li>
+
+<li><p><strong>axilio completion zsh</strong> - Generate the autocompletion script for zsh</p></li>
+
+<li><p><strong>axilio config</strong> - Show and edit CLI configuration (API host, paths,
+auth)</p></li>
+
+<li><p><strong>axilio config set</strong> - Set a config value. Supported keys: base-url</p></li>
+
+<li><p><strong>axilio config unset</strong> - Clear a config value. Supported keys:
+base-url</p></li>
+
+<li><p><strong>axilio doctor</strong> - Check that your setup is sane: auth, connectivity,
+and environment</p></li>
+
+<li><p><strong>axilio help</strong> - Help about any command</p></li>
+
+<li><p><strong>axilio init</strong> - Drop an agent skill into this repo so a coding agent
+can drive phones via the CLI</p></li>
+
+<li><p><strong>axilio login</strong> - Sign in: browser OAuth by default, or store an API
+key</p></li>
+
+<li><p><strong>axilio logout</strong> - Remove stored credentials (API key and OAuth
+session)</p></li>
+
+<li><p><strong>axilio orgs</strong> - List and switch the active organization (OAuth
+sessions)</p></li>
+
+<li><p><strong>axilio orgs clear</strong> - Clear the active organization (revert to your
+session default)</p></li>
+
+<li><p><strong>axilio orgs list</strong> - List the organizations you belong to</p></li>
+
+<li><p><strong>axilio orgs use</strong> - Set the active organization for future commands</p></li>
+
+<li><p><strong>axilio phone</strong> - Observe and control the selected session's phone</p></li>
+
+<li><p><strong>axilio phone find</strong> - Locate an element by natural-language query
+(vision)</p></li>
+
+<li><p><strong>axilio phone find-text</strong> - Return the first OCR text match, or an
+empty successful result</p></li>
+
+<li><p><strong>axilio phone key</strong> - Press the supported named key: enter</p></li>
+
+<li><p><strong>axilio phone long-press</strong> - Press and hold at coordinates</p></li>
+
+<li><p><strong>axilio phone observe</strong> - Capture the screen: text + icon elements
+with coordinates</p></li>
+
+<li><p><strong>axilio phone screenshot</strong> - Capture the screen as a PNG file</p></li>
+
+<li><p><strong>axilio phone send</strong> - Upload a local image/video and push it to the
+phone's gallery</p></li>
+
+<li><p><strong>axilio phone swipe</strong> - Swipe from one point to another</p></li>
+
+<li><p><strong>axilio phone tap</strong> - Tap at coordinates, or at a natural-language
+target with --query</p></li>
+
+<li><p><strong>axilio phone type</strong> - Type a string of text</p></li>
+
+<li><p><strong>axilio phone wait-for</strong> - Poll until text appears (or disappears
+with --gone)</p></li>
+
+<li><p><strong>axilio phones</strong> - Discover shared and dedicated phones</p></li>
+
+<li><p><strong>axilio phones list</strong> - List phones you can start a session on right
+now (shared pool + your free dedicated phones)</p></li>
+
+<li><p><strong>axilio phones mine</strong> - List your org's dedicated phones, including
+ones currently in use</p></li>
+
+<li><p><strong>axilio runs</strong> - Start, inspect, and cancel workflow runs</p></li>
+
+<li><p><strong>axilio runs cancel</strong> - Cancel a queued or running run</p></li>
+
+<li><p><strong>axilio runs get</strong> - Show a single run in detail</p></li>
+
+<li><p><strong>axilio runs list</strong> - List recent runs, most recent first</p></li>
+
+<li><p><strong>axilio runs start</strong> - Start one or more runs of a workflow</p></li>
+
+<li><p><strong>axilio sessions</strong> - Acquire, list, select, and release phone
+sessions</p></li>
+
+<li><p><strong>axilio sessions current</strong> - Show the session currently selected for
+phone commands</p></li>
+
+<li><p><strong>axilio sessions list</strong> - List the phone leases this CLI holds
+(--remote for all server sessions)</p></li>
+
+<li><p><strong>axilio sessions start</strong> - Acquire a phone and open a session; the
+lease persists until you stop it</p></li>
+
+<li><p><strong>axilio sessions stop</strong> - Release a session by session id or phone id</p></li>
+
+<li><p><strong>axilio status</strong> - Check your credentials and reach the API</p></li>
+
+<li><p><strong>axilio upgrade</strong> - Update axilio to the latest release</p></li>
+
+<li><p><strong>axilio uploads</strong> - Add, list, push, and delete files in your
+organization's library</p></li>
+
+<li><p><strong>axilio uploads add</strong> - Upload a local file into the library without
+pushing it anywhere</p></li>
+
+<li><p><strong>axilio uploads delete</strong> - Delete a file from the library and free
+its quota</p></li>
+
+<li><p><strong>axilio uploads list</strong> - List the files in your organization's
+library</p></li>
+
+<li><p><strong>axilio uploads push</strong> - Push a file already in the library to a
+phone</p></li>
+
+<li><p><strong>axilio workflows</strong> - Discover workflows that can be run</p></li>
+
+<li><p><strong>axilio workflows list</strong> - List workflows in your org, most recent
+first</p></li>
+</ul>
+
+<h2 id="axilio-api-keys">axilio api-keys</h2>
+
+<pre><code>axilio api-keys
+</code></pre>
+
+<p>Running <code>axilio api-keys</code> without a subcommand is equivalent to <code>axilio
+api-keys --help</code>: it only displays this help and does not list, create,
+or delete API keys. Global flags shown here therefore have no effect.
+Pass flags to an api-keys subcommand instead.</p>
+
+<p>Manage API keys scoped to the active organization. List keys to discover
+their IDs, create a named key whose secret is shown once, or delete a
+key by ID. Organization access and API-key management permissions are
+enforced by the API.</p>
+
+<h3 id="global-option-behavior">Global-option behavior</h3>
+
+<ul>
+<li><p><strong>--api-key</strong>=<em>value</em> - No effect on api-keys command; bare axilio
+api-keys only displays this help</p></li>
+
+<li><p><strong>--base-url</strong>=<em>value</em> - No effect on api-keys command; bare axilio
+api-keys only displays this help</p></li>
+
+<li><p><strong>--no-color</strong> - No effect on api-keys command; bare axilio api-keys
+only displays this help</p></li>
+
+<li><p><strong>--org</strong>=<em>value</em> - No effect on api-keys command; bare axilio
+api-keys only displays this help</p></li>
+
+<li><p><strong>-o</strong>, <strong>--output</strong>=<em>value</em> - No effect on api-keys command; bare
+axilio api-keys only displays this help (default &quot;table&quot;)</p></li>
+
+<li><p><strong>-q</strong>, <strong>--quiet</strong> - No effect on api-keys command; bare axilio
+api-keys only displays this help</p></li>
+</ul>
+
+<h3 id="workflow-examples">Workflow examples</h3>
+
+<pre><code>axilio api-keys list
+axilio api-keys create ci
+axilio api-keys delete key_123 --yes
+axilio api-keys delete &lt;key-id&gt; --yes
+</code></pre>
+
+<h2 id="axilio-api-keys-create">axilio api-keys create</h2>
+
+<pre><code>axilio api-keys create &lt;name&gt;
+</code></pre>
+
+<p>Create a named API key in the active organization.</p>
+
+<p>The result includes the ID, name, full secret, and creation time. Save
+the secret immediately: later list calls show only a preview and the
+full value cannot be retrieved.</p>
+
+<h3 id="global-option-behavior-1">Global-option behavior</h3>
+
+<ul>
+<li><p><strong>--api-key</strong>=<em>value</em> - API key for the API-key create request;
+overrides AXILIO_API_KEY and the saved key</p></li>
+
+<li><p><strong>--base-url</strong>=<em>value</em> - API host for the API-key create request;
+overrides AXILIO_BASE_URL and saved base-url</p></li>
+
+<li><p><strong>--no-color</strong> - Disable ANSI color in the human-readable form of the
+created API key</p></li>
+
+<li><p><strong>--org</strong>=<em>value</em> - OAuth org for the API-key create request;
+overrides AXILIO_ORG and the saved active org; API keys ignore it</p></li>
+
+<li><p><strong>-o</strong>, <strong>--output</strong>=<em>value</em> - Render the created API key as table or
+json (default &quot;table&quot;)</p></li>
+
+<li><p><strong>-q</strong>, <strong>--quiet</strong> - Suppress the save-now warning; the created key
+remains on stdout</p></li>
+</ul>
+
+<h3 id="examples-and-expected-output">Examples and expected output</h3>
+
+<p><strong>Sample 1</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio api-keys create ci
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<pre><code>ID       &lt;key-id&gt;
+Name     ci
+Key      axl_&lt;new-secret&gt;
+Created  &lt;timestamp&gt;
+</code></pre>
+
+<p><strong>Standard error</strong></p>
+
+<pre><code>Save this key now; it will not be shown again.
+</code></pre>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Notes:</strong> The displayed secret is representative and is never a real credential.</p>
+
+<p><strong>Sample 2</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio api-keys create &quot;release automation&quot; -o json
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<pre><code>{
+  &quot;id&quot;: &quot;&lt;key-id&gt;&quot;,
+  &quot;name&quot;: &quot;release automation&quot;,
+  &quot;key_value&quot;: &quot;axl_&lt;new-secret&gt;&quot;,
+  &quot;created_at&quot;: &quot;&lt;timestamp&gt;&quot;
+}
+</code></pre>
+
+<p><strong>Standard error</strong></p>
+
+<p>None.</p>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Notes:</strong> Save the returned secret immediately; it is representative here and
+never a real credential.</p>
+
+<h2 id="axilio-api-keys-delete">axilio api-keys delete</h2>
+
+<pre><code>axilio api-keys delete &lt;key-id&gt; [flags]
+</code></pre>
+
+<p>Permanently delete an organization API key using an ID discovered with
+<code>api-keys list</code>.</p>
+
+<p>Without --yes, table mode reads confirmation from stdin, including
+redirected input. JSON and quiet modes do not prompt and require --yes.
+JSON success reports the deleted key ID.</p>
+
+<h3 id="command-options">Command options</h3>
+
+<ul>
+<li><strong>-y</strong>, <strong>--yes</strong> - Delete without prompting; required in JSON or
+quiet mode</li>
+</ul>
+
+<h3 id="global-option-behavior-2">Global-option behavior</h3>
+
+<ul>
+<li><p><strong>--api-key</strong>=<em>value</em> - API key for API-key deletion; overrides
+AXILIO_API_KEY and the saved key</p></li>
+
+<li><p><strong>--base-url</strong>=<em>value</em> - API host for API-key deletion; overrides
+AXILIO_BASE_URL and saved base-url</p></li>
+
+<li><p><strong>--no-color</strong> - No effect on API-key deletion; its runtime messages
+are unstyled</p></li>
+
+<li><p><strong>--org</strong>=<em>value</em> - OAuth org for API-key deletion; overrides
+AXILIO_ORG and the saved active org; API keys ignore it</p></li>
+
+<li><p><strong>-o</strong>, <strong>--output</strong>=<em>value</em> - Emit a human confirmation or JSON
+API-key deletion result (default &quot;table&quot;)</p></li>
+
+<li><p><strong>-q</strong>, <strong>--quiet</strong> - Suppress the API-key deletion prompt and human
+result; --yes is still required; JSON still prints</p></li>
+</ul>
+
+<h3 id="examples-and-expected-output-1">Examples and expected output</h3>
+
+<p><strong>Sample 1</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio api-keys list
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<pre><code>ID       NAME  KEY       LAST USED  CREATED
+&lt;key-id&gt; ci    axl_ci…   -          &lt;timestamp&gt;
+</code></pre>
+
+<p><strong>Standard error</strong></p>
+
+<p>None.</p>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Notes:</strong> Use the listed key ID with api-keys delete.</p>
+
+<p><strong>Sample 2</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio api-keys delete key_123
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<p>None.</p>
+
+<p><strong>Standard error</strong></p>
+
+<pre><code>Delete API key key_123? [y/N] Deleted key_123
+</code></pre>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Notes:</strong> Without --yes, table mode reads confirmation from stdin, including
+redirected input. JSON and quiet modes require --yes.</p>
+
+<p><strong>Sample 3</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio api-keys delete key_123 --yes
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<p>None.</p>
+
+<p><strong>Standard error</strong></p>
+
+<pre><code>Deleted key_123
+</code></pre>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Sample 4</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio api-keys delete &lt;key-id&gt; --yes
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<p>None.</p>
+
+<p><strong>Standard error</strong></p>
+
+<pre><code>Deleted &lt;key-id&gt;
+</code></pre>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<h2 id="axilio-api-keys-list">axilio api-keys list</h2>
+
+<pre><code>axilio api-keys list
+</code></pre>
+
+<p>List API keys in the active organization.</p>
+
+<p>Results include key ID, name, masked preview, last-used time, and
+creation time. Full secret values are never returned; use the ID with
+<code>api-keys delete</code>.</p>
+
+<h3 id="global-option-behavior-3">Global-option behavior</h3>
+
+<ul>
+<li><p><strong>--api-key</strong>=<em>value</em> - API key for the API-key list request;
+overrides AXILIO_API_KEY and the saved key</p></li>
+
+<li><p><strong>--base-url</strong>=<em>value</em> - API host for the API-key list request;
+overrides AXILIO_BASE_URL and saved base-url</p></li>
+
+<li><p><strong>--no-color</strong> - Disable ANSI color in the human-readable form of the
+API-key list</p></li>
+
+<li><p><strong>--org</strong>=<em>value</em> - OAuth org for the API-key list request; overrides
+AXILIO_ORG and the saved active org; API keys ignore it</p></li>
+
+<li><p><strong>-o</strong>, <strong>--output</strong>=<em>value</em> - Render the API-key list as table or
+json (default &quot;table&quot;)</p></li>
+
+<li><p><strong>-q</strong>, <strong>--quiet</strong> - Suppress stderr notes for the API-key list
+request; the API-key list remains on stdout</p></li>
+</ul>
+
+<h3 id="examples-and-expected-output-2">Examples and expected output</h3>
+
+<p><strong>Sample 1</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio api-keys list
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<pre><code>ID       NAME  KEY       LAST USED  CREATED
+&lt;key-id&gt; ci    axl_ci…   -          &lt;timestamp&gt;
+</code></pre>
+
+<p><strong>Standard error</strong></p>
+
+<p>None.</p>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Notes:</strong> Only the masked preview is returned; an empty result says no keys were
+found.</p>
+
+<p><strong>Sample 2</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio api-keys list -o json
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<pre><code>{
+  &quot;api_keys&quot;: [
+    {
+      &quot;id&quot;: &quot;&lt;key-id&gt;&quot;,
+      &quot;name&quot;: &quot;ci&quot;,
+      &quot;key_preview&quot;: &quot;axl_ci…&quot;,
+      &quot;created_at&quot;: &quot;&lt;timestamp&gt;&quot;
+    }
+  ],
+  &quot;limit&quot;: 50,
+  &quot;offset&quot;: 0,
+  &quot;total&quot;: 1
+}
+</code></pre>
+
+<p><strong>Standard error</strong></p>
+
+<p>None.</p>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Notes:</strong> Key IDs and timestamps vary; full secrets are never listed.</p>
+
+<h2 id="axilio-completion">axilio completion</h2>
+
+<pre><code>axilio completion
+</code></pre>
+
+<p>Generate the autocompletion script for axilio for the specified shell.</p>
+
+<p>See each sub-command's help for details on how to use the generated
+script.</p>
+
+<h3 id="global-option-behavior-4">Global-option behavior</h3>
+
+<ul>
+<li><p><strong>--api-key</strong>=<em>value</em> - No effect on completion command</p></li>
+
+<li><p><strong>--base-url</strong>=<em>value</em> - No effect on completion command</p></li>
+
+<li><p><strong>--no-color</strong> - No effect on completion command</p></li>
+
+<li><p><strong>--org</strong>=<em>value</em> - No effect on completion command</p></li>
+
+<li><p><strong>-o</strong>, <strong>--output</strong>=<em>value</em> - No effect on completion command
+(default &quot;table&quot;)</p></li>
+
+<li><p><strong>-q</strong>, <strong>--quiet</strong> - No effect on completion command</p></li>
+</ul>
+
+<h3 id="workflow-examples-1">Workflow examples</h3>
+
+<pre><code>axilio completion bash
+axilio completion zsh
+axilio completion fish
+axilio completion powershell
+</code></pre>
+
+<h2 id="axilio-completion-bash">axilio completion bash</h2>
+
+<pre><code>axilio completion bash
+</code></pre>
+
+<p>Generate the autocompletion script for the bash shell.</p>
+
+<p>This script depends on the 'bash-completion' package. If it is not
+installed already, you can install it via your OS's package manager.</p>
+
+<p>To load completions in your current shell session:</p>
+
+<p>source &lt;(axilio completion bash)</p>
+
+<p>To load completions for every new session, execute once:</p>
+
+<h4 id="linux">Linux:</h4>
+
+<p>axilio completion bash &gt; /etc/bash_completion.d/axilio</p>
+
+<h4 id="macos">macOS:</h4>
+
+<p>axilio completion bash &gt; $(brew --prefix)/etc/bash_completion.d/axilio</p>
+
+<p>You will need to start a new shell for this setup to take effect.</p>
+
+<h3 id="command-options-1">Command options</h3>
+
+<ul>
+<li><strong>--no-descriptions</strong> - disable completion descriptions</li>
+</ul>
+
+<h3 id="global-option-behavior-5">Global-option behavior</h3>
+
+<ul>
+<li><p><strong>--api-key</strong>=<em>value</em> - No effect on bash completion generation</p></li>
+
+<li><p><strong>--base-url</strong>=<em>value</em> - No effect on bash completion generation</p></li>
+
+<li><p><strong>--no-color</strong> - No effect on bash completion; the script contains no
+ANSI styling</p></li>
+
+<li><p><strong>--org</strong>=<em>value</em> - No effect on bash completion generation</p></li>
+
+<li><p><strong>-o</strong>, <strong>--output</strong>=<em>value</em> - Does not reformat bash completion as
+JSON; the shell script remains on stdout (default &quot;table&quot;)</p></li>
+
+<li><p><strong>-q</strong>, <strong>--quiet</strong> - Does not suppress the bash completion script;
+only stderr notices</p></li>
+</ul>
+
+<h3 id="examples-and-expected-output-3">Examples and expected output</h3>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio completion bash
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<pre><code># bash completion V2 for axilio  -*- shell-script -*-
+
+__axilio_debug()
+</code></pre>
+
+<p><strong>Standard error</strong></p>
+
+<p>None.</p>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Notes:</strong> The sample is shortened; stdout is a complete Bash completion script.</p>
+
+<h2 id="axilio-completion-fish">axilio completion fish</h2>
+
+<pre><code>axilio completion fish [flags]
+</code></pre>
+
+<p>Generate the autocompletion script for the fish shell.</p>
+
+<p>To load completions in your current shell session:</p>
+
+<p>axilio completion fish | source</p>
+
+<p>To load completions for every new session, execute once:</p>
+
+<p>axilio completion fish &gt; ~/.config/fish/completions/axilio.fish</p>
+
+<p>You will need to start a new shell for this setup to take effect.</p>
+
+<h3 id="command-options-2">Command options</h3>
+
+<ul>
+<li><strong>--no-descriptions</strong> - disable completion descriptions</li>
+</ul>
+
+<h3 id="global-option-behavior-6">Global-option behavior</h3>
+
+<ul>
+<li><p><strong>--api-key</strong>=<em>value</em> - No effect on fish completion generation</p></li>
+
+<li><p><strong>--base-url</strong>=<em>value</em> - No effect on fish completion generation</p></li>
+
+<li><p><strong>--no-color</strong> - No effect on fish completion; the script contains no
+ANSI styling</p></li>
+
+<li><p><strong>--org</strong>=<em>value</em> - No effect on fish completion generation</p></li>
+
+<li><p><strong>-o</strong>, <strong>--output</strong>=<em>value</em> - Does not reformat fish completion as
+JSON; the shell script remains on stdout (default &quot;table&quot;)</p></li>
+
+<li><p><strong>-q</strong>, <strong>--quiet</strong> - Does not suppress the fish completion script;
+only stderr notices</p></li>
+</ul>
+
+<h3 id="examples-and-expected-output-4">Examples and expected output</h3>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio completion fish
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<pre><code># fish completion for axilio  -*- shell-script -*-
+
+function __axilio_debug
+</code></pre>
+
+<p><strong>Standard error</strong></p>
+
+<p>None.</p>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Notes:</strong> The sample is shortened; stdout is a complete Fish completion script.</p>
+
+<h2 id="axilio-completion-powershell">axilio completion powershell</h2>
+
+<pre><code>axilio completion powershell [flags]
+</code></pre>
+
+<p>Generate the autocompletion script for powershell.</p>
+
+<p>To load completions in your current shell session:</p>
+
+<p>axilio completion powershell | Out-String | Invoke-Expression</p>
+
+<p>To load completions for every new session, add the output of the above
+command to your powershell profile.</p>
+
+<h3 id="command-options-3">Command options</h3>
+
+<ul>
+<li><strong>--no-descriptions</strong> - disable completion descriptions</li>
+</ul>
+
+<h3 id="global-option-behavior-7">Global-option behavior</h3>
+
+<ul>
+<li><p><strong>--api-key</strong>=<em>value</em> - No effect on powershell completion generation</p></li>
+
+<li><p><strong>--base-url</strong>=<em>value</em> - No effect on powershell completion generation</p></li>
+
+<li><p><strong>--no-color</strong> - No effect on powershell completion; the script
+contains no ANSI styling</p></li>
+
+<li><p><strong>--org</strong>=<em>value</em> - No effect on powershell completion generation</p></li>
+
+<li><p><strong>-o</strong>, <strong>--output</strong>=<em>value</em> - Does not reformat powershell completion
+as JSON; the shell script remains on stdout (default &quot;table&quot;)</p></li>
+
+<li><p><strong>-q</strong>, <strong>--quiet</strong> - Does not suppress the powershell completion
+script; only stderr notices</p></li>
+</ul>
+
+<h3 id="examples-and-expected-output-5">Examples and expected output</h3>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio completion powershell
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<pre><code># powershell completion for axilio  -*- shell-script -*-
+
+function __axilio_debug {
+</code></pre>
+
+<p><strong>Standard error</strong></p>
+
+<p>None.</p>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Notes:</strong> The sample is shortened; stdout is a complete PowerShell completion
+script.</p>
+
+<h2 id="axilio-completion-zsh">axilio completion zsh</h2>
+
+<pre><code>axilio completion zsh [flags]
+</code></pre>
+
+<p>Generate the autocompletion script for the zsh shell.</p>
+
+<p>If shell completion is not already enabled in your environment you will
+need to enable it. You can execute the following once:</p>
+
+<p>echo &quot;autoload -U compinit; compinit&quot; &gt;&gt; ~/.zshrc</p>
+
+<p>To load completions in your current shell session:</p>
+
+<p>source &lt;(axilio completion zsh)</p>
+
+<p>To load completions for every new session, execute once:</p>
+
+<h4 id="linux-1">Linux:</h4>
+
+<p>axilio completion zsh &gt; &quot;${fpath[1]}/_axilio&quot;</p>
+
+<h4 id="macos-1">macOS:</h4>
+
+<p>axilio completion zsh &gt; $(brew
+--prefix)/share/zsh/site-functions/_axilio</p>
+
+<p>You will need to start a new shell for this setup to take effect.</p>
+
+<h3 id="command-options-4">Command options</h3>
+
+<ul>
+<li><strong>--no-descriptions</strong> - disable completion descriptions</li>
+</ul>
+
+<h3 id="global-option-behavior-8">Global-option behavior</h3>
+
+<ul>
+<li><p><strong>--api-key</strong>=<em>value</em> - No effect on zsh completion generation</p></li>
+
+<li><p><strong>--base-url</strong>=<em>value</em> - No effect on zsh completion generation</p></li>
+
+<li><p><strong>--no-color</strong> - No effect on zsh completion; the script contains no
+ANSI styling</p></li>
+
+<li><p><strong>--org</strong>=<em>value</em> - No effect on zsh completion generation</p></li>
+
+<li><p><strong>-o</strong>, <strong>--output</strong>=<em>value</em> - Does not reformat zsh completion as
+JSON; the shell script remains on stdout (default &quot;table&quot;)</p></li>
+
+<li><p><strong>-q</strong>, <strong>--quiet</strong> - Does not suppress the zsh completion script;
+only stderr notices</p></li>
+</ul>
+
+<h3 id="examples-and-expected-output-6">Examples and expected output</h3>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio completion zsh
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<pre><code>#compdef axilio
+compdef _axilio axilio
+
+# zsh completion for axilio
+</code></pre>
+
+<p><strong>Standard error</strong></p>
+
+<p>None.</p>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Notes:</strong> The sample is shortened; stdout is a complete Zsh completion script.</p>
+
+<h2 id="axilio-config">axilio config</h2>
+
+<pre><code>axilio config
+</code></pre>
+
+<p>Inspect and edit CLI configuration without hand-editing files. Bare
+<code>axilio config</code> reports the effective API host, API-key authentication
+summary, active organization, config path, and sessions directory. The
+current summary does not detect a stored OAuth session, so an OAuth-only
+login may be shown as auth method <code>none</code>; <code>status</code> verifies effective
+credentials. The only editable key is base-url.</p>
+
+<p>Current ways to change these values are:</p>
+
+<pre><code>API host         axilio config set base-url [url]
+                 axilio config unset base-url
+API key          axilio login --api-key [api_key]
+                 axilio logout clears saved credentials
+Active org       axilio orgs use [org_name]
+                 axilio orgs clear
+Config path      set XDG_CONFIG_HOME; file is [value]/axilio/config.json
+                 (default ~/.config/axilio/config.json)
+Sessions dir     set XDG_CONFIG_HOME; directory is [value]/axilio/sessions
+                 (default ~/.config/axilio/sessions)
+</code></pre>
+
+<h3 id="global-option-behavior-9">Global-option behavior</h3>
+
+<ul>
+<li><p><strong>--api-key</strong>=<em>value</em> - No actual effect. Ephemerally shows this as
+the effective API key source; does not persist the new key. Use axilio
+login --api-key [api_key] to verify and persist a new key.</p></li>
+
+<li><p><strong>--base-url</strong>=<em>value</em> - No actual effect. Ephemerally shows this as
+the effective API host; does not save the new host. See the above help
+content to change base-url.</p></li>
+
+<li><p><strong>--no-color</strong> - Disable ANSI color in the human-readable
+configuration table</p></li>
+
+<li><p><strong>--org</strong>=<em>value</em> - No actual effect. Ephemerally changes the
+displayed org only, does not save the selection. Use axilio orgs use
+[org_name] instead to persist changes to active org setting.</p></li>
+
+<li><p><strong>-o</strong>, <strong>--output</strong>=<em>value</em> - Render the configuration summary as
+table or json (default &quot;table&quot;)</p></li>
+
+<li><p><strong>-q</strong>, <strong>--quiet</strong> - Suppress stderr update notices; the
+configuration summary remains on stdout</p></li>
+</ul>
+
+<h3 id="examples-and-expected-output-7">Examples and expected output</h3>
+
+<p><strong>Sample 1</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio config
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<pre><code>API host     https://api.axilio.ai
+Auth method  api-key (source: config)
+Active org   (session default)
+Config file  &lt;config-path&gt;
+Sessions dir &lt;sessions-directory&gt;
+</code></pre>
+
+<p><strong>Standard error</strong></p>
+
+<p>None.</p>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Sample 2</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio config set base-url https://api.axilio.ai
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<p>None.</p>
+
+<p><strong>Standard error</strong></p>
+
+<pre><code>Set base-url = https://api.axilio.ai in &lt;config-path&gt;
+</code></pre>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Sample 3</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio config unset base-url
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<p>None.</p>
+
+<p><strong>Standard error</strong></p>
+
+<pre><code>Unset base-url in &lt;config-path&gt;
+</code></pre>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<h2 id="axilio-config-set">axilio config set</h2>
+
+<pre><code>axilio config set &lt;key&gt; &lt;value&gt;
+</code></pre>
+
+<p>Set base-url in the shared config file.</p>
+
+<p>Use an http or https API origin such as <a href="https://api.axilio.ai" rel="noreferrer noopener">https://api.axilio.ai</a>, without
+/api/v1 or another path. Validation currently accepts any URL with a
+scheme and host, so a different scheme or path is saved even though
+requests may then fail. Requests resolve the host from --base-url,
+AXILIO_BASE_URL, this saved value, then <a href="https://api.axilio.ai" rel="noreferrer noopener">https://api.axilio.ai</a>.</p>
+
+<h3 id="global-option-behavior-10">Global-option behavior</h3>
+
+<ul>
+<li><p><strong>--api-key</strong>=<em>value</em> - No effect on config set command; only the
+named config value is saved</p></li>
+
+<li><p><strong>--base-url</strong>=<em>value</em> - No effect on config set command; the
+positional value is saved instead</p></li>
+
+<li><p><strong>--no-color</strong> - No effect on config set command; its confirmation is
+unstyled</p></li>
+
+<li><p><strong>--org</strong>=<em>value</em> - No effect on config set command; active org is not
+an editable key</p></li>
+
+<li><p><strong>-o</strong>, <strong>--output</strong>=<em>value</em> - Emit a human confirmation or JSON key,
+value, and config-path result (default &quot;table&quot;)</p></li>
+
+<li><p><strong>-q</strong>, <strong>--quiet</strong> - Suppress the human config set confirmation; JSON
+still prints</p></li>
+</ul>
+
+<h3 id="examples-and-expected-output-8">Examples and expected output</h3>
+
+<p><strong>Sample 1</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio config set base-url https://api.axilio.ai
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<p>None.</p>
+
+<p><strong>Standard error</strong></p>
+
+<pre><code>Set base-url = https://api.axilio.ai in &lt;config-path&gt;
+</code></pre>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Sample 2</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio config
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<pre><code>API host     https://api.axilio.ai
+Auth method  api-key (source: config)
+Active org   (session default)
+Config file  &lt;config-path&gt;
+Sessions dir &lt;sessions-directory&gt;
+</code></pre>
+
+<p><strong>Standard error</strong></p>
+
+<p>None.</p>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<h2 id="axilio-config-unset">axilio config unset</h2>
+
+<pre><code>axilio config unset &lt;key&gt;
+</code></pre>
+
+<p>Remove the saved base-url from the shared config file.</p>
+
+<p>Subsequent requests fall back to --base-url, AXILIO_BASE_URL, then
+<a href="https://api.axilio.ai" rel="noreferrer noopener">https://api.axilio.ai</a>. This does not remove credentials.</p>
+
+<h3 id="global-option-behavior-11">Global-option behavior</h3>
+
+<ul>
+<li><p><strong>--api-key</strong>=<em>value</em> - No effect on config unset command; credentials
+are not removed</p></li>
+
+<li><p><strong>--base-url</strong>=<em>value</em> - No effect on config unset command; it removes
+the saved base-url</p></li>
+
+<li><p><strong>--no-color</strong> - No effect on config unset command; its confirmation
+is unstyled</p></li>
+
+<li><p><strong>--org</strong>=<em>value</em> - No effect on config unset command; active org is
+not removed</p></li>
+
+<li><p><strong>-o</strong>, <strong>--output</strong>=<em>value</em> - Emit a human confirmation or JSON key,
+unset, and config-path result (default &quot;table&quot;)</p></li>
+
+<li><p><strong>-q</strong>, <strong>--quiet</strong> - Suppress the human config unset confirmation;
+JSON still prints</p></li>
+</ul>
+
+<h3 id="examples-and-expected-output-9">Examples and expected output</h3>
+
+<p><strong>Sample 1</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio config unset base-url
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<p>None.</p>
+
+<p><strong>Standard error</strong></p>
+
+<pre><code>Unset base-url in &lt;config-path&gt;
+</code></pre>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Sample 2</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio config
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<pre><code>API host     https://api.axilio.ai
+Auth method  api-key (source: config)
+Active org   (session default)
+Config file  &lt;config-path&gt;
+Sessions dir &lt;sessions-directory&gt;
+</code></pre>
+
+<p><strong>Standard error</strong></p>
+
+<p>None.</p>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<h2 id="axilio-doctor">axilio doctor</h2>
+
+<pre><code>axilio doctor
+</code></pre>
+
+<p>Run a one-shot health check of credentials, authentication, API
+connectivity, account balance and plan, CLI version, config path,
+sessions directory, and current session.</p>
+
+<p>Missing or rejected credentials and authenticated connectivity failures
+are required failures and make the command exit non-zero. Account, plan,
+and local environment rows are informational; without credentials,
+connectivity is also informational. Each network probe is bounded to 8
+seconds. Use -o json for an overall ok value and the complete checks
+array.</p>
+
+<h3 id="global-option-behavior-12">Global-option behavior</h3>
+
+<ul>
+<li><p><strong>--api-key</strong>=<em>value</em> - API key for doctor's authenticated checks;
+overrides AXILIO_API_KEY and the saved key</p></li>
+
+<li><p><strong>--base-url</strong>=<em>value</em> - API host for doctor's authenticated checks;
+overrides AXILIO_BASE_URL and saved base-url</p></li>
+
+<li><p><strong>--no-color</strong> - Disable ANSI color in the human-readable form of the
+doctor report</p></li>
+
+<li><p><strong>--org</strong>=<em>value</em> - OAuth org for doctor's authenticated checks;
+overrides AXILIO_ORG and the saved active org; API keys ignore it</p></li>
+
+<li><p><strong>-o</strong>, <strong>--output</strong>=<em>value</em> - Render the doctor report as table or
+json (default &quot;table&quot;)</p></li>
+
+<li><p><strong>-q</strong>, <strong>--quiet</strong> - Suppress stderr notes for doctor's authenticated
+checks; the doctor report remains on stdout</p></li>
+</ul>
+
+<h3 id="examples-and-expected-output-10">Examples and expected output</h3>
+
+<p><strong>Sample 1</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio doctor
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<pre><code>CHECK            STATUS  DETAIL
+Authentication   ok      method: api-key (source: config)
+Credentials      ok      API key present (axl_…)
+Connectivity     ok      https://api.axilio.ai/api/v1 reachable
+Account          ok      balance: $5.00
+...
+</code></pre>
+
+<p><strong>Standard error</strong></p>
+
+<p>None.</p>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Notes:</strong> Representative excerpt; the full report also includes local environment
+rows.</p>
+
+<p><strong>Sample 2</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio doctor -o json
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<pre><code>{
+  &quot;checks&quot;: [
+    {
+      &quot;name&quot;: &quot;Authentication&quot;,
+      &quot;status&quot;: &quot;ok&quot;,
+      &quot;detail&quot;: &quot;method: api-key (source: config)&quot;
+    }
+  ],
+  &quot;ok&quot;: true
+}
+</code></pre>
+
+<p><strong>Standard error</strong></p>
+
+<p>None.</p>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Notes:</strong> Shortened valid JSON; the complete checks array includes connectivity,
+account, version, config, and session rows.</p>
+
+<p><strong>Sample 3</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>AXILIO_API_KEY=axl_invalid axilio doctor
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<pre><code>CHECK           STATUS  DETAIL
+Authentication  ok      method: api-key (source: env (AXILIO_API_KEY))
+Credentials     ok      API key present (axl_…)
+Connectivity    ok      https://api.axilio.ai/api/v1 reachable
+Authentication fail    API key rejected (HTTP 401); run `axilio login`
+...
+</code></pre>
+
+<p><strong>Standard error</strong></p>
+
+<pre><code>doctor: API key rejected (HTTP 401); run `axilio login`
+</code></pre>
+
+<p><strong>Exit status:</strong> 3.</p>
+
+<p><strong>Notes:</strong> Authentication failures exit 3; authenticated transport failures exit 6.
+Fang adds ERROR framing and may add ANSI styling at the process
+boundary; the stderr sample shows the underlying message.</p>
+
+<h2 id="axilio-help">axilio help</h2>
+
+<pre><code>axilio help [command]
+</code></pre>
+
+<p>Help provides help for any command in the application.</p>
+
+<p>Simply type axilio help [path to command] for full details.</p>
+
+<h3 id="global-option-behavior-13">Global-option behavior</h3>
+
+<ul>
+<li><p><strong>--api-key</strong>=<em>value</em> - No effect on help command or the help content
+it renders</p></li>
+
+<li><p><strong>--base-url</strong>=<em>value</em> - No effect on help command or the help content
+it renders</p></li>
+
+<li><p><strong>--no-color</strong> - No effect on help command; help styling is controlled
+by the renderer</p></li>
+
+<li><p><strong>--org</strong>=<em>value</em> - No effect on help command or the help content it
+renders</p></li>
+
+<li><p><strong>-o</strong>, <strong>--output</strong>=<em>value</em> - Does not reformat help as JSON; json
+only suppresses the update notice (default &quot;table&quot;)</p></li>
+
+<li><p><strong>-q</strong>, <strong>--quiet</strong> - Does not hide help; only suppresses the
+post-command update notice</p></li>
+</ul>
+
+<h3 id="examples-and-expected-output-11">Examples and expected output</h3>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio help phone tap
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<pre><code>Perform a tap action on the selected phone.
+
+USAGE
+
+  axilio phone tap [x y] [--flags]
+</code></pre>
+
+<p><strong>Standard error</strong></p>
+
+<p>None.</p>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Notes:</strong> The complete help includes examples and command-effective flag
+descriptions.</p>
+
+<h2 id="axilio-init">axilio init</h2>
+
+<pre><code>axilio init [flags]
+</code></pre>
+
+<p>Write an instruction file that teaches your coding agent to drive a
+phone through the axilio CLI and then hand back a runnable SDK script.
+The agent asks whether you want Python or Go.</p>
+
+<p>Bare <code>axilio init</code> detects which agents this repo uses (.claude/,
+AGENTS.md, .cursor/) and writes a skill for each; on a terminal with
+nothing detected it asks. --agent picks one explicitly:</p>
+
+<p>--agent claude -&gt; .claude/skills/axilio/SKILL.md</p>
+
+<pre><code>--agent codex   -&gt;  AGENTS.md (appended, never clobbered)
+--agent cursor  -&gt;  .cursor/rules/axilio.mdc
+</code></pre>
+
+<p>Auto-detected targets that already contain the skill are skipped. An
+explicit target that already exists is an error unless --force is set;
+for AGENTS.md, --force replaces only the marked Axilio block. Without
+markers, interactive mode asks which agent to configure, while JSON,
+quiet, or redirected use requires --agent.</p>
+
+<p>It finishes with a sign-in check: browser login is the one step an agent
+can't do itself, so init surfaces it while a human is likely at the
+keyboard.</p>
+
+<h3 id="command-options-5">Command options</h3>
+
+<ul>
+<li><p><strong>--agent</strong>=<em>value</em> - Target claude, codex, or cursor; omit to detect
+repository markers</p></li>
+
+<li><p><strong>--force</strong> - Refresh an existing skill; only the marked Axilio
+AGENTS.md block is replaced</p></li>
+</ul>
+
+<h3 id="global-option-behavior-14">Global-option behavior</h3>
+
+<ul>
+<li><p><strong>--api-key</strong>=<em>value</em> - No effect on init command. A supplied value
+only changes the final sign-in message</p></li>
+
+<li><p><strong>--base-url</strong>=<em>value</em> - Host for the skill download and sign-in
+check; overrides AXILIO_BASE_URL and saved base-url</p></li>
+
+<li><p><strong>--no-color</strong> - Disable ANSI color in init success messages</p></li>
+
+<li><p><strong>--org</strong>=<em>value</em> - No effect on init command. Skill download and
+generated files are not org-scoped</p></li>
+
+<li><p><strong>-o</strong>, <strong>--output</strong>=<em>value</em> - Emit human init messages or JSON
+written and skipped path lists (default &quot;table&quot;)</p></li>
+
+<li><p><strong>-q</strong>, <strong>--quiet</strong> - Suppress human init prompts and messages;
+--agent may be required; JSON still prints</p></li>
+</ul>
+
+<h3 id="examples-and-expected-output-12">Examples and expected output</h3>
+
+<p><strong>Sample 1</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio init
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<p>None.</p>
+
+<p><strong>Standard error</strong></p>
+
+<pre><code>✓ Wrote the Axilio agent skill to &lt;detected-target&gt;
+Not signed in. A human must run `axilio login` (browser), or set AXILIO_API_KEY.
+</code></pre>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Notes:</strong> Representative stderr excerpt; detected targets depend on repository
+markers, existing auto-detected skills may be skipped, and the command
+finishes with a suggested agent prompt.</p>
+
+<p><strong>Sample 2</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio init --agent codex
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<p>None.</p>
+
+<p><strong>Standard error</strong></p>
+
+<pre><code>✓ Wrote the Axilio agent skill to AGENTS.md
+Not signed in. A human must run `axilio login` (browser), or set AXILIO_API_KEY.
+</code></pre>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Notes:</strong> Excerpt: stderr then prints the suggested first agent prompt.</p>
+
+<p><strong>Sample 3</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio init --agent claude --force
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<p>None.</p>
+
+<p><strong>Standard error</strong></p>
+
+<pre><code>✓ Wrote the Axilio agent skill to .claude/skills/axilio/SKILL.md
+Not signed in. A human must run `axilio login` (browser), or set AXILIO_API_KEY.
+</code></pre>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Notes:</strong> Excerpt: --force replaces an existing Axilio-owned Claude skill before
+the suggested first agent prompt.</p>
+
+<h2 id="axilio-login">axilio login</h2>
+
+<pre><code>axilio login
+</code></pre>
+
+<p>Sign in to Axilio.</p>
+
+<p>With no arguments on a terminal, open a browser OAuth flow and store the
+session in the OS keychain, with a protected file fallback. Pass
+--api-key, or pipe a key on stdin, to verify an axl_ API key against the
+API and persist it in the shared Axilio config file. A --base-url
+supplied with API-key login is saved with the key.</p>
+
+<h3 id="global-option-behavior-15">Global-option behavior</h3>
+
+<ul>
+<li><p><strong>--api-key</strong>=<em>value</em> - Verify and save this API key instead of
+opening browser OAuth</p></li>
+
+<li><p><strong>--base-url</strong>=<em>value</em> - API host for login; also saved when API-key
+login succeeds</p></li>
+
+<li><p><strong>--no-color</strong> - Disable ANSI color in login progress and success
+messages</p></li>
+
+<li><p><strong>--org</strong>=<em>value</em> - Does not choose the login org; only scopes the
+post-login OAuth balance request</p></li>
+
+<li><p><strong>-o</strong>, <strong>--output</strong>=<em>value</em> - Emit human login messages or a JSON
+sign-in result (default &quot;table&quot;)</p></li>
+
+<li><p><strong>-q</strong>, <strong>--quiet</strong> - Suppress human login messages; browser OAuth
+still opens; JSON still prints</p></li>
+</ul>
+
+<h3 id="examples-and-expected-output-13">Examples and expected output</h3>
+
+<p><strong>Sample 1</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio login
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<p>None.</p>
+
+<p><strong>Standard error</strong></p>
+
+<pre><code>→ Opening your browser to authorize the CLI…
+✓ Signed in to https://api.axilio.ai
+</code></pre>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Notes:</strong> Representative stderr excerpt; the browser URL, optional organization
+line, and balance result vary by login.</p>
+
+<p><strong>Sample 2</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio login --api-key axl_xxx
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<p>None.</p>
+
+<p><strong>Standard error</strong></p>
+
+<pre><code>✓ Signed in to https://api.axilio.ai
+  Balance  $5.00
+  Saved to &lt;config-path&gt;
+</code></pre>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Notes:</strong> axl_xxx is a non-secret format placeholder; replace it with a valid key
+before running the command.</p>
+
+<p><strong>Sample 3</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>printf '%s\n' &quot;$AXILIO_API_KEY&quot; | axilio login
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<p>None.</p>
+
+<p><strong>Standard error</strong></p>
+
+<pre><code>✓ Signed in to https://api.axilio.ai
+  Balance  $5.00
+  Saved to &lt;config-path&gt;
+</code></pre>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<h2 id="axilio-logout">axilio logout</h2>
+
+<pre><code>axilio logout
+</code></pre>
+
+<p>Sign out locally and, when present, revoke the OAuth refresh-token
+family server-side.</p>
+
+<p>The saved API key, OAuth session, and active organization are removed. A
+saved base URL, environment credentials, and local phone-session lease
+files are not removed.</p>
+
+<h3 id="global-option-behavior-16">Global-option behavior</h3>
+
+<ul>
+<li><p><strong>--api-key</strong>=<em>value</em> - No effect on logout command; saved credentials
+are cleared regardless</p></li>
+
+<li><p><strong>--base-url</strong>=<em>value</em> - No effect on logout command; OAuth revocation
+uses the session's saved host</p></li>
+
+<li><p><strong>--no-color</strong> - Disable ANSI color in the signed-out success message</p></li>
+
+<li><p><strong>--org</strong>=<em>value</em> - No effect on logout command; the saved active org
+is cleared regardless</p></li>
+
+<li><p><strong>-o</strong>, <strong>--output</strong>=<em>value</em> - Emit a human sign-out message or JSON
+sign-out result (default &quot;table&quot;)</p></li>
+
+<li><p><strong>-q</strong>, <strong>--quiet</strong> - Suppress human logout warnings and results; JSON
+still prints</p></li>
+</ul>
+
+<h3 id="examples-and-expected-output-14">Examples and expected output</h3>
+
+<p><strong>Sample 1</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio logout
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<p>None.</p>
+
+<p><strong>Standard error</strong></p>
+
+<pre><code>✓ Signed out.
+</code></pre>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Notes:</strong> Already-signed-out is also exit 0 and reports Already signed out.</p>
+
+<p><strong>Sample 2</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio status
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<p>None.</p>
+
+<p><strong>Standard error</strong></p>
+
+<pre><code>not signed in; run `axilio login` or set AXILIO_API_KEY
+</code></pre>
+
+<p><strong>Exit status:</strong> 3.</p>
+
+<p><strong>Notes:</strong> Follow-up verification after logout; environment credentials can still
+keep status authenticated. Fang adds ERROR framing and may add ANSI
+styling at the process boundary; the stderr sample shows the underlying
+message.</p>
+
+<h2 id="axilio-orgs">axilio orgs</h2>
+
+<pre><code>axilio orgs
+</code></pre>
+
+<p>Swap between the organizations you belong to without signing in again.</p>
+
+<p><code>orgs list</code> shows them, <code>orgs use \&lt;slug\&gt;</code> sets the active org for
+future commands, and <code>--org</code> / <code>AXILIO_ORG</code> override it for a single
+call. API keys are bound to one org, so this applies to <code>axilio login</code>
+(OAuth) sessions.</p>
+
+<h3 id="global-option-behavior-17">Global-option behavior</h3>
+
+<ul>
+<li><p><strong>--api-key</strong>=<em>value</em> - API-key auth cannot list OAuth memberships;
+use a saved OAuth session</p></li>
+
+<li><p><strong>--base-url</strong>=<em>value</em> - API host for the organization-list request;
+overrides AXILIO_BASE_URL and saved base-url</p></li>
+
+<li><p><strong>--no-color</strong> - Disable ANSI color in the human-readable organization
+listing</p></li>
+
+<li><p><strong>--org</strong>=<em>value</em> - No effect on orgs list command; the supplied
+override is not saved, only changes displayed org for one command</p></li>
+
+<li><p><strong>-o</strong>, <strong>--output</strong>=<em>value</em> - Render organizations and the active
+selection as table or json (default &quot;table&quot;)</p></li>
+
+<li><p><strong>-q</strong>, <strong>--quiet</strong> - Suppress orgs stderr notes; the organization
+list remains on stdout</p></li>
+</ul>
+
+<h3 id="examples-and-expected-output-15">Examples and expected output</h3>
+
+<p><strong>Sample 1</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio orgs
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<pre><code>   SLUG         NAME          ID
+*  example-org  Example Inc.  &lt;organization-id&gt;
+</code></pre>
+
+<p><strong>Standard error</strong></p>
+
+<p>None.</p>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Sample 2</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio orgs list
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<pre><code>   SLUG         NAME          ID
+*  example-org  Example Inc.  &lt;organization-id&gt;
+</code></pre>
+
+<p><strong>Standard error</strong></p>
+
+<p>None.</p>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Sample 3</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio orgs use example-org
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<p>None.</p>
+
+<p><strong>Standard error</strong></p>
+
+<pre><code>Active organization set to example-org (Example Inc.).
+</code></pre>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Sample 4</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio --org another-org workflows list
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<pre><code>WORKFLOW ID   NAME      PLATFORM  STATUS  LAST RUN
+&lt;workflow-id&gt; Checkout  android   active  &lt;timestamp&gt;
+</code></pre>
+
+<p><strong>Standard error</strong></p>
+
+<p>None.</p>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Sample 5</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio orgs clear
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<p>None.</p>
+
+<p><strong>Standard error</strong></p>
+
+<pre><code>Cleared the active organization; using your session default.
+</code></pre>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<h2 id="axilio-orgs-clear">axilio orgs clear</h2>
+
+<pre><code>axilio orgs clear
+</code></pre>
+
+<p>Remove the stored active organization.</p>
+
+<p>OAuth-backed requests then use the organization from AXILIO_ORG or the
+OAuth session default unless --org is supplied for the call. This does
+not alter API-key scope.</p>
+
+<h3 id="global-option-behavior-18">Global-option behavior</h3>
+
+<ul>
+<li><p><strong>--api-key</strong>=<em>value</em> - No effect on orgs clear command; it only
+clears the saved org selection</p></li>
+
+<li><p><strong>--base-url</strong>=<em>value</em> - No effect on orgs clear command; it makes no
+API request</p></li>
+
+<li><p><strong>--no-color</strong> - No effect on orgs clear command; its confirmation is
+unstyled</p></li>
+
+<li><p><strong>--org</strong>=<em>value</em> - No effect on orgs clear command; the supplied
+override is not saved</p></li>
+
+<li><p><strong>-o</strong>, <strong>--output</strong>=<em>value</em> - Emit a human confirmation or JSON clear
+result (default &quot;table&quot;)</p></li>
+
+<li><p><strong>-q</strong>, <strong>--quiet</strong> - Suppress the human org-clear confirmation; JSON
+still prints</p></li>
+</ul>
+
+<h3 id="examples-and-expected-output-16">Examples and expected output</h3>
+
+<p><strong>Sample 1</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio orgs clear
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<p>None.</p>
+
+<p><strong>Standard error</strong></p>
+
+<pre><code>Cleared the active organization; using your session default.
+</code></pre>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Notes:</strong> If no organization is set, it reports that state and still exits 0.</p>
+
+<p><strong>Sample 2</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio orgs list
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<pre><code>   SLUG         NAME          ID
+   example-org  Example Inc.  &lt;organization-id&gt;
+</code></pre>
+
+<p><strong>Standard error</strong></p>
+
+<pre><code>No active org set; using your session default.
+</code></pre>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Notes:</strong> The full note suggests <code>axilio orgs use \&lt;slug\&gt;</code> to persist a
+selection.</p>
+
+<h2 id="axilio-orgs-list">axilio orgs list</h2>
+
+<pre><code>axilio orgs list
+</code></pre>
+
+<p>List organizations available to the saved OAuth session.</p>
+
+<p>The table includes slug, name, and ID; <code>*</code> marks the effective active
+organization when one is selected. Organization selection resolves from
+--org, AXILIO_ORG, <code>orgs use</code>, then the OAuth session default. API-key
+logins cannot switch organizations.</p>
+
+<h3 id="global-option-behavior-19">Global-option behavior</h3>
+
+<ul>
+<li><p><strong>--api-key</strong>=<em>value</em> - API-key auth cannot list OAuth memberships;
+use a saved OAuth session</p></li>
+
+<li><p><strong>--base-url</strong>=<em>value</em> - API host for the organization-list request;
+overrides AXILIO_BASE_URL and saved base-url</p></li>
+
+<li><p><strong>--no-color</strong> - Disable ANSI color in the human-readable organization
+listing</p></li>
+
+<li><p><strong>--org</strong>=<em>value</em> - No effect on orgs list command; the supplied
+override is not saved, only changes displayed org for one command</p></li>
+
+<li><p><strong>-o</strong>, <strong>--output</strong>=<em>value</em> - Render organizations and the active
+selection as table or json (default &quot;table&quot;)</p></li>
+
+<li><p><strong>-q</strong>, <strong>--quiet</strong> - Suppress orgs list stderr notes; the
+organization list remains on stdout</p></li>
+</ul>
+
+<h3 id="examples-and-expected-output-17">Examples and expected output</h3>
+
+<p><strong>Sample 1</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio orgs list
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<pre><code>   SLUG         NAME          ID
+*  example-org  Example Inc.  &lt;organization-id&gt;
+</code></pre>
+
+<p><strong>Standard error</strong></p>
+
+<p>None.</p>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Sample 2</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio orgs list -o json
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<pre><code>{
+  &quot;active&quot;: &quot;example-org&quot;,
+  &quot;organizations&quot;: [
+    {&quot;id&quot;: &quot;&lt;organization-id&gt;&quot;, &quot;slug&quot;: &quot;example-org&quot;, &quot;name&quot;: &quot;Example Inc.&quot;}
+  ]
+}
+</code></pre>
+
+<p><strong>Standard error</strong></p>
+
+<p>None.</p>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Notes:</strong> Organization membership and the active selector vary by session.</p>
+
+<h2 id="axilio-orgs-use">axilio orgs use</h2>
+
+<pre><code>axilio orgs use &lt;slug-or-id&gt;
+</code></pre>
+
+<p>Verify a slug or ID against organizations available to the saved OAuth
+session, then store its slug as the active organization.</p>
+
+<p>--org and AXILIO_ORG override this stored selection. API keys remain
+bound to their own organization and cannot use this command.</p>
+
+<h3 id="global-option-behavior-20">Global-option behavior</h3>
+
+<ul>
+<li><p><strong>--api-key</strong>=<em>value</em> - API-key auth cannot switch orgs; use a saved
+OAuth session</p></li>
+
+<li><p><strong>--base-url</strong>=<em>value</em> - API host for the membership check; overrides
+AXILIO_BASE_URL and saved base-url</p></li>
+
+<li><p><strong>--no-color</strong> - No effect on orgs use command; its confirmation is
+unstyled</p></li>
+
+<li><p><strong>--org</strong>=<em>value</em> - Does not choose the org to save; the positional
+slug or ID does</p></li>
+
+<li><p><strong>-o</strong>, <strong>--output</strong>=<em>value</em> - Emit a human confirmation or JSON
+active-organization result (default &quot;table&quot;)</p></li>
+
+<li><p><strong>-q</strong>, <strong>--quiet</strong> - Suppress the human org-selection confirmation;
+JSON still prints</p></li>
+</ul>
+
+<h3 id="examples-and-expected-output-18">Examples and expected output</h3>
+
+<p><strong>Sample 1</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio orgs list
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<pre><code>   SLUG         NAME          ID
+*  example-org  Example Inc.  &lt;organization-id&gt;
+</code></pre>
+
+<p><strong>Standard error</strong></p>
+
+<p>None.</p>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Sample 2</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio orgs use example-org
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<p>None.</p>
+
+<p><strong>Standard error</strong></p>
+
+<pre><code>Active organization set to example-org (Example Inc.).
+</code></pre>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<h2 id="axilio-phone">axilio phone</h2>
+
+<pre><code>axilio phone
+</code></pre>
+
+<p>Running <code>axilio phone</code> without a subcommand is equivalent to <code>axilio
+phone --help</code>: it only displays this help and does not observe or
+control a phone. Phone and global flags shown here therefore have no
+effect. Pass flags to a phone subcommand instead.</p>
+
+<p>Drive a phone leased with <code>axilio sessions start</code>.</p>
+
+<p>A reliable loop is observe the screen, find or semantically target an
+element, act, then observe again to verify.</p>
+
+<p>Available verbs are observe, find, find-text, tap, long-press, swipe,
+type, key, screenshot, wait-for, and send. Every successful verb emits a
+structured result with -o json.</p>
+
+<p>Session selection precedence is --session, AXILIO_SESSION, the sole
+active local lease, the saved current-session pointer, then an ambiguity
+error. The verbs mirror the SDK MobileDriver so an explored interaction
+maps directly onto SDK code.</p>
+
+<h3 id="command-options-6">Command options</h3>
+
+<ul>
+<li><strong>--session</strong>=<em>value</em> - No effect on phone command; bare axilio phone
+only displays this help</li>
+</ul>
+
+<h3 id="global-option-behavior-21">Global-option behavior</h3>
+
+<ul>
+<li><p><strong>--api-key</strong>=<em>value</em> - No effect on phone command; bare axilio phone
+only displays this help</p></li>
+
+<li><p><strong>--base-url</strong>=<em>value</em> - No effect on phone command; bare axilio phone
+only displays this help</p></li>
+
+<li><p><strong>--no-color</strong> - No effect on phone command; bare axilio phone only
+displays this help</p></li>
+
+<li><p><strong>--org</strong>=<em>value</em> - No effect on phone command; bare axilio phone only
+displays this help</p></li>
+
+<li><p><strong>-o</strong>, <strong>--output</strong>=<em>value</em> - No effect on phone command; bare axilio
+phone only displays this help (default &quot;table&quot;)</p></li>
+
+<li><p><strong>-q</strong>, <strong>--quiet</strong> - No effect on phone command; bare axilio phone
+only displays this help</p></li>
+</ul>
+
+<h3 id="workflow-examples-2">Workflow examples</h3>
+
+<pre><code>axilio phone observe
+axilio phone tap --query &quot;the search box&quot;
+axilio phone type &quot;Axilio&quot;
+axilio phone observe
+</code></pre>
+
+<h2 id="axilio-phone-find">axilio phone find</h2>
+
+<pre><code>axilio phone find &lt;query&gt; [flags]
+</code></pre>
+
+<p>Locate one visible element from a natural-language description and
+return its text, center, bounding box, confidence, and source.</p>
+
+<p>The OCR engine defaults to free, the vision model is selected by the
+server, and the effective deadline is 10 seconds when --timeout is
+omitted. A missing target is an error; use <code>find-text</code> for a successful
+empty result.</p>
+
+<h3 id="command-options-7">Command options</h3>
+
+<ul>
+<li><p><strong>--model</strong>=<em>value</em> - Vision model override; omitted lets the server
+select the model</p></li>
+
+<li><p><strong>--ocr-engine</strong>=<em>value</em> - OCR engine: free or premium; omitted uses
+free</p></li>
+
+<li><p><strong>--timeout</strong>=<em>duration</em> - Vision deadline such as 15s; omitted uses
+10s (default &quot;0s&quot;)</p></li>
+</ul>
+
+<h3 id="parent-options">Parent options</h3>
+
+<ul>
+<li><strong>--session</strong>=<em>value</em> - Session ID; overrides AXILIO_SESSION,
+sole-lease, and current-pointer selection</li>
+</ul>
+
+<h3 id="global-option-behavior-22">Global-option behavior</h3>
+
+<ul>
+<li><p><strong>--api-key</strong>=<em>value</em> - No effect; the session's embedded control
+token in the websocket URL authenticates phone commands</p></li>
+
+<li><p><strong>--base-url</strong>=<em>value</em> - No effect on phone find command; it does not
+call the Axilio API</p></li>
+
+<li><p><strong>--no-color</strong> - Disable ANSI color in the human-readable form of the
+found-element result</p></li>
+
+<li><p><strong>--org</strong>=<em>value</em> - No effect on phone find command; phone control is
+selected by session, not org</p></li>
+
+<li><p><strong>-o</strong>, <strong>--output</strong>=<em>value</em> - Render the found-element result as
+table or json (default &quot;table&quot;)</p></li>
+
+<li><p><strong>-q</strong>, <strong>--quiet</strong> - Suppress stderr notes for vision search; the
+found-element result remains on stdout</p></li>
+</ul>
+
+<h3 id="examples-and-expected-output-19">Examples and expected output</h3>
+
+<p><strong>Sample 1</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio phone find &quot;the search box&quot;
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<pre><code>Text        Search
+Center      540,620
+BBox        80,560 920x120
+Confidence  0.99
+Source      ocr
+</code></pre>
+
+<p><strong>Standard error</strong></p>
+
+<p>None.</p>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Sample 2</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio phone find &quot;settings icon&quot; --ocr-engine premium
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<pre><code>Text
+Center      900,120
+BBox        840,60 120x120
+Confidence  0.98
+Source      vlm
+</code></pre>
+
+<p><strong>Standard error</strong></p>
+
+<p>None.</p>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Notes:</strong> Vision-model elements can have no text; coordinates depend on the
+current frame.</p>
+
+<p><strong>Sample 3</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio phone find &quot;continue button&quot; --timeout 15s -o json
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<pre><code>{
+  &quot;text&quot;: &quot;Continue&quot;,
+  &quot;center&quot;: {&quot;x&quot;: 540, &quot;y&quot;: 1120},
+  &quot;bbox&quot;: {&quot;x&quot;: 80, &quot;y&quot;: 1060, &quot;width&quot;: 920, &quot;height&quot;: 120},
+  &quot;confidence&quot;: 0.98,
+  &quot;source&quot;: &quot;ocr&quot;
+}
+</code></pre>
+
+<p><strong>Standard error</strong></p>
+
+<p>None.</p>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Notes:</strong> Element content and coordinates depend on the current frame.</p>
+
+<h2 id="axilio-phone-find-text">axilio phone find-text</h2>
+
+<pre><code>axilio phone find-text &lt;text&gt; [flags]
+</code></pre>
+
+<p>Search OCR text without semantic vision.</p>
+
+<p>By default, match a case-insensitive substring and return the first
+element. --exact uses a case-sensitive exact match. No match is
+successful: table output prints <code>No match.</code> and JSON output is null
+rather than a not-found error.</p>
+
+<h3 id="command-options-8">Command options</h3>
+
+<ul>
+<li><strong>--exact</strong> - Require a case-sensitive exact match instead of
+case-insensitive substring</li>
+</ul>
+
+<h3 id="parent-options-1">Parent options</h3>
+
+<ul>
+<li><strong>--session</strong>=<em>value</em> - Session ID; overrides AXILIO_SESSION,
+sole-lease, and current-pointer selection</li>
+</ul>
+
+<h3 id="global-option-behavior-23">Global-option behavior</h3>
+
+<ul>
+<li><p><strong>--api-key</strong>=<em>value</em> - No effect; the session's embedded control
+token in the websocket URL authenticates phone commands</p></li>
+
+<li><p><strong>--base-url</strong>=<em>value</em> - No effect on phone find-text command; it does
+not call the Axilio API</p></li>
+
+<li><p><strong>--no-color</strong> - Disable ANSI color in the human-readable form of the
+text-match result</p></li>
+
+<li><p><strong>--org</strong>=<em>value</em> - No effect on phone find-text command; phone
+control is selected by session, not org</p></li>
+
+<li><p><strong>-o</strong>, <strong>--output</strong>=<em>value</em> - Render the text-match result as table
+or json (default &quot;table&quot;)</p></li>
+
+<li><p><strong>-q</strong>, <strong>--quiet</strong> - Suppress stderr notes for OCR search; the
+text-match result remains on stdout</p></li>
+</ul>
+
+<h3 id="examples-and-expected-output-20">Examples and expected output</h3>
+
+<p><strong>Sample 1</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio phone find-text &quot;sign in&quot;
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<pre><code>Text        Sign in
+Center      540,1120
+BBox        80,1060 920x120
+Confidence  0.98
+Source      ocr
+</code></pre>
+
+<p><strong>Standard error</strong></p>
+
+<p>None.</p>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Notes:</strong> The default is a case-insensitive substring match.</p>
+
+<p><strong>Sample 2</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio phone find-text &quot;Sign in&quot; --exact
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<pre><code>Text        Sign in
+Center      540,1120
+BBox        80,1060 920x120
+Confidence  0.98
+Source      ocr
+</code></pre>
+
+<p><strong>Standard error</strong></p>
+
+<p>None.</p>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Notes:</strong> Exact matching is case-sensitive.</p>
+
+<p><strong>Sample 3</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio phone find-text &quot;settings&quot;
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<pre><code>No match.
+</code></pre>
+
+<p><strong>Standard error</strong></p>
+
+<p>None.</p>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Notes:</strong> No match is success; -o json emits null.</p>
+
+<p><strong>Sample 4</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio phone find-text &quot;settings&quot; -o json
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<pre><code>null
+</code></pre>
+
+<p><strong>Standard error</strong></p>
+
+<p>None.</p>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Notes:</strong> No match is a successful literal JSON null.</p>
+
+<h2 id="axilio-phone-key">axilio phone key</h2>
+
+<pre><code>axilio phone key &lt;name&gt;
+</code></pre>
+
+<p>Press a named key on the selected phone.</p>
+
+<p>The only named key currently supported by the CLI and pinned mobile
+driver is <code>enter</code>; back, home, and other key names are not available.</p>
+
+<h3 id="parent-options-2">Parent options</h3>
+
+<ul>
+<li><strong>--session</strong>=<em>value</em> - Session ID; overrides AXILIO_SESSION,
+sole-lease, and current-pointer selection</li>
+</ul>
+
+<h3 id="global-option-behavior-24">Global-option behavior</h3>
+
+<ul>
+<li><p><strong>--api-key</strong>=<em>value</em> - No effect; the session's embedded control
+token in the websocket URL authenticates phone commands</p></li>
+
+<li><p><strong>--base-url</strong>=<em>value</em> - No effect on phone key command; it does not
+call the Axilio API</p></li>
+
+<li><p><strong>--no-color</strong> - No effect on phone key command; its runtime message
+is unstyled</p></li>
+
+<li><p><strong>--org</strong>=<em>value</em> - No effect on phone key command; the target is
+selected by session, not org</p></li>
+
+<li><p><strong>-o</strong>, <strong>--output</strong>=<em>value</em> - Emit a human confirmation or JSON key
+press result (default &quot;table&quot;)</p></li>
+
+<li><p><strong>-q</strong>, <strong>--quiet</strong> - Suppress the human key press result; the phone
+action still runs; JSON still prints</p></li>
+</ul>
+
+<h3 id="examples-and-expected-output-21">Examples and expected output</h3>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio phone key enter
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<p>None.</p>
+
+<p><strong>Standard error</strong></p>
+
+<pre><code>Pressed enter
+</code></pre>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<h2 id="axilio-phone-long-press">axilio phone long-press</h2>
+
+<pre><code>axilio phone long-press &lt;x&gt; &lt;y&gt; [flags]
+</code></pre>
+
+<p>Press and hold at frame-space pixel coordinates, with (0,0) at the
+screen's top-left.</p>
+
+<p>This command is coordinate-only; use observe or find to inspect the
+current frame before choosing a point. The default hold duration is 800
+milliseconds.</p>
+
+<h3 id="command-options-9">Command options</h3>
+
+<ul>
+<li><strong>--duration-ms</strong>=<em>number</em> - How long to hold the coordinate, in
+milliseconds (default &quot;800&quot;)</li>
+</ul>
+
+<h3 id="parent-options-3">Parent options</h3>
+
+<ul>
+<li><strong>--session</strong>=<em>value</em> - Session ID; overrides AXILIO_SESSION,
+sole-lease, and current-pointer selection</li>
+</ul>
+
+<h3 id="global-option-behavior-25">Global-option behavior</h3>
+
+<ul>
+<li><p><strong>--api-key</strong>=<em>value</em> - No effect; the session's embedded control
+token in the websocket URL authenticates phone commands</p></li>
+
+<li><p><strong>--base-url</strong>=<em>value</em> - No effect on phone long-press command; it
+does not call the Axilio API</p></li>
+
+<li><p><strong>--no-color</strong> - No effect on phone long-press command; its runtime
+message is unstyled</p></li>
+
+<li><p><strong>--org</strong>=<em>value</em> - No effect on phone long-press command; the target
+is selected by session, not org</p></li>
+
+<li><p><strong>-o</strong>, <strong>--output</strong>=<em>value</em> - Emit a human confirmation or JSON
+long-press result (default &quot;table&quot;)</p></li>
+
+<li><p><strong>-q</strong>, <strong>--quiet</strong> - Suppress the human long-press result; the phone
+action still runs; JSON still prints</p></li>
+</ul>
+
+<h3 id="examples-and-expected-output-22">Examples and expected output</h3>
+
+<p><strong>Sample 1</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio phone long-press 540 1080
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<p>None.</p>
+
+<p><strong>Standard error</strong></p>
+
+<pre><code>Long-pressed 540,1080 for 800ms
+</code></pre>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Sample 2</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio phone long-press 540 1080 --duration-ms 1200
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<p>None.</p>
+
+<p><strong>Standard error</strong></p>
+
+<pre><code>Long-pressed 540,1080 for 1200ms
+</code></pre>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<h2 id="axilio-phone-observe">axilio phone observe</h2>
+
+<pre><code>axilio phone observe [flags]
+</code></pre>
+
+<p>Capture and analyze the selected phone's current screen.</p>
+
+<p>OCR uses the free engine when --ocr-engine is omitted. Table output
+lists recognized text with center coordinates and confidence, then
+summarizes icons and screen dimensions. JSON returns the complete screen
+object, including texts, icons, dimensions, screen hash, and capture
+time.</p>
+
+<h3 id="command-options-10">Command options</h3>
+
+<ul>
+<li><strong>--ocr-engine</strong>=<em>value</em> - OCR engine: free or premium; omitted uses
+free</li>
+</ul>
+
+<h3 id="parent-options-4">Parent options</h3>
+
+<ul>
+<li><strong>--session</strong>=<em>value</em> - Session ID; overrides AXILIO_SESSION,
+sole-lease, and current-pointer selection</li>
+</ul>
+
+<h3 id="global-option-behavior-26">Global-option behavior</h3>
+
+<ul>
+<li><p><strong>--api-key</strong>=<em>value</em> - No effect; the session's embedded control
+token in the websocket URL authenticates phone commands</p></li>
+
+<li><p><strong>--base-url</strong>=<em>value</em> - No effect on phone observe command; it does
+not call the Axilio API</p></li>
+
+<li><p><strong>--no-color</strong> - Disable ANSI color in the human-readable form of the
+observation result</p></li>
+
+<li><p><strong>--org</strong>=<em>value</em> - No effect on phone observe command; phone control
+is selected by session, not org</p></li>
+
+<li><p><strong>-o</strong>, <strong>--output</strong>=<em>value</em> - Render the observation result as table
+or json (default &quot;table&quot;)</p></li>
+
+<li><p><strong>-q</strong>, <strong>--quiet</strong> - Suppress stderr notes for observation; the
+observation result remains on stdout</p></li>
+</ul>
+
+<h3 id="examples-and-expected-output-23">Examples and expected output</h3>
+
+<p><strong>Sample 1</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio phone observe
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<pre><code>TEXT          X    Y     CONF
+coffee shops  540  620   0.99
+Continue      540  1120  0.98
+</code></pre>
+
+<p><strong>Standard error</strong></p>
+
+<pre><code>2 texts, 0 icons  1080x2400
+</code></pre>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Notes:</strong> JSON includes texts, icons, dimensions, screen hash, and capture time.</p>
+
+<p><strong>Sample 2</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio phone observe --ocr-engine premium
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<pre><code>TEXT          X    Y     CONF
+coffee shops  540  620   0.99
+Continue      540  1120  0.98
+</code></pre>
+
+<p><strong>Standard error</strong></p>
+
+<pre><code>2 texts, 0 icons  1080x2400
+</code></pre>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Notes:</strong> Premium OCR changes recognition, not the table shape.</p>
+
+<p><strong>Sample 3</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio phone observe -o json
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<pre><code>{
+  &quot;texts&quot;: [
+    {&quot;text&quot;: &quot;Continue&quot;, &quot;center&quot;: {&quot;x&quot;: 540, &quot;y&quot;: 1120}, &quot;confidence&quot;: 0.98}
+  ],
+  &quot;icons&quot;: [],
+  &quot;hash&quot;: &quot;&lt;screen-hash&gt;&quot;,
+  &quot;width&quot;: 1080,
+  &quot;height&quot;: 2400,
+  &quot;captured_at&quot;: &quot;&lt;timestamp&gt;&quot;
+}
+</code></pre>
+
+<p><strong>Standard error</strong></p>
+
+<p>None.</p>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Notes:</strong> Shortened representative screen JSON; elements also include bounding
+boxes and sources.</p>
+
+<h3 id="walkthrough">Walkthrough</h3>
+
+<pre><code>+----------------------------+
+| Search                     |
+| [ coffee shops           ] |  text &quot;coffee shops&quot;  540,620  0.99
+|                            |
+| [        Continue        ] |  text &quot;Continue&quot;     540,1120  0.98
++----------------------------+
+right-side fields: text, center (x,y), confidence
+frame 1080x2400; frame-space pixels; (0,0) is top-left
+
+reuse the observed Continue center:
+axilio phone tap 540 1120
+</code></pre>
+
+<h2 id="axilio-phone-screenshot">axilio phone screenshot</h2>
+
+<pre><code>axilio phone screenshot [flags]
+</code></pre>
+
+<p>Capture the selected phone's screen as PNG bytes and write them to
+--out.</p>
+
+<p>The default destination is screenshot.png in the current directory. If
+the destination already exists, its contents are overwritten without
+confirmation; the CLI does not create a backup. On success the human
+result reports the path and byte count.</p>
+
+<h3 id="command-options-11">Command options</h3>
+
+<ul>
+<li><strong>--out</strong>=<em>value</em> - PNG path to create; overwrite existing contents
+without confirmation (default &quot;screenshot.png&quot;)</li>
+</ul>
+
+<h3 id="parent-options-5">Parent options</h3>
+
+<ul>
+<li><strong>--session</strong>=<em>value</em> - Session ID; overrides AXILIO_SESSION,
+sole-lease, and current-pointer selection</li>
+</ul>
+
+<h3 id="global-option-behavior-27">Global-option behavior</h3>
+
+<ul>
+<li><p><strong>--api-key</strong>=<em>value</em> - No effect; the session's embedded control
+token in the websocket URL authenticates phone commands</p></li>
+
+<li><p><strong>--base-url</strong>=<em>value</em> - No effect on phone screenshot command; it
+does not call the Axilio API</p></li>
+
+<li><p><strong>--no-color</strong> - No effect on phone screenshot command; its runtime
+message is unstyled</p></li>
+
+<li><p><strong>--org</strong>=<em>value</em> - No effect on phone screenshot command; the target
+is selected by session, not org</p></li>
+
+<li><p><strong>-o</strong>, <strong>--output</strong>=<em>value</em> - Emit a human confirmation or JSON
+screenshot write result (default &quot;table&quot;)</p></li>
+
+<li><p><strong>-q</strong>, <strong>--quiet</strong> - Suppress the human screenshot result; the phone
+action still runs; JSON still prints</p></li>
+</ul>
+
+<h3 id="examples-and-expected-output-24">Examples and expected output</h3>
+
+<p><strong>Sample 1</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio phone screenshot
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<p>None.</p>
+
+<p><strong>Standard error</strong></p>
+
+<pre><code>Wrote screenshot.png (&lt;bytes&gt; bytes)
+</code></pre>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Notes:</strong> A new file requests mode 0644, subject to the process umask. Overwriting
+an existing file preserves its mode while replacing its contents.</p>
+
+<p><strong>Sample 2</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio phone screenshot --out login.png
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<p>None.</p>
+
+<p><strong>Standard error</strong></p>
+
+<pre><code>Wrote login.png (&lt;bytes&gt; bytes)
+</code></pre>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Notes:</strong> A new file requests mode 0644, subject to the process umask. Overwriting
+an existing file preserves its mode while replacing its contents.</p>
+
+<p><strong>Sample 3</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio phone screenshot --out ./login.png
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<p>None.</p>
+
+<p><strong>Standard error</strong></p>
+
+<pre><code>Wrote ./login.png (&lt;bytes&gt; bytes)
+</code></pre>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Notes:</strong> Deliberate correction of the legacy artifacts/login.png example:
+screenshot does not create missing parent directories, so this target
+uses the existing current directory. A new file requests mode 0644
+subject to umask; overwrite preserves the existing mode.</p>
+
+<h2 id="axilio-phone-send">axilio phone send</h2>
+
+<pre><code>axilio phone send &lt;path&gt; [flags]
+</code></pre>
+
+<p>Upload a local file into the org library and push it into the phone's
+media library so it appears in the gallery.</p>
+
+<p>Targets the current session's phone (override with --session). Supported
+images are jpg, jpeg, png, webp, gif, and heic; supported videos are
+mp4, webm, mov, 3gp, and mkv. The target collection is inferred by media
+type unless DCIM, Pictures, or Movies is selected. Phones accept
+deliveries up to 100 MiB. By default the command returns after dispatch;
+--wait blocks for delivered or failed, and --timeout applies only with
+--wait. This combines <code>uploads add</code> and <code>uploads push</code> and therefore
+retains the upload in the org library.</p>
+
+<h3 id="command-options-12">Command options</h3>
+
+<ul>
+<li><p><strong>--collection</strong>=<em>value</em> - Target DCIM, Pictures, or Movies; omitted
+infers from media type</p></li>
+
+<li><p><strong>--timeout</strong>=<em>duration</em> - Maximum delivery wait; applies only with
+--wait (default &quot;1m0s&quot;)</p></li>
+
+<li><p><strong>--wait</strong> - Block until the phone reports delivered or failed instead
+of returning at dispatch</p></li>
+</ul>
+
+<h3 id="parent-options-6">Parent options</h3>
+
+<ul>
+<li><strong>--session</strong>=<em>value</em> - Session ID; overrides AXILIO_SESSION,
+sole-lease, and current-pointer selection</li>
+</ul>
+
+<h3 id="global-option-behavior-28">Global-option behavior</h3>
+
+<ul>
+<li><p><strong>--api-key</strong>=<em>value</em> - API key for the upload-and-delivery request;
+overrides AXILIO_API_KEY and the saved key</p></li>
+
+<li><p><strong>--base-url</strong>=<em>value</em> - API host for the upload-and-delivery request;
+overrides AXILIO_BASE_URL and saved base-url</p></li>
+
+<li><p><strong>--no-color</strong> - Disable ANSI color in the human-readable form of the
+delivery result</p></li>
+
+<li><p><strong>--org</strong>=<em>value</em> - OAuth org for the upload-and-delivery request;
+overrides AXILIO_ORG and the saved active org; API keys ignore it</p></li>
+
+<li><p><strong>-o</strong>, <strong>--output</strong>=<em>value</em> - Render the delivery result as table or
+json (default &quot;table&quot;)</p></li>
+
+<li><p><strong>-q</strong>, <strong>--quiet</strong> - Suppress upload progress and delivery notes; the
+delivery result remains on stdout</p></li>
+</ul>
+
+<h3 id="examples-and-expected-output-25">Examples and expected output</h3>
+
+<p><strong>Sample 1</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio phone send ./photo.jpg
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<pre><code>Delivery  &lt;delivery-id&gt;
+File      photo.jpg
+Status    dispatched
+</code></pre>
+
+<p><strong>Standard error</strong></p>
+
+<pre><code>→ Sending photo.jpg to phone &lt;phone-id&gt;
+pushed; re-run with --wait to confirm delivery
+</code></pre>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Notes:</strong> The upload remains in the organization library.</p>
+
+<p><strong>Sample 2</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio phone send ./clip.mp4 --collection Movies
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<pre><code>Delivery  &lt;delivery-id&gt;
+File      clip.mp4
+Status    dispatched
+</code></pre>
+
+<p><strong>Standard error</strong></p>
+
+<pre><code>→ Sending clip.mp4 to phone &lt;phone-id&gt;
+pushed; re-run with --wait to confirm delivery
+</code></pre>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Notes:</strong> The upload remains in the organization library and is delivered to
+Movies.</p>
+
+<p><strong>Sample 3</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio phone send ./photo.jpg --wait --timeout 2m
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<pre><code>Delivery  &lt;delivery-id&gt;
+File      photo.jpg
+Status    delivered
+</code></pre>
+
+<p><strong>Standard error</strong></p>
+
+<pre><code>→ Sending photo.jpg to phone &lt;phone-id&gt;
+</code></pre>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Notes:</strong> With --wait, the command returns only after delivered, failed, or the
+two-minute deadline.</p>
+
+<h2 id="axilio-phone-swipe">axilio phone swipe</h2>
+
+<pre><code>axilio phone swipe &lt;x1&gt; &lt;y1&gt; &lt;x2&gt; &lt;y2&gt; [flags]
+</code></pre>
+
+<p>Swipe between two frame-space pixel coordinates, with (0,0) at the
+screen's top-left.</p>
+
+<p>This command is coordinate-only; use observe to inspect the current
+frame. The default gesture duration is 300 milliseconds.</p>
+
+<h3 id="command-options-13">Command options</h3>
+
+<ul>
+<li><strong>--duration-ms</strong>=<em>number</em> - How long the swipe gesture takes, in
+milliseconds (default &quot;300&quot;)</li>
+</ul>
+
+<h3 id="parent-options-7">Parent options</h3>
+
+<ul>
+<li><strong>--session</strong>=<em>value</em> - Session ID; overrides AXILIO_SESSION,
+sole-lease, and current-pointer selection</li>
+</ul>
+
+<h3 id="global-option-behavior-29">Global-option behavior</h3>
+
+<ul>
+<li><p><strong>--api-key</strong>=<em>value</em> - No effect; the session's embedded control
+token in the websocket URL authenticates phone commands</p></li>
+
+<li><p><strong>--base-url</strong>=<em>value</em> - No effect on phone swipe command; it does not
+call the Axilio API</p></li>
+
+<li><p><strong>--no-color</strong> - No effect on phone swipe command; its runtime message
+is unstyled</p></li>
+
+<li><p><strong>--org</strong>=<em>value</em> - No effect on phone swipe command; the target is
+selected by session, not org</p></li>
+
+<li><p><strong>-o</strong>, <strong>--output</strong>=<em>value</em> - Emit a human confirmation or JSON swipe
+result (default &quot;table&quot;)</p></li>
+
+<li><p><strong>-q</strong>, <strong>--quiet</strong> - Suppress the human swipe result; the phone
+action still runs; JSON still prints</p></li>
+</ul>
+
+<h3 id="examples-and-expected-output-26">Examples and expected output</h3>
+
+<p><strong>Sample 1</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio phone swipe 540 1600 540 500
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<p>None.</p>
+
+<p><strong>Standard error</strong></p>
+
+<pre><code>Swiped 540,1600 -&gt; 540,500
+</code></pre>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Sample 2</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio phone swipe 200 800 900 800 --duration-ms 500
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<p>None.</p>
+
+<p><strong>Standard error</strong></p>
+
+<pre><code>Swiped 200,800 -&gt; 900,800
+</code></pre>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<h2 id="axilio-phone-tap">axilio phone tap</h2>
+
+<pre><code>axilio phone tap [x y] [flags]
+</code></pre>
+
+<p>Perform a tap action on the selected phone.</p>
+
+<p>The coordinate form takes x and y as frame-space pixels, with (0,0) at
+the screen's top-left.</p>
+
+<p>Use --query to find an element by natural-language description and tap
+its center. If --query and coordinates are both provided, --query takes
+precedence.</p>
+
+<p>Session selection precedence is --session, AXILIO_SESSION, the sole
+active lease, the saved current-session pointer, then an ambiguity
+error.</p>
+
+<h3 id="command-options-14">Command options</h3>
+
+<ul>
+<li><p><strong>--model</strong>=<em>value</em> - Vision model for --query only; omitted lets the
+server select</p></li>
+
+<li><p><strong>--ocr-engine</strong>=<em>value</em> - OCR engine for --query only: free or
+premium; omitted uses free</p></li>
+
+<li><p><strong>--query</strong>=<em>value</em> - Recommended natural-language target; vision
+finds it and taps its center</p></li>
+</ul>
+
+<h3 id="parent-options-8">Parent options</h3>
+
+<ul>
+<li><strong>--session</strong>=<em>value</em> - Session ID; overrides AXILIO_SESSION,
+sole-lease, and current-pointer selection</li>
+</ul>
+
+<h3 id="global-option-behavior-30">Global-option behavior</h3>
+
+<ul>
+<li><p><strong>--api-key</strong>=<em>value</em> - No effect; the session's embedded control
+token in the websocket URL authenticates phone commands</p></li>
+
+<li><p><strong>--base-url</strong>=<em>value</em> - No effect on phone tap command; it does not
+call the Axilio API</p></li>
+
+<li><p><strong>--no-color</strong> - No effect on phone tap command; its runtime message
+is unstyled</p></li>
+
+<li><p><strong>--org</strong>=<em>value</em> - No effect on phone tap command; the target is
+selected by session, not org</p></li>
+
+<li><p><strong>-o</strong>, <strong>--output</strong>=<em>value</em> - Emit a human confirmation or JSON tap
+result (default &quot;table&quot;)</p></li>
+
+<li><p><strong>-q</strong>, <strong>--quiet</strong> - Suppress the human tap result; the phone action
+still runs; JSON still prints</p></li>
+</ul>
+
+<h3 id="examples-and-expected-output-27">Examples and expected output</h3>
+
+<p><strong>Sample 1</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio phone tap --query &quot;the search box&quot;
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<p>None.</p>
+
+<p><strong>Standard error</strong></p>
+
+<pre><code>Tapped &quot;the search box&quot; at 540,620
+</code></pre>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Sample 2</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio phone tap 540 1200
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<p>None.</p>
+
+<p><strong>Standard error</strong></p>
+
+<pre><code>Tapped 540,1200
+</code></pre>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Sample 3</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio phone tap --session sess_123 --query &quot;continue&quot;
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<p>None.</p>
+
+<p><strong>Standard error</strong></p>
+
+<pre><code>Tapped &quot;continue&quot; at 540,1120
+</code></pre>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<h2 id="axilio-phone-type">axilio phone type</h2>
+
+<pre><code>axilio phone type &lt;text&gt;
+</code></pre>
+
+<p>Type text into the focused field on the selected phone.</p>
+
+<p>Enclose text in quotes when it contains spaces or shell-special
+characters. Text is entered through a US-layout keyboard. Printable
+ASCII characters are supported; emoji and other non-ASCII characters are
+silently skipped.</p>
+
+<h3 id="parent-options-9">Parent options</h3>
+
+<ul>
+<li><strong>--session</strong>=<em>value</em> - Session ID; overrides AXILIO_SESSION,
+sole-lease, and current-pointer selection</li>
+</ul>
+
+<h3 id="global-option-behavior-31">Global-option behavior</h3>
+
+<ul>
+<li><p><strong>--api-key</strong>=<em>value</em> - No effect; the session's embedded control
+token in the websocket URL authenticates phone commands</p></li>
+
+<li><p><strong>--base-url</strong>=<em>value</em> - No effect on phone type command; it does not
+call the Axilio API</p></li>
+
+<li><p><strong>--no-color</strong> - No effect on phone type command; its runtime message
+is unstyled</p></li>
+
+<li><p><strong>--org</strong>=<em>value</em> - No effect on phone type command; the target is
+selected by session, not org</p></li>
+
+<li><p><strong>-o</strong>, <strong>--output</strong>=<em>value</em> - Emit a human confirmation or JSON
+typing result (default &quot;table&quot;)</p></li>
+
+<li><p><strong>-q</strong>, <strong>--quiet</strong> - Suppress the human typing result; the phone
+action still runs; JSON still prints</p></li>
+</ul>
+
+<h3 id="examples-and-expected-output-28">Examples and expected output</h3>
+
+<p><strong>Sample 1</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio phone type &quot;hello world&quot;
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<p>None.</p>
+
+<p><strong>Standard error</strong></p>
+
+<pre><code>Typed &quot;hello world&quot;
+</code></pre>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Sample 2</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio phone type 'user@example.com'
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<p>None.</p>
+
+<p><strong>Standard error</strong></p>
+
+<pre><code>Typed &quot;user@example.com&quot;
+</code></pre>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Sample 3</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio phone type &quot;don't split this text&quot;
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<p>None.</p>
+
+<p><strong>Standard error</strong></p>
+
+<pre><code>Typed &quot;don't split this text&quot;
+</code></pre>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<h2 id="axilio-phone-wait-for">axilio phone wait-for</h2>
+
+<pre><code>axilio phone wait-for &lt;text&gt; [flags]
+</code></pre>
+
+<p>Poll OCR until text appears, or until it disappears with --gone.</p>
+
+<p>The default match is a case-insensitive substring; --exact requires a
+case-sensitive exact match. The default timeout is 10 seconds. A timeout
+returns the CLI timeout exit code (5). Waiting for presence returns the
+matching element; waiting for absence is action-only.</p>
+
+<h3 id="command-options-15">Command options</h3>
+
+<ul>
+<li><p><strong>--exact</strong> - Require a case-sensitive exact match instead of
+substring</p></li>
+
+<li><p><strong>--gone</strong> - Wait for the text to disappear instead of appear</p></li>
+
+<li><p><strong>--timeout</strong>=<em>duration</em> - Maximum OCR polling time before exit code 5
+(default &quot;10s&quot;)</p></li>
+</ul>
+
+<h3 id="parent-options-10">Parent options</h3>
+
+<ul>
+<li><strong>--session</strong>=<em>value</em> - Session ID; overrides AXILIO_SESSION,
+sole-lease, and current-pointer selection</li>
+</ul>
+
+<h3 id="global-option-behavior-32">Global-option behavior</h3>
+
+<ul>
+<li><p><strong>--api-key</strong>=<em>value</em> - No effect; the session's embedded control
+token in the websocket URL authenticates phone commands</p></li>
+
+<li><p><strong>--base-url</strong>=<em>value</em> - No effect on phone wait-for command; it does
+not call the Axilio API</p></li>
+
+<li><p><strong>--no-color</strong> - Disable ANSI color in the human-readable form of the
+matched-element result</p></li>
+
+<li><p><strong>--org</strong>=<em>value</em> - No effect on phone wait-for command; phone control
+is selected by session, not org</p></li>
+
+<li><p><strong>-o</strong>, <strong>--output</strong>=<em>value</em> - Render a present match or --gone result
+as table or json (default &quot;table&quot;)</p></li>
+
+<li><p><strong>-q</strong>, <strong>--quiet</strong> - Suppress human wait notes; table or JSON results
+remain on stdout</p></li>
+</ul>
+
+<h3 id="examples-and-expected-output-29">Examples and expected output</h3>
+
+<p><strong>Sample 1</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio phone wait-for &quot;Results&quot;
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<pre><code>Text        Results
+Center      540,1120
+BBox        80,1060 920x120
+Confidence  0.98
+Source      ocr
+</code></pre>
+
+<p><strong>Standard error</strong></p>
+
+<p>None.</p>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Sample 2</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio phone wait-for &quot;Loading&quot; --gone
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<p>None.</p>
+
+<p><strong>Standard error</strong></p>
+
+<pre><code>&quot;Loading&quot; gone
+</code></pre>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Sample 3</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio phone wait-for &quot;Ready&quot; --exact --timeout 30s
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<pre><code>Text        Ready
+Center      540,1120
+BBox        80,1060 920x120
+Confidence  0.98
+Source      ocr
+</code></pre>
+
+<p><strong>Standard error</strong></p>
+
+<p>None.</p>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Notes:</strong> Exact matching is case-sensitive and waits up to 30 seconds.</p>
+
+<p><strong>Sample 4</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio phone wait-for &quot;Results&quot; --timeout 1s
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<p>None.</p>
+
+<p><strong>Standard error</strong></p>
+
+<pre><code>timeout: text not found within deadline: Results
+</code></pre>
+
+<p><strong>Exit status:</strong> 5.</p>
+
+<p><strong>Notes:</strong> Timeouts use the stable timeout exit status. Fang adds ERROR framing and
+may add ANSI styling at the process boundary; the stderr sample shows
+the underlying message.</p>
+
+<h2 id="axilio-phones">axilio phones</h2>
+
+<pre><code>axilio phones
+</code></pre>
+
+<p>Running <code>axilio phones</code> without a subcommand is equivalent to <code>axilio
+phones --help</code>: it only displays this help and does not list or change
+phones. Global flags shown here therefore have no effect. Pass flags to
+<code>phones list</code> or <code>phones mine</code> instead.</p>
+
+<p>Discover phones before starting a session. <code>phones list</code> shows shared
+phones and currently free dedicated phones that can be allocated now.
+<code>phones mine</code> shows the organization's complete dedicated inventory,
+including busy and offline phones, and is the place to find a phone ID
+for <code>sessions start --phone-id</code>.</p>
+
+<h3 id="global-option-behavior-33">Global-option behavior</h3>
+
+<ul>
+<li><p><strong>--api-key</strong>=<em>value</em> - No effect on phones command; bare axilio
+phones only displays this help</p></li>
+
+<li><p><strong>--base-url</strong>=<em>value</em> - No effect on phones command; bare axilio
+phones only displays this help</p></li>
+
+<li><p><strong>--no-color</strong> - No effect on phones command; bare axilio phones only
+displays this help</p></li>
+
+<li><p><strong>--org</strong>=<em>value</em> - No effect on phones command; bare axilio phones
+only displays this help</p></li>
+
+<li><p><strong>-o</strong>, <strong>--output</strong>=<em>value</em> - No effect on phones command; bare
+axilio phones only displays this help (default &quot;table&quot;)</p></li>
+
+<li><p><strong>-q</strong>, <strong>--quiet</strong> - No effect on phones command; bare axilio phones
+only displays this help</p></li>
+</ul>
+
+<h3 id="workflow-examples-3">Workflow examples</h3>
+
+<pre><code>axilio phones list
+axilio phones mine
+</code></pre>
+
+<h2 id="axilio-phones-list">axilio phones list</h2>
+
+<pre><code>axilio phones list
+</code></pre>
+
+<p>List the phones available to start a session on immediately: every
+active phone in the shared pool, plus your org's own dedicated phones
+that are currently free.</p>
+
+<p>Busy or offline dedicated phones do not appear here; use <code>axilio phones
+mine</code> to see the full dedicated inventory. Results include phone ID,
+type, model, and status.</p>
+
+<h3 id="global-option-behavior-34">Global-option behavior</h3>
+
+<ul>
+<li><p><strong>--api-key</strong>=<em>value</em> - API key for the available-phone request;
+overrides AXILIO_API_KEY and the saved key</p></li>
+
+<li><p><strong>--base-url</strong>=<em>value</em> - API host for the available-phone request;
+overrides AXILIO_BASE_URL and saved base-url</p></li>
+
+<li><p><strong>--no-color</strong> - Disable ANSI color in the human-readable form of the
+available-phone result</p></li>
+
+<li><p><strong>--org</strong>=<em>value</em> - OAuth org for the available-phone request;
+overrides AXILIO_ORG and the saved active org; API keys ignore it</p></li>
+
+<li><p><strong>-o</strong>, <strong>--output</strong>=<em>value</em> - Render the available-phone result as
+table or json (default &quot;table&quot;)</p></li>
+
+<li><p><strong>-q</strong>, <strong>--quiet</strong> - Suppress stderr notes for the available-phone
+request; the available-phone result remains on stdout</p></li>
+</ul>
+
+<h3 id="examples-and-expected-output-30">Examples and expected output</h3>
+
+<p><strong>Sample 1</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio phones list
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<pre><code>PHONE ID   TYPE     MODEL    STATUS
+&lt;phone-id&gt; android  Pixel 8  active
+</code></pre>
+
+<p><strong>Standard error</strong></p>
+
+<p>None.</p>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Notes:</strong> An empty successful result prints No phones available.</p>
+
+<p><strong>Sample 2</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio phones list -o json
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<pre><code>{
+  &quot;android_count&quot;: 1,
+  &quot;iphone_count&quot;: 0,
+  &quot;phones&quot;: [
+    {
+      &quot;created_at&quot;: &quot;&lt;timestamp&gt;&quot;,
+      &quot;model_name&quot;: &quot;Pixel 8&quot;,
+      &quot;ownership_type&quot;: &quot;shared&quot;,
+      &quot;phone_id&quot;: &quot;&lt;phone-id&gt;&quot;,
+      &quot;phone_type&quot;: &quot;android&quot;,
+      &quot;status&quot;: &quot;active&quot;,
+      &quot;updated_at&quot;: &quot;&lt;timestamp&gt;&quot;
+    }
+  ]
+}
+</code></pre>
+
+<p><strong>Standard error</strong></p>
+
+<p>None.</p>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Notes:</strong> Counts, inventory, and optional phone fields vary by organization and
+availability.</p>
+
+<h2 id="axilio-phones-mine">axilio phones mine</h2>
+
+<pre><code>axilio phones mine
+</code></pre>
+
+<p>List your organization's full dedicated (private/rented) phone inventory
+in every state - free, busy in an active session, or offline.</p>
+
+<p>This is how you discover a phone_id to pin with <code>axilio sessions start
+--phone-id</code>. Results include phone ID, nickname, type, model, status,
+and the session ID holding a busy phone.</p>
+
+<h3 id="global-option-behavior-35">Global-option behavior</h3>
+
+<ul>
+<li><p><strong>--api-key</strong>=<em>value</em> - API key for the dedicated-phone request;
+overrides AXILIO_API_KEY and the saved key</p></li>
+
+<li><p><strong>--base-url</strong>=<em>value</em> - API host for the dedicated-phone request;
+overrides AXILIO_BASE_URL and saved base-url</p></li>
+
+<li><p><strong>--no-color</strong> - Disable ANSI color in the human-readable form of the
+dedicated-phone result</p></li>
+
+<li><p><strong>--org</strong>=<em>value</em> - OAuth org for the dedicated-phone request;
+overrides AXILIO_ORG and the saved active org; API keys ignore it</p></li>
+
+<li><p><strong>-o</strong>, <strong>--output</strong>=<em>value</em> - Render the dedicated-phone result as
+table or json (default &quot;table&quot;)</p></li>
+
+<li><p><strong>-q</strong>, <strong>--quiet</strong> - Suppress stderr notes for the dedicated-phone
+request; the dedicated-phone result remains on stdout</p></li>
+</ul>
+
+<h3 id="examples-and-expected-output-31">Examples and expected output</h3>
+
+<p><strong>Sample 1</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio phones mine
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<pre><code>PHONE ID   NICKNAME  TYPE     MODEL    STATUS  SESSION
+&lt;phone-id&gt; demo      android  Pixel 8  active  &lt;session-id&gt;
+</code></pre>
+
+<p><strong>Standard error</strong></p>
+
+<p>None.</p>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Notes:</strong> An empty successful result prints No dedicated phones.</p>
+
+<p><strong>Sample 2</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio sessions start --phone-id ph_123
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<pre><code>Session      &lt;session-id&gt;
+Phone        ph_123
+Region       us-central
+Live view    &lt;live-view-url&gt;
+Control URL  &lt;control-url&gt;
+</code></pre>
+
+<p><strong>Standard error</strong></p>
+
+<pre><code>Drive it:  axilio phone observe
+Pin it to this shell (for parallel work):  export AXILIO_SESSION=&lt;session-id&gt;
+Release it with:  axilio sessions stop &lt;session-id&gt;
+</code></pre>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<h2 id="axilio-runs">axilio runs</h2>
+
+<pre><code>axilio runs
+</code></pre>
+
+<p>Running <code>axilio runs</code> without a subcommand is equivalent to <code>axilio runs
+--help</code>: it only displays this help and does not list, start, inspect,
+or cancel runs. Global flags shown here therefore have no effect. Pass
+flags to a runs subcommand instead.</p>
+
+<p>Manage workflow executions in the active organization. Discover a
+workflow ID with <code>workflows list</code>, start one or more runs, list recent
+run IDs and statuses, inspect a run in detail, or cancel queued and
+running work.</p>
+
+<h3 id="global-option-behavior-36">Global-option behavior</h3>
+
+<ul>
+<li><p><strong>--api-key</strong>=<em>value</em> - No effect on runs command; bare axilio runs
+only displays this help</p></li>
+
+<li><p><strong>--base-url</strong>=<em>value</em> - No effect on runs command; bare axilio runs
+only displays this help</p></li>
+
+<li><p><strong>--no-color</strong> - No effect on runs command; bare axilio runs only
+displays this help</p></li>
+
+<li><p><strong>--org</strong>=<em>value</em> - No effect on runs command; bare axilio runs only
+displays this help</p></li>
+
+<li><p><strong>-o</strong>, <strong>--output</strong>=<em>value</em> - No effect on runs command; bare axilio
+runs only displays this help (default &quot;table&quot;)</p></li>
+
+<li><p><strong>-q</strong>, <strong>--quiet</strong> - No effect on runs command; bare axilio runs only
+displays this help</p></li>
+</ul>
+
+<h3 id="workflow-examples-4">Workflow examples</h3>
+
+<pre><code>axilio workflows list
+axilio runs start wf_123
+axilio runs start &lt;workflow-id&gt;
+axilio runs list --workflow wf_123
+axilio runs list --workflow &lt;workflow-id&gt;
+axilio runs get run_123
+axilio runs get &lt;run-id&gt;
+</code></pre>
+
+<h2 id="axilio-runs-cancel">axilio runs cancel</h2>
+
+<pre><code>axilio runs cancel &lt;run-id&gt; [flags]
+</code></pre>
+
+<p>Cancel a queued or running run by an ID discovered with <code>runs list</code>.</p>
+
+<p>Without --yes, table mode reads confirmation from stdin, including
+redirected input. JSON and quiet modes do not prompt and require --yes.
+JSON success reports the canceled run ID.</p>
+
+<h3 id="command-options-16">Command options</h3>
+
+<ul>
+<li><strong>-y</strong>, <strong>--yes</strong> - Cancel without prompting; required in JSON or
+quiet mode</li>
+</ul>
+
+<h3 id="global-option-behavior-37">Global-option behavior</h3>
+
+<ul>
+<li><p><strong>--api-key</strong>=<em>value</em> - API key for run cancellation; overrides
+AXILIO_API_KEY and the saved key</p></li>
+
+<li><p><strong>--base-url</strong>=<em>value</em> - API host for run cancellation; overrides
+AXILIO_BASE_URL and saved base-url</p></li>
+
+<li><p><strong>--no-color</strong> - No effect on run cancellation; its runtime messages
+are unstyled</p></li>
+
+<li><p><strong>--org</strong>=<em>value</em> - OAuth org for run cancellation; overrides
+AXILIO_ORG and the saved active org; API keys ignore it</p></li>
+
+<li><p><strong>-o</strong>, <strong>--output</strong>=<em>value</em> - Emit a human confirmation or JSON run
+cancellation result (default &quot;table&quot;)</p></li>
+
+<li><p><strong>-q</strong>, <strong>--quiet</strong> - Suppress the run cancellation prompt and human
+result; --yes is still required; JSON still prints</p></li>
+</ul>
+
+<h3 id="examples-and-expected-output-32">Examples and expected output</h3>
+
+<p><strong>Sample 1</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio runs list
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<pre><code>RUN ID   STATUS     TRIGGER  WORKFLOW      CREATED
+&lt;run-id&gt; running    manual   &lt;workflow-id&gt; &lt;timestamp&gt;
+</code></pre>
+
+<p><strong>Standard error</strong></p>
+
+<p>None.</p>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Notes:</strong> Use a queued or running run ID with runs cancel.</p>
+
+<p><strong>Sample 2</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio runs cancel run_123
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<p>None.</p>
+
+<p><strong>Standard error</strong></p>
+
+<pre><code>Cancel run run_123? [y/N] Canceled run_123
+</code></pre>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Notes:</strong> Without --yes, table mode reads confirmation from stdin, including
+redirected input. JSON and quiet modes require --yes.</p>
+
+<p><strong>Sample 3</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio runs cancel run_123 --yes
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<p>None.</p>
+
+<p><strong>Standard error</strong></p>
+
+<pre><code>Canceled run_123
+</code></pre>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Sample 4</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio runs cancel &lt;run-id&gt; --yes
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<p>None.</p>
+
+<p><strong>Standard error</strong></p>
+
+<pre><code>Canceled &lt;run-id&gt;
+</code></pre>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<h2 id="axilio-runs-get">axilio runs get</h2>
+
+<pre><code>axilio runs get &lt;run-id&gt;
+</code></pre>
+
+<p>Fetch one run by the ID returned from <code>runs list</code> or <code>runs start</code>.</p>
+
+<p>The result includes status, trigger, workflow, session, phone, created,
+started and completed times, error message, and video URL when present.</p>
+
+<h3 id="global-option-behavior-38">Global-option behavior</h3>
+
+<ul>
+<li><p><strong>--api-key</strong>=<em>value</em> - API key for the run-detail request; overrides
+AXILIO_API_KEY and the saved key</p></li>
+
+<li><p><strong>--base-url</strong>=<em>value</em> - API host for the run-detail request;
+overrides AXILIO_BASE_URL and saved base-url</p></li>
+
+<li><p><strong>--no-color</strong> - Disable ANSI color in the human-readable form of the
+run-detail result</p></li>
+
+<li><p><strong>--org</strong>=<em>value</em> - OAuth org for the run-detail request; overrides
+AXILIO_ORG and the saved active org; API keys ignore it</p></li>
+
+<li><p><strong>-o</strong>, <strong>--output</strong>=<em>value</em> - Render the run-detail result as table
+or json (default &quot;table&quot;)</p></li>
+
+<li><p><strong>-q</strong>, <strong>--quiet</strong> - Suppress stderr notes for the run-detail
+request; the run-detail result remains on stdout</p></li>
+</ul>
+
+<h3 id="examples-and-expected-output-33">Examples and expected output</h3>
+
+<p><strong>Sample 1</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio runs list
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<pre><code>RUN ID   STATUS     TRIGGER  WORKFLOW      CREATED
+&lt;run-id&gt; completed  manual   &lt;workflow-id&gt; &lt;timestamp&gt;
+</code></pre>
+
+<p><strong>Standard error</strong></p>
+
+<p>None.</p>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Notes:</strong> Use a returned run ID with runs get.</p>
+
+<p><strong>Sample 2</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio runs get run_123
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<pre><code>Run        run_123
+Status     completed
+Trigger    manual
+Workflow   &lt;workflow-id&gt;
+Session    &lt;session-id&gt;
+Phone      &lt;phone-id&gt;
+Created    &lt;created-at&gt;
+Started    &lt;started-at&gt;
+Completed  &lt;completed-at&gt;
+Error      -
+Video      &lt;video-url&gt;
+</code></pre>
+
+<p><strong>Standard error</strong></p>
+
+<p>None.</p>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Sample 3</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio runs get run_123 -o json
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<pre><code>{
+  &quot;id&quot;: &quot;run_123&quot;,
+  &quot;status&quot;: &quot;completed&quot;,
+  &quot;trigger&quot;: &quot;manual&quot;,
+  &quot;workflow_id&quot;: &quot;&lt;workflow-id&gt;&quot;,
+  &quot;session_id&quot;: &quot;&lt;session-id&gt;&quot;,
+  &quot;phone_id&quot;: &quot;&lt;phone-id&gt;&quot;
+}
+</code></pre>
+
+<p><strong>Standard error</strong></p>
+
+<p>None.</p>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Notes:</strong> Shortened representative SDK response; timestamps, errors, and video URL
+appear when present.</p>
+
+<p><strong>Sample 4</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio runs get &lt;run-id&gt;
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<pre><code>Run        &lt;run-id&gt;
+Status     completed
+Trigger    manual
+Workflow   &lt;workflow-id&gt;
+Session    &lt;session-id&gt;
+Phone      &lt;phone-id&gt;
+Created    &lt;created-at&gt;
+Started    &lt;started-at&gt;
+Completed  &lt;completed-at&gt;
+Error      -
+Video      &lt;video-url&gt;
+</code></pre>
+
+<p><strong>Standard error</strong></p>
+
+<p>None.</p>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<h2 id="axilio-runs-list">axilio runs list</h2>
+
+<pre><code>axilio runs list [flags]
+</code></pre>
+
+<p>List recent runs in the active organization, most recent first.</p>
+
+<p>Filter by workflow ID and cap the result count with --limit. Table rows
+include run ID, status, trigger, workflow ID, and creation time; use a
+returned run ID with <code>runs get</code> or <code>runs cancel</code>.</p>
+
+<h3 id="command-options-17">Command options</h3>
+
+<ul>
+<li><p><strong>--limit</strong>=<em>number</em> - Maximum number of most-recent runs to return
+(default &quot;20&quot;)</p></li>
+
+<li><p><strong>--workflow</strong>=<em>value</em> - Return only runs for this workflow ID</p></li>
+</ul>
+
+<h3 id="global-option-behavior-39">Global-option behavior</h3>
+
+<ul>
+<li><p><strong>--api-key</strong>=<em>value</em> - API key for the run-list request; overrides
+AXILIO_API_KEY and the saved key</p></li>
+
+<li><p><strong>--base-url</strong>=<em>value</em> - API host for the run-list request; overrides
+AXILIO_BASE_URL and saved base-url</p></li>
+
+<li><p><strong>--no-color</strong> - Disable ANSI color in the human-readable form of the
+run-list result</p></li>
+
+<li><p><strong>--org</strong>=<em>value</em> - OAuth org for the run-list request; overrides
+AXILIO_ORG and the saved active org; API keys ignore it</p></li>
+
+<li><p><strong>-o</strong>, <strong>--output</strong>=<em>value</em> - Render the run-list result as table or
+json (default &quot;table&quot;)</p></li>
+
+<li><p><strong>-q</strong>, <strong>--quiet</strong> - Suppress stderr notes for the run-list request;
+the run-list result remains on stdout</p></li>
+</ul>
+
+<h3 id="examples-and-expected-output-34">Examples and expected output</h3>
+
+<p><strong>Sample 1</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio runs list
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<pre><code>RUN ID   STATUS     TRIGGER  WORKFLOW      CREATED
+&lt;run-id&gt; completed  manual   &lt;workflow-id&gt; &lt;timestamp&gt;
+</code></pre>
+
+<p><strong>Standard error</strong></p>
+
+<p>None.</p>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Notes:</strong> An empty successful result prints No runs found.</p>
+
+<p><strong>Sample 2</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio runs list --workflow wf_123 --limit 10
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<pre><code>RUN ID   STATUS     TRIGGER  WORKFLOW  CREATED
+&lt;run-id&gt; completed  manual   wf_123    &lt;timestamp&gt;
+</code></pre>
+
+<p><strong>Standard error</strong></p>
+
+<p>None.</p>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Notes:</strong> Run IDs, statuses, and timestamps vary.</p>
+
+<p><strong>Sample 3</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio runs list -o json
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<pre><code>{
+  &quot;limit&quot;: 20,
+  &quot;offset&quot;: 0,
+  &quot;runs&quot;: [
+    {
+      &quot;id&quot;: &quot;&lt;run-id&gt;&quot;,
+      &quot;status&quot;: &quot;completed&quot;,
+      &quot;trigger&quot;: &quot;manual&quot;,
+      &quot;workflow_id&quot;: &quot;&lt;workflow-id&gt;&quot;
+    }
+  ],
+  &quot;total&quot;: 1
+}
+</code></pre>
+
+<p><strong>Standard error</strong></p>
+
+<p>None.</p>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Notes:</strong> Shortened representative SDK response; run records can include
+additional fields.</p>
+
+<h2 id="axilio-runs-start">axilio runs start</h2>
+
+<pre><code>axilio runs start &lt;workflow-id&gt; [flags]
+</code></pre>
+
+<p>Create runs for a workflow ID discovered with <code>workflows list</code>.</p>
+
+<p>--count creates that many run configurations; v0.5.0 does not validate
+its range locally, so use a positive count.</p>
+
+<p>--phone-id pins every created run to a specific dedicated phone.</p>
+
+<p>--start-timeout is the number of seconds a queued run may wait for a
+phone before auto-cancel; zero omits the value and uses the server
+default, and nonzero values are sent without client-side range
+validation.</p>
+
+<p>Successful output contains the created run IDs.</p>
+
+<h3 id="command-options-18">Command options</h3>
+
+<ul>
+<li><p><strong>--count</strong>=<em>number</em> - Number of run configurations to create; v0.5.0
+does not validate the range (default &quot;1&quot;)</p></li>
+
+<li><p><strong>--phone-id</strong>=<em>value</em> - Dedicated phone ID to pin to every created
+run</p></li>
+
+<li><p><strong>--start-timeout</strong>=<em>number</em> - Queued-phone wait in seconds; 0 uses
+the server default, nonzero is sent as-is</p></li>
+</ul>
+
+<h3 id="global-option-behavior-40">Global-option behavior</h3>
+
+<ul>
+<li><p><strong>--api-key</strong>=<em>value</em> - API key for the run-create request; overrides
+AXILIO_API_KEY and the saved key</p></li>
+
+<li><p><strong>--base-url</strong>=<em>value</em> - API host for the run-create request;
+overrides AXILIO_BASE_URL and saved base-url</p></li>
+
+<li><p><strong>--no-color</strong> - No effect on runs start command; its human messages
+are unstyled</p></li>
+
+<li><p><strong>--org</strong>=<em>value</em> - OAuth org for the run-create request; overrides
+AXILIO_ORG and the saved active org; API keys ignore it</p></li>
+
+<li><p><strong>-o</strong>, <strong>--output</strong>=<em>value</em> - Emit created run IDs as human messages
+or json (default &quot;table&quot;)</p></li>
+
+<li><p><strong>-q</strong>, <strong>--quiet</strong> - Suppress table-mode run IDs and guidance; a JSON
+result remains on stdout</p></li>
+</ul>
+
+<h3 id="examples-and-expected-output-35">Examples and expected output</h3>
+
+<p><strong>Sample 1</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio runs start wf_123
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<p>None.</p>
+
+<p><strong>Standard error</strong></p>
+
+<pre><code>Started run &lt;run-id&gt;
+</code></pre>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Sample 2</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio runs start wf_123 --count 3
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<p>None.</p>
+
+<p><strong>Standard error</strong></p>
+
+<pre><code>Started run &lt;run-id-1&gt;
+Started run &lt;run-id-2&gt;
+Started run &lt;run-id-3&gt;
+</code></pre>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Sample 3</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio runs start wf_123 --phone-id ph_123
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<p>None.</p>
+
+<p><strong>Standard error</strong></p>
+
+<pre><code>Started run &lt;run-id&gt;
+</code></pre>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Sample 4</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio runs start wf_123 --start-timeout 300
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<p>None.</p>
+
+<p><strong>Standard error</strong></p>
+
+<pre><code>Started run &lt;run-id&gt;
+</code></pre>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Sample 5</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio runs start &lt;workflow-id&gt;
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<p>None.</p>
+
+<p><strong>Standard error</strong></p>
+
+<pre><code>Started run &lt;run-id&gt;
+</code></pre>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Notes:</strong> -o json emits the complete run_ids response on stdout.</p>
+
+<h2 id="axilio-sessions">axilio sessions</h2>
+
+<pre><code>axilio sessions
+</code></pre>
+
+<p>Running <code>axilio sessions</code> without a subcommand is equivalent to <code>axilio
+sessions --help</code>: it only displays this help and does not acquire, list,
+select, or stop sessions. Global flags shown here therefore have no
+effect. Pass flags to a sessions subcommand instead.</p>
+
+<p>Manage the phone leases used by <code>axilio phone</code>. Starting a session
+stores a local lease file and a current-session pointer until the
+session is stopped. Session selection precedence is --session,
+AXILIO_SESSION, the sole active lease, the current-session pointer, then
+an ambiguity error. <code>sessions list --remote</code> instead asks the API for
+all active server sessions.</p>
+
+<h3 id="global-option-behavior-41">Global-option behavior</h3>
+
+<ul>
+<li><p><strong>--api-key</strong>=<em>value</em> - No effect on sessions command; bare axilio
+sessions only displays this help</p></li>
+
+<li><p><strong>--base-url</strong>=<em>value</em> - No effect on sessions command; bare axilio
+sessions only displays this help</p></li>
+
+<li><p><strong>--no-color</strong> - No effect on sessions command; bare axilio sessions
+only displays this help</p></li>
+
+<li><p><strong>--org</strong>=<em>value</em> - No effect on sessions command; bare axilio
+sessions only displays this help</p></li>
+
+<li><p><strong>-o</strong>, <strong>--output</strong>=<em>value</em> - No effect on sessions command; bare
+axilio sessions only displays this help (default &quot;table&quot;)</p></li>
+
+<li><p><strong>-q</strong>, <strong>--quiet</strong> - No effect on sessions command; bare axilio
+sessions only displays this help</p></li>
+</ul>
+
+<h3 id="workflow-examples-5">Workflow examples</h3>
+
+<pre><code>axilio sessions start
+axilio sessions list
+axilio sessions current
+axilio sessions stop sess_123
+axilio sessions stop &lt;session-id&gt;
+</code></pre>
+
+<h2 id="axilio-sessions-current">axilio sessions current</h2>
+
+<pre><code>axilio sessions current
+</code></pre>
+
+<p>Resolve and show the session selected for phone commands.</p>
+
+<p>Phone command session selection precedence is --session, AXILIO_SESSION,
+the sole active local lease, the saved current-session pointer, then an
+ambiguity error. This command has no --session flag, so it starts at
+AXILIO_SESSION. If no session resolves, the current implementation
+prints a note and exits successfully.</p>
+
+<h3 id="global-option-behavior-42">Global-option behavior</h3>
+
+<ul>
+<li><p><strong>--api-key</strong>=<em>value</em> - No effect on sessions current command; it uses
+local session data or its control URL</p></li>
+
+<li><p><strong>--base-url</strong>=<em>value</em> - No effect on sessions current command; it
+does not call the Axilio API</p></li>
+
+<li><p><strong>--no-color</strong> - Disable ANSI color in the human-readable form of the
+current-session result</p></li>
+
+<li><p><strong>--org</strong>=<em>value</em> - No effect on sessions current command; phone
+control is selected by session, not org</p></li>
+
+<li><p><strong>-o</strong>, <strong>--output</strong>=<em>value</em> - Render the current-session result as
+table or json (default &quot;table&quot;)</p></li>
+
+<li><p><strong>-q</strong>, <strong>--quiet</strong> - Suppress stderr notes for session resolution;
+the current-session result remains on stdout</p></li>
+</ul>
+
+<h3 id="examples-and-expected-output-36">Examples and expected output</h3>
+
+<p><strong>Sample 1</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio sessions current
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<pre><code>Session  &lt;session-id&gt;
+Phone    &lt;phone-id&gt;
+Type     android
+</code></pre>
+
+<p><strong>Standard error</strong></p>
+
+<p>None.</p>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Notes:</strong> No selected session is an exit-0 answer; JSON prints null.</p>
+
+<p><strong>Sample 2</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>AXILIO_SESSION=sess_123 axilio sessions current
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<pre><code>Session  sess_123
+Phone    &lt;phone-id&gt;
+Type     android
+</code></pre>
+
+<p><strong>Standard error</strong></p>
+
+<p>None.</p>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Notes:</strong> The named lease must exist locally; AXILIO_SESSION has precedence over
+sole-lease and current-pointer selection.</p>
+
+<p><strong>Sample 3</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio sessions current -o json
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<pre><code>{
+  &quot;session_id&quot;: &quot;&lt;session-id&gt;&quot;,
+  &quot;phone_id&quot;: &quot;&lt;phone-id&gt;&quot;,
+  &quot;phone_type&quot;: &quot;android&quot;,
+  &quot;control_url&quot;: &quot;&lt;control-url&gt;&quot;,
+  &quot;created_at&quot;: &quot;&lt;timestamp&gt;&quot;
+}
+</code></pre>
+
+<p><strong>Standard error</strong></p>
+
+<p>None.</p>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Notes:</strong> With no selected lease, the successful JSON result is null.</p>
+
+<h2 id="axilio-sessions-list">axilio sessions list</h2>
+
+<pre><code>axilio sessions list [flags]
+</code></pre>
+
+<p>List local lease files by default.</p>
+
+<p>The <code>*</code> marker identifies the lease that phone commands would select in
+this shell when resolution is not ambiguous. Use --remote to list active
+server sessions instead; remote rows include session ID, phone ID, phone
+type, and model but are not the local lease registry.</p>
+
+<h3 id="command-options-19">Command options</h3>
+
+<ul>
+<li><strong>--remote</strong> - List all active server sessions instead of this CLI's
+local lease files</li>
+</ul>
+
+<h3 id="global-option-behavior-43">Global-option behavior</h3>
+
+<ul>
+<li><p><strong>--api-key</strong>=<em>value</em> - Authenticates only --remote listing; no effect
+on local lease files</p></li>
+
+<li><p><strong>--base-url</strong>=<em>value</em> - Selects the API host only with --remote; no
+effect on local lease files</p></li>
+
+<li><p><strong>--no-color</strong> - Disable ANSI color in the human-readable session
+listing</p></li>
+
+<li><p><strong>--org</strong>=<em>value</em> - Selects the OAuth org only with --remote; no
+effect on local lease files</p></li>
+
+<li><p><strong>-o</strong>, <strong>--output</strong>=<em>value</em> - Render local or remote sessions as
+table or json (default &quot;table&quot;)</p></li>
+
+<li><p><strong>-q</strong>, <strong>--quiet</strong> - Suppress stderr notes; the session listing
+remains on stdout</p></li>
+</ul>
+
+<h3 id="examples-and-expected-output-37">Examples and expected output</h3>
+
+<p><strong>Sample 1</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio sessions list
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<pre><code>   SESSION       PHONE       TYPE
+*  &lt;session-id&gt;  &lt;phone-id&gt;  android
+</code></pre>
+
+<p><strong>Standard error</strong></p>
+
+<p>None.</p>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Notes:</strong> With no local leases, stdout says how to acquire one and exit status is
+0.</p>
+
+<p><strong>Sample 2</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio sessions list --remote
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<pre><code>SESSION       PHONE       TYPE     MODEL
+&lt;session-id&gt;  &lt;phone-id&gt;  android  Pixel 8
+</code></pre>
+
+<p><strong>Standard error</strong></p>
+
+<p>None.</p>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Notes:</strong> Remote results come from the API and do not mark the locally selected
+lease.</p>
+
+<p><strong>Sample 3</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio sessions list -o json
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<pre><code>[
+  {
+    &quot;session_id&quot;: &quot;&lt;session-id&gt;&quot;,
+    &quot;phone_id&quot;: &quot;&lt;phone-id&gt;&quot;,
+    &quot;phone_type&quot;: &quot;android&quot;,
+    &quot;control_url&quot;: &quot;&lt;control-url&gt;&quot;,
+    &quot;created_at&quot;: &quot;&lt;timestamp&gt;&quot;
+  }
+]
+</code></pre>
+
+<p><strong>Standard error</strong></p>
+
+<p>None.</p>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Notes:</strong> Local lease JSON includes the stored control URL; IDs and URLs vary.</p>
+
+<h2 id="axilio-sessions-start">axilio sessions start</h2>
+
+<pre><code>axilio sessions start [flags]
+</code></pre>
+
+<p>Acquire an Android phone by default and persist its session as a local
+lease and current-session pointer.</p>
+
+<p>Select iphone with --phone-type, pin a dedicated phone discovered
+through <code>phones mine</code> with --phone-id, or attach the session to a
+workflow with --workflow. --export prints only <code>export
+AXILIO_SESSION=\&lt;id\&gt;</code> for shell eval; that shell syntax also wins when
+-o json is supplied. The lease remains active until explicitly stopped.</p>
+
+<h3 id="command-options-20">Command options</h3>
+
+<ul>
+<li><p><strong>--export</strong> - Print only <code>export AXILIO_SESSION=\&lt;id\&gt;</code> for shell
+eval</p></li>
+
+<li><p><strong>--phone-id</strong>=<em>value</em> - Pin a dedicated phone ID from <code>phones mine</code>
+instead of pool allocation</p></li>
+
+<li><p><strong>--phone-type</strong>=<em>value</em> - Phone platform to allocate: android or
+iphone (default &quot;android&quot;)</p></li>
+
+<li><p><strong>--workflow</strong>=<em>value</em> - Workflow ID to attach; omit for an
+interactive lease</p></li>
+</ul>
+
+<h3 id="global-option-behavior-44">Global-option behavior</h3>
+
+<ul>
+<li><p><strong>--api-key</strong>=<em>value</em> - API key for the phone-allocation request;
+overrides AXILIO_API_KEY and the saved key</p></li>
+
+<li><p><strong>--base-url</strong>=<em>value</em> - API host for the phone-allocation request;
+overrides AXILIO_BASE_URL and saved base-url</p></li>
+
+<li><p><strong>--no-color</strong> - Disable ANSI color in the human-readable form of the
+allocated-session result</p></li>
+
+<li><p><strong>--org</strong>=<em>value</em> - OAuth org for the phone-allocation request;
+overrides AXILIO_ORG and the saved active org; API keys ignore it</p></li>
+
+<li><p><strong>-o</strong>, <strong>--output</strong>=<em>value</em> - Render the allocated session as table
+or json; --export always emits shell text (default &quot;table&quot;)</p></li>
+
+<li><p><strong>-q</strong>, <strong>--quiet</strong> - Suppress session guidance; the result or
+--export text remains on stdout</p></li>
+</ul>
+
+<h3 id="examples-and-expected-output-38">Examples and expected output</h3>
+
+<p><strong>Sample 1</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio sessions start
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<pre><code>Session      &lt;session-id&gt;
+Phone        &lt;phone-id&gt;
+Region       us-central
+Live view    &lt;live-view-url&gt;
+Control URL  &lt;control-url&gt;
+</code></pre>
+
+<p><strong>Standard error</strong></p>
+
+<pre><code>Drive it:  axilio phone observe
+Pin it to this shell (for parallel work):  export AXILIO_SESSION=&lt;session-id&gt;
+Release it with:  axilio sessions stop &lt;session-id&gt;
+</code></pre>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Sample 2</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio sessions start --phone-type iphone
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<pre><code>Session      &lt;session-id&gt;
+Phone        &lt;phone-id&gt;
+Region       us-central
+Live view    &lt;live-view-url&gt;
+Control URL  &lt;control-url&gt;
+</code></pre>
+
+<p><strong>Standard error</strong></p>
+
+<pre><code>Drive it:  axilio phone observe
+Pin it to this shell (for parallel work):  export AXILIO_SESSION=&lt;session-id&gt;
+Release it with:  axilio sessions stop &lt;session-id&gt;
+</code></pre>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Sample 3</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio sessions start --phone-id ph_123
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<pre><code>Session      &lt;session-id&gt;
+Phone        ph_123
+Region       us-central
+Live view    &lt;live-view-url&gt;
+Control URL  &lt;control-url&gt;
+</code></pre>
+
+<p><strong>Standard error</strong></p>
+
+<pre><code>Drive it:  axilio phone observe
+Pin it to this shell (for parallel work):  export AXILIO_SESSION=&lt;session-id&gt;
+Release it with:  axilio sessions stop &lt;session-id&gt;
+</code></pre>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Sample 4</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio sessions start --workflow wf_123
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<pre><code>Session      &lt;session-id&gt;
+Phone        &lt;phone-id&gt;
+Region       us-central
+Live view    &lt;live-view-url&gt;
+Control URL  &lt;control-url&gt;
+</code></pre>
+
+<p><strong>Standard error</strong></p>
+
+<pre><code>Drive it:  axilio phone observe
+Pin it to this shell (for parallel work):  export AXILIO_SESSION=&lt;session-id&gt;
+Release it with:  axilio sessions stop &lt;session-id&gt;
+</code></pre>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Sample 5</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio sessions start --export
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<pre><code>export AXILIO_SESSION=&lt;session-id&gt;
+</code></pre>
+
+<p><strong>Standard error</strong></p>
+
+<p>None.</p>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Notes:</strong> --export emits shell text even when -o json is also supplied.</p>
+
+<p><strong>Sample 6</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>eval &quot;$(axilio sessions start --export)&quot;
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<p>None.</p>
+
+<p><strong>Standard error</strong></p>
+
+<p>None.</p>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Notes:</strong> The shell consumes the nested command's export line and sets
+AXILIO_SESSION in the current shell.</p>
+
+<h2 id="axilio-sessions-stop">axilio sessions stop</h2>
+
+<pre><code>axilio sessions stop &lt;session-id|phone-id&gt; [flags]
+</code></pre>
+
+<p>Release an active phone allocation using either its session ID or phone
+ID.</p>
+
+<p>Discover IDs with <code>sessions list --remote</code>; a matching local lease and
+current-session pointer are removed after release. Without --yes, table
+mode reads confirmation from stdin, including redirected input. JSON and
+quiet modes do not prompt and require --yes.</p>
+
+<h3 id="command-options-21">Command options</h3>
+
+<ul>
+<li><strong>-y</strong>, <strong>--yes</strong> - Release without prompting; required in JSON or
+quiet mode</li>
+</ul>
+
+<h3 id="global-option-behavior-45">Global-option behavior</h3>
+
+<ul>
+<li><p><strong>--api-key</strong>=<em>value</em> - API key for session release; overrides
+AXILIO_API_KEY and the saved key</p></li>
+
+<li><p><strong>--base-url</strong>=<em>value</em> - API host for session release; overrides
+AXILIO_BASE_URL and saved base-url</p></li>
+
+<li><p><strong>--no-color</strong> - No effect on session release; its runtime messages
+are unstyled</p></li>
+
+<li><p><strong>--org</strong>=<em>value</em> - OAuth org for session release; overrides
+AXILIO_ORG and the saved active org; API keys ignore it</p></li>
+
+<li><p><strong>-o</strong>, <strong>--output</strong>=<em>value</em> - Emit a human confirmation or JSON
+session release result (default &quot;table&quot;)</p></li>
+
+<li><p><strong>-q</strong>, <strong>--quiet</strong> - Suppress the session release prompt and human
+result; --yes is still required; JSON still prints</p></li>
+</ul>
+
+<h3 id="examples-and-expected-output-39">Examples and expected output</h3>
+
+<p><strong>Sample 1</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio sessions list --remote
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<pre><code>SESSION       PHONE       TYPE     MODEL
+&lt;session-id&gt;  &lt;phone-id&gt;  android  Pixel 8
+</code></pre>
+
+<p><strong>Standard error</strong></p>
+
+<p>None.</p>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Notes:</strong> Use the returned session or phone ID with sessions stop.</p>
+
+<p><strong>Sample 2</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio sessions stop sess_123
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<p>None.</p>
+
+<p><strong>Standard error</strong></p>
+
+<pre><code>Release &lt;phone-id&gt;? [y/N] Released &lt;phone-id&gt;.
+</code></pre>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Notes:</strong> Without --yes, table mode reads confirmation from stdin, including
+redirected input. JSON and quiet modes require --yes.</p>
+
+<p><strong>Sample 3</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio sessions stop ph_123 --yes
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<p>None.</p>
+
+<p><strong>Standard error</strong></p>
+
+<pre><code>Released ph_123.
+</code></pre>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Sample 4</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio sessions stop &lt;session-id&gt; --yes
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<p>None.</p>
+
+<p><strong>Standard error</strong></p>
+
+<pre><code>Released &lt;phone-id&gt;.
+</code></pre>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<h2 id="axilio-status">axilio status</h2>
+
+<pre><code>axilio status
+</code></pre>
+
+<p>Make an authenticated API request and report status, effective API host,
+active organization selector, and account balance.</p>
+
+<p>A valid API key or OAuth session is required. Use -o json for the
+structured status, api_host, active_org, and balance fields.</p>
+
+<h3 id="global-option-behavior-46">Global-option behavior</h3>
+
+<ul>
+<li><p><strong>--api-key</strong>=<em>value</em> - API key for the status request; overrides
+AXILIO_API_KEY and the saved key</p></li>
+
+<li><p><strong>--base-url</strong>=<em>value</em> - API host for the status request; overrides
+AXILIO_BASE_URL and saved base-url</p></li>
+
+<li><p><strong>--no-color</strong> - Disable ANSI color in the human-readable form of the
+status result</p></li>
+
+<li><p><strong>--org</strong>=<em>value</em> - OAuth org for the status request; overrides
+AXILIO_ORG and the saved active org; API keys ignore it</p></li>
+
+<li><p><strong>-o</strong>, <strong>--output</strong>=<em>value</em> - Render the status result as table or
+json (default &quot;table&quot;)</p></li>
+
+<li><p><strong>-q</strong>, <strong>--quiet</strong> - Suppress stderr notes for the status request;
+the status result remains on stdout</p></li>
+</ul>
+
+<h3 id="examples-and-expected-output-40">Examples and expected output</h3>
+
+<p><strong>Sample 1</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio status
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<pre><code>Status      ok
+API host    https://api.axilio.ai/api/v1
+Active org  (session default)
+Balance     $5.00
+</code></pre>
+
+<p><strong>Standard error</strong></p>
+
+<p>None.</p>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Sample 2</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio status -o json
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<pre><code>{
+  &quot;active_org&quot;: &quot;&quot;,
+  &quot;api_host&quot;: &quot;https://api.axilio.ai/api/v1&quot;,
+  &quot;balance&quot;: &quot;$5.00&quot;,
+  &quot;status&quot;: &quot;ok&quot;
+}
+</code></pre>
+
+<p><strong>Standard error</strong></p>
+
+<p>None.</p>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Notes:</strong> Balance and active organization vary by account.</p>
+
+<h2 id="axilio-upgrade">axilio upgrade</h2>
+
+<pre><code>axilio upgrade [flags]
+</code></pre>
+
+<p>Download the latest release from GitHub and replace this binary in place
+(the download is checksum-verified).</p>
+
+<p>Homebrew installs defer to <code>brew upgrade</code>, and development or <code>go
+install</code> builds are left to the Go toolchain. On a standalone release,
+--check reports whether a newer release exists without installing it. A
+Homebrew invocation currently prints <code>brew upgrade axilio</code> guidance and
+returns before checking, even when --check is supplied.</p>
+
+<h3 id="command-options-22">Command options</h3>
+
+<ul>
+<li><strong>--check</strong> - Check a standalone release without installing; Homebrew
+currently prints upgrade guidance</li>
+</ul>
+
+<h3 id="global-option-behavior-47">Global-option behavior</h3>
+
+<ul>
+<li><p><strong>--api-key</strong>=<em>value</em> - No effect on upgrade command; release checks
+use GitHub without Axilio auth</p></li>
+
+<li><p><strong>--base-url</strong>=<em>value</em> - No effect on upgrade command; release checks
+use GitHub</p></li>
+
+<li><p><strong>--no-color</strong> - No effect on upgrade command; its runtime messages
+are unstyled</p></li>
+
+<li><p><strong>--org</strong>=<em>value</em> - No effect on upgrade command; releases are not
+organization-scoped</p></li>
+
+<li><p><strong>-o</strong>, <strong>--output</strong>=<em>value</em> - Emit human upgrade guidance or a JSON
+upgrade-status result (default &quot;table&quot;)</p></li>
+
+<li><p><strong>-q</strong>, <strong>--quiet</strong> - Suppress human upgrade guidance and status; JSON
+still prints</p></li>
+</ul>
+
+<h3 id="examples-and-expected-output-41">Examples and expected output</h3>
+
+<p><strong>Sample 1</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio upgrade --check
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<p>None.</p>
+
+<p><strong>Standard error</strong></p>
+
+<pre><code>A newer release is available: &lt;old&gt; -&gt; &lt;new&gt;. Run `axilio upgrade` to install.
+</code></pre>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Notes:</strong> The version placeholders vary. This is the newer-release branch;
+up-to-date, no-release, development, and Homebrew-managed installations
+report their own state instead.</p>
+
+<p><strong>Sample 2</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio upgrade
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<p>None.</p>
+
+<p><strong>Standard error</strong></p>
+
+<pre><code>Upgrading axilio &lt;current-version&gt; -&gt; &lt;latest-version&gt;...
+Upgraded to &lt;latest-version&gt;.
+</code></pre>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Notes:</strong> Standalone release only; development builds and Homebrew-managed
+installs print their own package-manager guidance.</p>
+
+<p><strong>Sample 3</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>brew upgrade axilio
+</code></pre>
+
+<p><strong>External command behavior</strong></p>
+
+<p>Output and exit status are owned by Homebrew, not the axilio CLI.</p>
+
+<h2 id="axilio-uploads">axilio uploads</h2>
+
+<pre><code>axilio uploads
+</code></pre>
+
+<p>Running <code>axilio uploads</code> without a subcommand is equivalent to <code>axilio
+uploads --help</code>: it only displays this help and does not add, list,
+push, or delete uploads. Global flags shown here therefore have no
+effect. Pass flags to an uploads subcommand instead.</p>
+
+<p>Manage the org file library. Files live here until deleted and can be
+pushed to any phone the org holds, so one upload serves many phones.
+<code>add</code> stores a local file, <code>list</code> discovers uploads and quota, <code>push</code>
+delivers a stored upload, and <code>delete</code> frees library quota. <code>phone send</code>
+combines add and push for the selected session's phone.</p>
+
+<h3 id="global-option-behavior-48">Global-option behavior</h3>
+
+<ul>
+<li><p><strong>--api-key</strong>=<em>value</em> - No effect on uploads command; bare axilio
+uploads only displays this help</p></li>
+
+<li><p><strong>--base-url</strong>=<em>value</em> - No effect on uploads command; bare axilio
+uploads only displays this help</p></li>
+
+<li><p><strong>--no-color</strong> - No effect on uploads command; bare axilio uploads
+only displays this help</p></li>
+
+<li><p><strong>--org</strong>=<em>value</em> - No effect on uploads command; bare axilio uploads
+only displays this help</p></li>
+
+<li><p><strong>-o</strong>, <strong>--output</strong>=<em>value</em> - No effect on uploads command; bare
+axilio uploads only displays this help (default &quot;table&quot;)</p></li>
+
+<li><p><strong>-q</strong>, <strong>--quiet</strong> - No effect on uploads command; bare axilio
+uploads only displays this help</p></li>
+</ul>
+
+<h3 id="workflow-examples-6">Workflow examples</h3>
+
+<pre><code>axilio uploads add ./photo.jpg
+axilio uploads list
+axilio uploads push upl_123 --phone-id ph_123
+axilio uploads push &lt;upload-id&gt; --phone-id &lt;phone-id&gt;
+axilio uploads delete upl_123 --yes
+axilio uploads delete &lt;upload-id&gt; --yes
+</code></pre>
+
+<h2 id="axilio-uploads-add">axilio uploads add</h2>
+
+<pre><code>axilio uploads add &lt;path&gt; [flags]
+</code></pre>
+
+<p>Register a local file, upload its bytes, and verify them, leaving a
+ready file in the library.</p>
+
+<p>Use <code>axilio uploads push</code> to send it to a phone, or <code>axilio phone send</code>
+to do both in one step. The stored filename defaults to the local
+basename and MIME type is inferred from the extension; --filename and
+--mime-type override those values.</p>
+
+<h3 id="command-options-23">Command options</h3>
+
+<ul>
+<li><p><strong>--filename</strong>=<em>value</em> - Stored filename; omitted uses the local
+file's basename</p></li>
+
+<li><p><strong>--mime-type</strong>=<em>value</em> - Stored MIME type; omitted infers it from the
+file extension</p></li>
+</ul>
+
+<h3 id="global-option-behavior-49">Global-option behavior</h3>
+
+<ul>
+<li><p><strong>--api-key</strong>=<em>value</em> - API key for the file-upload request; overrides
+AXILIO_API_KEY and the saved key</p></li>
+
+<li><p><strong>--base-url</strong>=<em>value</em> - API host for the file-upload request;
+overrides AXILIO_BASE_URL and saved base-url</p></li>
+
+<li><p><strong>--no-color</strong> - Disable ANSI color in the human-readable form of the
+stored-upload result</p></li>
+
+<li><p><strong>--org</strong>=<em>value</em> - OAuth org for the file-upload request; overrides
+AXILIO_ORG and the saved active org; API keys ignore it</p></li>
+
+<li><p><strong>-o</strong>, <strong>--output</strong>=<em>value</em> - Render the stored-upload result as
+table or json (default &quot;table&quot;)</p></li>
+
+<li><p><strong>-q</strong>, <strong>--quiet</strong> - Suppress upload progress; the stored-upload
+result remains on stdout</p></li>
+</ul>
+
+<h3 id="examples-and-expected-output-42">Examples and expected output</h3>
+
+<p><strong>Sample 1</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio uploads add ./photo.jpg
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<pre><code>ID        &lt;upload-id&gt;
+Filename  photo.jpg
+Size      2.0 MiB
+Type      image/jpeg
+Status    ready
+</code></pre>
+
+<p><strong>Standard error</strong></p>
+
+<pre><code>→ Uploading photo.jpg
+</code></pre>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Sample 2</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio uploads add ./asset --filename photo.jpg --mime-type image/jpeg
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<pre><code>ID        &lt;upload-id&gt;
+Filename  photo.jpg
+Size      2.0 MiB
+Type      image/jpeg
+Status    ready
+</code></pre>
+
+<p><strong>Standard error</strong></p>
+
+<pre><code>→ Uploading asset
+</code></pre>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Notes:</strong> --filename and --mime-type override values inferred from the local path.</p>
+
+<h2 id="axilio-uploads-delete">axilio uploads delete</h2>
+
+<pre><code>axilio uploads delete &lt;upload-id&gt; [flags]
+</code></pre>
+
+<p>Delete an upload from the active organization's library and free its
+storage quota.</p>
+
+<p>Use <code>uploads list</code> to discover the upload ID. Deletion also schedules
+removal from every phone holding or receiving a copy. Without --yes,
+table mode reads confirmation from stdin, including redirected input.
+JSON and quiet modes do not prompt and require --yes. The alias <code>uploads
+rm</code> performs the same operation.</p>
+
+<h3 id="command-options-24">Command options</h3>
+
+<ul>
+<li><strong>-y</strong>, <strong>--yes</strong> - Delete without prompting; required in JSON or
+quiet mode</li>
+</ul>
+
+<h3 id="global-option-behavior-50">Global-option behavior</h3>
+
+<ul>
+<li><p><strong>--api-key</strong>=<em>value</em> - API key for the upload-delete request;
+overrides AXILIO_API_KEY and the saved key</p></li>
+
+<li><p><strong>--base-url</strong>=<em>value</em> - API host for the upload-delete request;
+overrides AXILIO_BASE_URL and saved base-url</p></li>
+
+<li><p><strong>--no-color</strong> - No effect on uploads delete command; its human
+confirmation is unstyled</p></li>
+
+<li><p><strong>--org</strong>=<em>value</em> - OAuth org for the upload-delete request; overrides
+AXILIO_ORG and the saved active org; API keys ignore it</p></li>
+
+<li><p><strong>-o</strong>, <strong>--output</strong>=<em>value</em> - Emit a human confirmation or JSON
+deletion result (default &quot;table&quot;)</p></li>
+
+<li><p><strong>-q</strong>, <strong>--quiet</strong> - Suppress the prompt and human confirmation;
+--yes is required; JSON still prints</p></li>
+</ul>
+
+<h3 id="examples-and-expected-output-43">Examples and expected output</h3>
+
+<p><strong>Sample 1</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio uploads list
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<pre><code>ID          FILENAME   SIZE     TYPE        STATUS  CREATED
+&lt;upload-id&gt; photo.jpg  2.0 MiB  image/jpeg  ready   &lt;timestamp&gt;
+</code></pre>
+
+<p><strong>Standard error</strong></p>
+
+<pre><code>1 of 10000 files, 2.0 MiB of 50.0 GiB used
+</code></pre>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Notes:</strong> Use the listed upload ID with uploads delete.</p>
+
+<p><strong>Sample 2</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio uploads delete upl_123
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<p>None.</p>
+
+<p><strong>Standard error</strong></p>
+
+<pre><code>Delete upload upl_123? Also recall it from phones holding or receiving a copy?
+</code></pre>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Notes:</strong> The table-mode prompt continues with [y/N], then reports Deleted upl_123
+after confirmation. Redirected stdin can answer; JSON and quiet modes
+require --yes.</p>
+
+<p><strong>Sample 3</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio uploads rm upl_123 --yes
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<p>None.</p>
+
+<p><strong>Standard error</strong></p>
+
+<pre><code>Deleted upl_123
+</code></pre>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Sample 4</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio uploads delete &lt;upload-id&gt; --yes
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<p>None.</p>
+
+<p><strong>Standard error</strong></p>
+
+<pre><code>Deleted &lt;upload-id&gt;
+</code></pre>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Notes:</strong> The API removes the library object immediately and schedules recall from
+phones holding or receiving a copy; the pinned helper discards the
+pending-phone count.</p>
+
+<h2 id="axilio-uploads-list">axilio uploads list</h2>
+
+<pre><code>axilio uploads list [flags]
+</code></pre>
+
+<p>List uploads and standing storage quota for the active organization.</p>
+
+<p>Results include upload ID, filename, size, MIME type, status, and
+creation time. Page with --limit and --offset, search filenames by
+case-insensitive substring, and sort by created_at, filename, or
+size_bytes in asc or desc order. Omitting sort/order uses server
+defaults.</p>
+
+<h3 id="command-options-25">Command options</h3>
+
+<ul>
+<li><p><strong>--limit</strong>=<em>number</em> - Maximum files in this page (default &quot;50&quot;)</p></li>
+
+<li><p><strong>--offset</strong>=<em>number</em> - Number of matching files to skip before this
+page</p></li>
+
+<li><p><strong>--order</strong>=<em>value</em> - Sort direction: asc or desc; omitted uses server
+default</p></li>
+
+<li><p><strong>--search</strong>=<em>value</em> - Filter filenames by case-insensitive substring</p></li>
+
+<li><p><strong>--sort</strong>=<em>value</em> - Sort key: created_at, filename, or size_bytes;
+omitted uses server default</p></li>
+</ul>
+
+<h3 id="global-option-behavior-51">Global-option behavior</h3>
+
+<ul>
+<li><p><strong>--api-key</strong>=<em>value</em> - API key for the upload-list request; overrides
+AXILIO_API_KEY and the saved key</p></li>
+
+<li><p><strong>--base-url</strong>=<em>value</em> - API host for the upload-list request;
+overrides AXILIO_BASE_URL and saved base-url</p></li>
+
+<li><p><strong>--no-color</strong> - Disable ANSI color in the human-readable form of the
+upload-list result</p></li>
+
+<li><p><strong>--org</strong>=<em>value</em> - OAuth org for the upload-list request; overrides
+AXILIO_ORG and the saved active org; API keys ignore it</p></li>
+
+<li><p><strong>-o</strong>, <strong>--output</strong>=<em>value</em> - Render the upload-list result as table
+or json (default &quot;table&quot;)</p></li>
+
+<li><p><strong>-q</strong>, <strong>--quiet</strong> - Suppress stderr notes for the upload-list
+request; the upload-list result remains on stdout</p></li>
+</ul>
+
+<h3 id="examples-and-expected-output-44">Examples and expected output</h3>
+
+<p><strong>Sample 1</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio uploads list
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<pre><code>ID          FILENAME   SIZE     TYPE        STATUS  CREATED
+&lt;upload-id&gt; photo.jpg  2.0 MiB  image/jpeg  ready   &lt;timestamp&gt;
+</code></pre>
+
+<p><strong>Standard error</strong></p>
+
+<pre><code>1 of 10000 files, 2.0 MiB of 50.0 GiB used
+</code></pre>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Notes:</strong> An empty page still reports quota usage; the current global limits are
+10000 files and 50 GiB.</p>
+
+<p><strong>Sample 2</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio uploads list --search receipt --limit 20 --offset 0
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<pre><code>ID          FILENAME     SIZE      TYPE       STATUS  CREATED
+&lt;upload-id&gt; receipt.jpg  512.0 KiB image/jpeg ready   &lt;timestamp&gt;
+</code></pre>
+
+<p><strong>Standard error</strong></p>
+
+<pre><code>1 of 10000 files, 512.0 KiB of 50.0 GiB used
+</code></pre>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Notes:</strong> Results and bytes used vary by organization; the limits are global.</p>
+
+<p><strong>Sample 3</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio uploads list --sort filename --order asc
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<pre><code>ID          FILENAME   SIZE     TYPE        STATUS  CREATED
+&lt;upload-id&gt; photo.jpg  2.0 MiB  image/jpeg  ready   &lt;timestamp&gt;
+</code></pre>
+
+<p><strong>Standard error</strong></p>
+
+<pre><code>1 of 10000 files, 2.0 MiB of 50.0 GiB used
+</code></pre>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Notes:</strong> Rows are sorted by filename ascending; results and bytes used vary by
+organization.</p>
+
+<p><strong>Sample 4</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio uploads list -o json
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<pre><code>{
+  &quot;files&quot;: [
+    {
+      &quot;id&quot;: &quot;&lt;upload-id&gt;&quot;,
+      &quot;filename&quot;: &quot;photo.jpg&quot;,
+      &quot;size_bytes&quot;: 2097152,
+      &quot;mime_type&quot;: &quot;image/jpeg&quot;,
+      &quot;status&quot;: &quot;ready&quot;,
+      &quot;created_at&quot;: &quot;&lt;timestamp&gt;&quot;
+    }
+  ],
+  &quot;total&quot;: 1,
+  &quot;usage&quot;: {
+    &quot;file_count&quot;: 1,
+    &quot;file_limit&quot;: 10000,
+    &quot;total_bytes&quot;: 2097152,
+    &quot;byte_limit&quot;: 53687091200
+  }
+}
+</code></pre>
+
+<p><strong>Standard error</strong></p>
+
+<p>None.</p>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Notes:</strong> Representative response; files, result count, and bytes used vary by
+organization; limits are global.</p>
+
+<h2 id="axilio-uploads-push">axilio uploads push</h2>
+
+<pre><code>axilio uploads push &lt;upload-id&gt; [flags]
+</code></pre>
+
+<p>Send a stored library file to a phone's media library.</p>
+
+<p>Unlike <code>axilio phone send</code> this uploads nothing, so the same file can be
+pushed to many phones without re-uploading it or consuming more quota.
+--phone-id is required and can be discovered with <code>phones mine</code> or
+<code>sessions list --remote</code>. The collection is inferred unless DCIM,
+Pictures, or Movies is selected. By default the command returns after
+dispatch; --wait blocks for delivered or failed, and --timeout applies
+only with --wait.</p>
+
+<h3 id="command-options-26">Command options</h3>
+
+<ul>
+<li><p><strong>--collection</strong>=<em>value</em> - Target DCIM, Pictures, or Movies; omitted
+infers from media type</p></li>
+
+<li><p><strong>--phone-id</strong>=<em>value</em> - Target phone ID from <code>phones mine</code> or remote
+sessions (required)</p></li>
+
+<li><p><strong>--timeout</strong>=<em>duration</em> - Maximum delivery wait; applies only with
+--wait (default &quot;1m0s&quot;)</p></li>
+
+<li><p><strong>--wait</strong> - Block until the phone reports delivered or failed instead
+of returning at dispatch</p></li>
+</ul>
+
+<h3 id="global-option-behavior-52">Global-option behavior</h3>
+
+<ul>
+<li><p><strong>--api-key</strong>=<em>value</em> - API key for the file-delivery request;
+overrides AXILIO_API_KEY and the saved key</p></li>
+
+<li><p><strong>--base-url</strong>=<em>value</em> - API host for the file-delivery request;
+overrides AXILIO_BASE_URL and saved base-url</p></li>
+
+<li><p><strong>--no-color</strong> - Disable ANSI color in the human-readable form of the
+delivery result</p></li>
+
+<li><p><strong>--org</strong>=<em>value</em> - OAuth org for the file-delivery request; overrides
+AXILIO_ORG and the saved active org; API keys ignore it</p></li>
+
+<li><p><strong>-o</strong>, <strong>--output</strong>=<em>value</em> - Render the delivery result as table or
+json (default &quot;table&quot;)</p></li>
+
+<li><p><strong>-q</strong>, <strong>--quiet</strong> - Suppress delivery progress and notes; the
+delivery result remains on stdout</p></li>
+</ul>
+
+<h3 id="examples-and-expected-output-45">Examples and expected output</h3>
+
+<p><strong>Sample 1</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio uploads push upl_123 --phone-id ph_123
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<pre><code>Delivery  &lt;delivery-id&gt;
+File      photo.jpg
+Status    dispatched
+</code></pre>
+
+<p><strong>Standard error</strong></p>
+
+<pre><code>→ Pushing upl_123 to phone ph_123
+pushed; re-run with --wait to confirm delivery
+</code></pre>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Sample 2</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio uploads push upl_123 --phone-id ph_123 --collection Pictures
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<pre><code>Delivery  &lt;delivery-id&gt;
+File      photo.jpg
+Status    dispatched
+</code></pre>
+
+<p><strong>Standard error</strong></p>
+
+<pre><code>→ Pushing upl_123 to phone ph_123
+pushed; re-run with --wait to confirm delivery
+</code></pre>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Notes:</strong> The phone receives the file in Pictures.</p>
+
+<p><strong>Sample 3</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio uploads push upl_123 --phone-id ph_123 --wait --timeout 2m
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<pre><code>Delivery  &lt;delivery-id&gt;
+File      photo.jpg
+Status    delivered
+</code></pre>
+
+<p><strong>Standard error</strong></p>
+
+<pre><code>→ Pushing upl_123 to phone ph_123
+</code></pre>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Notes:</strong> With --wait, the command returns only after delivered, failed, or the
+two-minute deadline.</p>
+
+<p><strong>Sample 4</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio uploads push &lt;upload-id&gt; --phone-id &lt;phone-id&gt;
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<pre><code>Delivery  &lt;delivery-id&gt;
+File      photo.jpg
+Status    dispatched
+</code></pre>
+
+<p><strong>Standard error</strong></p>
+
+<pre><code>→ Pushing &lt;upload-id&gt; to phone &lt;phone-id&gt;
+pushed; re-run with --wait to confirm delivery
+</code></pre>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<h2 id="axilio-workflows">axilio workflows</h2>
+
+<pre><code>axilio workflows
+</code></pre>
+
+<p>Running <code>axilio workflows</code> without a subcommand is equivalent to <code>axilio
+workflows --help</code>: it only displays this help and does not list
+workflows. Global flags shown here therefore have no effect. Pass flags
+to <code>workflows list</code> instead.</p>
+
+<p>Inspect workflows in the active organization. Use <code>workflows list</code> to
+discover a workflow ID, then pass that ID to <code>runs start</code> or <code>sessions
+start --workflow</code>.</p>
+
+<h3 id="global-option-behavior-53">Global-option behavior</h3>
+
+<ul>
+<li><p><strong>--api-key</strong>=<em>value</em> - No effect on workflows command; bare axilio
+workflows only displays this help</p></li>
+
+<li><p><strong>--base-url</strong>=<em>value</em> - No effect on workflows command; bare axilio
+workflows only displays this help</p></li>
+
+<li><p><strong>--no-color</strong> - No effect on workflows command; bare axilio workflows
+only displays this help</p></li>
+
+<li><p><strong>--org</strong>=<em>value</em> - No effect on workflows command; bare axilio
+workflows only displays this help</p></li>
+
+<li><p><strong>-o</strong>, <strong>--output</strong>=<em>value</em> - No effect on workflows command; bare
+axilio workflows only displays this help (default &quot;table&quot;)</p></li>
+
+<li><p><strong>-q</strong>, <strong>--quiet</strong> - No effect on workflows command; bare axilio
+workflows only displays this help</p></li>
+</ul>
+
+<h3 id="workflow-examples-7">Workflow examples</h3>
+
+<pre><code>axilio workflows list
+axilio workflows list --search checkout
+axilio runs start wf_123
+axilio runs start &lt;workflow-id&gt;
+</code></pre>
+
+<h2 id="axilio-workflows-list">axilio workflows list</h2>
+
+<pre><code>axilio workflows list [flags]
+</code></pre>
+
+<p>List workflows in the active organization, most recent first.</p>
+
+<p>Results include workflow ID, name, platform, status, and last-run time.
+Use --search for a name substring and --limit to control the number
+returned. A listed workflow ID can be passed directly to <code>runs start</code>.</p>
+
+<h3 id="command-options-27">Command options</h3>
+
+<ul>
+<li><p><strong>--limit</strong>=<em>number</em> - Maximum number of most-recent workflows to
+return (default &quot;20&quot;)</p></li>
+
+<li><p><strong>--search</strong>=<em>value</em> - Filter workflow names by substring</p></li>
+</ul>
+
+<h3 id="global-option-behavior-54">Global-option behavior</h3>
+
+<ul>
+<li><p><strong>--api-key</strong>=<em>value</em> - API key for the workflow-list request;
+overrides AXILIO_API_KEY and the saved key</p></li>
+
+<li><p><strong>--base-url</strong>=<em>value</em> - API host for the workflow-list request;
+overrides AXILIO_BASE_URL and saved base-url</p></li>
+
+<li><p><strong>--no-color</strong> - Disable ANSI color in the human-readable form of the
+workflow-list result</p></li>
+
+<li><p><strong>--org</strong>=<em>value</em> - OAuth org for the workflow-list request; overrides
+AXILIO_ORG and the saved active org; API keys ignore it</p></li>
+
+<li><p><strong>-o</strong>, <strong>--output</strong>=<em>value</em> - Render the workflow-list result as
+table or json (default &quot;table&quot;)</p></li>
+
+<li><p><strong>-q</strong>, <strong>--quiet</strong> - Suppress stderr notes for the workflow-list
+request; the workflow-list result remains on stdout</p></li>
+</ul>
+
+<h3 id="examples-and-expected-output-46">Examples and expected output</h3>
+
+<p><strong>Sample 1</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio workflows list
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<pre><code>WORKFLOW ID   NAME      PLATFORM  STATUS  LAST RUN
+&lt;workflow-id&gt; Checkout  android   active  &lt;timestamp&gt;
+</code></pre>
+
+<p><strong>Standard error</strong></p>
+
+<p>None.</p>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Notes:</strong> An empty successful result prints No workflows found.</p>
+
+<p><strong>Sample 2</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio workflows list --search checkout --limit 10
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<pre><code>WORKFLOW ID   NAME      PLATFORM  STATUS  LAST RUN
+&lt;workflow-id&gt; Checkout  android   active  &lt;timestamp&gt;
+</code></pre>
+
+<p><strong>Standard error</strong></p>
+
+<p>None.</p>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Notes:</strong> Names, IDs, statuses, and timestamps vary by organization.</p>
+
+<p><strong>Sample 3</strong></p>
+
+<p><strong>Invocation</strong></p>
+
+<pre><code>axilio workflows list -o json
+</code></pre>
+
+<p><strong>Standard output</strong></p>
+
+<pre><code>{
+  &quot;limit&quot;: 20,
+  &quot;offset&quot;: 0,
+  &quot;total&quot;: 1,
+  &quot;workflows&quot;: [
+    {
+      &quot;workflow&quot;: {
+        &quot;id&quot;: &quot;&lt;workflow-id&gt;&quot;,
+        &quot;name&quot;: &quot;Checkout&quot;,
+        &quot;platform&quot;: &quot;android&quot;,
+        &quot;status&quot;: &quot;active&quot;
+      }
+    }
+  ]
+}
+</code></pre>
+
+<p><strong>Standard error</strong></p>
+
+<p>None.</p>
+
+<p><strong>Exit status:</strong> 0.</p>
+
+<p><strong>Notes:</strong> Shortened representative SDK response; workflow records can include
+additional fields and stats.</p>
+
+<h1 id="environment">ENVIRONMENT</h1>
+
+<p><strong>AXILIO_API_KEY</strong> : API credential. Precedence: --api-key,
+AXILIO_API_KEY, saved config key, then the saved OAuth session.</p>
+
+<p><strong>AXILIO_BASE_URL</strong> : API host. Precedence: --base-url, AXILIO_BASE_URL,
+saved base-url, then <a href="https://api.axilio.ai" rel="noreferrer noopener">https://api.axilio.ai</a>.</p>
+
+<p><strong>AXILIO_ORG</strong> : OAuth organization slug or ID. Precedence: --org,
+AXILIO_ORG, saved active organization, then the OAuth session default.
+API keys remain scoped to the organization that created them.</p>
+
+<p><strong>AXILIO_SESSION</strong> : Selects a local phone lease. Precedence: --session,
+AXILIO_SESSION, the sole active lease, saved current-session pointer,
+then an ambiguity error.</p>
+
+<p><strong>AXILIO_DASHBOARD_URL</strong> : Overrides the dashboard host used for browser
+OAuth. It does not change the API host.</p>
+
+<p><strong>XDG_CONFIG_HOME</strong> : Moves config, OAuth fallback, lease, and
+update-check state from $HOME/.config to $XDG_CONFIG_HOME.</p>
+
+<p><strong>NO_COLOR</strong> : Set to 1 to disable color in Fang help; text decoration
+may remain. For terminal output it takes precedence over CLICOLOR and
+CLICOLOR_FORCE. With the pinned Fang color-profile dependency,
+CLICOLOR_FORCE can still force ANSI for non-terminal output.</p>
+
+<p><strong>CLICOLOR</strong> : Set to 1 to request ANSI color in Fang help when output
+is a terminal and TERM is not dumb.</p>
+
+<p><strong>CLICOLOR_FORCE</strong> : Set to 1 to force ANSI color in Fang help for
+non-terminal or dumb-terminal output. For non-terminal output in the
+pinned dependency, this also overrides NO_COLOR.</p>
+
+<p><strong>TERM</strong> : TERM=dumb disables Fang help styling unless CLICOLOR_FORCE=1
+is set.</p>
+
+<h1 id="exit-status">EXIT STATUS</h1>
+
+<p><strong>0 (ok)</strong> : Success.</p>
+
+<p><strong>1 (error)</strong> : Generic or unclassified failure, including local
+validation or lookup errors that were not explicitly coded.</p>
+
+<p><strong>2 (usage)</strong> : Explicit usage errors, recognized Cobra parse or arity
+errors, mobile invalid_args, or HTTP 400 or 422.</p>
+
+<p><strong>3 (auth)</strong> : Explicit authentication errors, mobile unauthorized, or
+HTTP 401 or 403.</p>
+
+<p><strong>4 (not-found)</strong> : Mobile element_not_found or no_allocation, or HTTP
+404.</p>
+
+<p><strong>5 (timeout)</strong> : Explicit or mobile timeout, context deadline, or HTTP
+408.</p>
+
+<p><strong>6 (unavailable)</strong> : Mobile connection, not_connected, or
+device_offline, or HTTP 429 or 5xx.</p>
+
+<p><strong>7 (canceled)</strong> : Explicit, mobile, or context cancellation.</p>
+
+<h1 id="files">FILES</h1>
+
+<p><strong>${XDG_CONFIG_HOME:-$HOME/.config}/axilio/config.json</strong> : Saved API
+key, API host, and active organization. A new file requests mode 0600;
+umask may make it more restrictive. Overwriting preserves its mode.</p>
+
+<p><strong>OS keychain: service axilio-cli, account oauth-tokens</strong> : Preferred
+storage for browser-OAuth access and refresh tokens.</p>
+
+<p><strong>${XDG_CONFIG_HOME:-$HOME/.config}/axilio/oauth.json</strong> : OAuth-token
+fallback when the OS keychain is unavailable. A new file requests mode
+0600; umask may make it more restrictive. Overwriting preserves its
+mode.</p>
+
+<dl>
+<dt><strong>${XDG_CONFIG_HOME:-$HOME/.config}/axilio/sessions/&lt;session-id&gt;.json</strong></dt>
+<dd>Mode-0600 local lease record containing the session's control URL.</dd>
+</dl>
+
+<p><strong>${XDG_CONFIG_HOME:-$HOME/.config}/axilio/current-session</strong> : Pointer
+to the last-started local session. A new file requests mode 0600; umask
+may make it more restrictive. Overwriting preserves its mode.</p>
+
+<p><strong>${XDG_CONFIG_HOME:-$HOME/.config}/axilio/update-check.json</strong> : Daily
+release-check cache. Failures reading or writing it do not fail
+commands.</p>
+
+<p><strong>./screenshot.png</strong> : Default output of <code>axilio phone screenshot</code>;
+--out selects another path and existing contents are overwritten.</p>
+
+<p><strong>.claude/skills/axilio/SKILL.md</strong> : Agent instructions written by
+<code>axilio init --agent claude</code>.</p>
+
+<p><strong>AGENTS.md</strong> : Shared file updated inside Axilio markers by <code>axilio
+init --agent codex</code>.</p>
+
+<p><strong>.cursor/rules/axilio.mdc</strong> : Agent instructions written by <code>axilio
+init --agent cursor</code>.</p>
+
+<h1 id="examples">EXAMPLES</h1>
+
+<p>Observe and act on a selected phone session:</p>
+
+<pre><code>axilio sessions start --phone-type android
+axilio phone observe
+axilio phone tap --query &quot;the search box&quot;
+axilio phone type &quot;coffee shops&quot;
+axilio phone observe
+</code></pre>
+
+<p>Start independent sessions in separate shells:</p>
+
+<pre><code>eval &quot;$(axilio sessions start --export)&quot;
+axilio phone screenshot --out screenshot.png
+</code></pre>
+
+<p>Run a workflow and request machine-readable output:</p>
+
+<pre><code>axilio workflows list -o json
+axilio runs start &lt;workflow-id&gt; --count 2 -o json
+</code></pre>
+
+<h1 id="see-also">SEE ALSO</h1>
+
+<p>Axilio documentation: <a href="https://docs.axilio.ai" rel="noreferrer noopener">https://docs.axilio.ai</a></p>
+
+<p>CLI issue tracker: <a href="https://github.com/axilioai/cli/issues" rel="noreferrer noopener">https://github.com/axilioai/cli/issues</a></p>
+
+<p>Axilio product site: <a href="https://axilio.ai" rel="noreferrer noopener">https://axilio.ai</a></p>
+  </main>
+  <footer>
+    <p>Generated from the axilio 0.6.1 command tree · source date 2026-08-02 · <a href="#top">top</a></p>
+  </footer>
+</body>
+</html>
