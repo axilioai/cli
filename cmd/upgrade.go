@@ -18,9 +18,6 @@ func upgradeCmd() *cobra.Command {
 			"standalone release, --check reports whether a newer release exists without " +
 			"installing it. A Homebrew invocation currently prints `brew upgrade axilio` " +
 			"guidance and returns before checking, even when --check is supplied.",
-		Example: `  axilio upgrade --check
-  axilio upgrade
-  brew upgrade axilio`,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			return runUpgrade(cmd.Context(), check)
 		},

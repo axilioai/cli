@@ -36,9 +36,6 @@ func configCmd() *cobra.Command {
 			"                   (default ~/.config/axilio/config.json)\n" +
 			"  Sessions dir     set XDG_CONFIG_HOME; directory is [value]/axilio/sessions\n" +
 			"                   (default ~/.config/axilio/sessions)",
-		Example: `  axilio config
-  axilio config set base-url https://api.axilio.ai
-  axilio config unset base-url`,
 		// Bare `axilio config` shows the current configuration.
 		RunE: func(_ *cobra.Command, _ []string) error {
 			return showConfig()
@@ -93,12 +90,12 @@ func configSetCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "set <key> <value>",
 		Short: "Set a config value. Supported keys: base-url.",
-		Long: "Set base-url in the shared config file. Supply an http or https API " +
-			"host such as https://api.axilio.ai, without /api/v1 or another path. " +
+		Long: "Set base-url in the shared config file. Use an http or https API " +
+			"origin such as https://api.axilio.ai, without /api/v1 or another path. " +
+			"Validation currently accepts any URL with a scheme and host, so a " +
+			"different scheme or path is saved even though requests may then fail. " +
 			"Requests resolve the host from --base-url, AXILIO_BASE_URL, this saved " +
 			"value, then https://api.axilio.ai.",
-		Example: `  axilio config set base-url https://api.axilio.ai
-  axilio config`,
 		Args: cobra.ExactArgs(2),
 		RunE: func(_ *cobra.Command, args []string) error {
 			key, val := args[0], args[1]
@@ -133,8 +130,6 @@ func configUnsetCmd() *cobra.Command {
 		Long: "Remove the saved base-url from the shared config file. Subsequent " +
 			"requests fall back to --base-url, AXILIO_BASE_URL, then " +
 			"https://api.axilio.ai. This does not remove credentials.",
-		Example: `  axilio config unset base-url
-  axilio config`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
 			key := args[0]

@@ -35,10 +35,6 @@ func uploadsCmd() *cobra.Command {
 			"`add` stores a local file, `list` discovers uploads and quota, `push` " +
 			"delivers a stored upload, and `delete` frees library quota. `phone send` " +
 			"combines add and push for the selected session's phone.",
-		Example: `  axilio uploads add ./photo.jpg
-  axilio uploads list
-  axilio uploads push upl_123 --phone-id ph_123
-  axilio uploads delete upl_123 --yes`,
 	}
 	cmd.AddCommand(uploadsAddCmd(), uploadsListCmd(), uploadsPushCmd(), uploadsDeleteCmd())
 	return cmd
@@ -54,8 +50,6 @@ func uploadsAddCmd() *cobra.Command {
 			"`axilio phone send` to do both in one step. The stored filename defaults " +
 			"to the local basename and MIME type is inferred from the extension; " +
 			"--filename and --mime-type override those values.",
-		Example: `  axilio uploads add ./photo.jpg
-  axilio uploads add ./asset --filename photo.jpg --mime-type image/jpeg`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cl, err := newClient()
@@ -107,10 +101,6 @@ func uploadsListCmd() *cobra.Command {
 			"time. Page with --limit and --offset, search filenames by " +
 			"case-insensitive substring, and sort by created_at, filename, or " +
 			"size_bytes in asc or desc order. Omitting sort/order uses server defaults.",
-		Example: `  axilio uploads list
-  axilio uploads list --search receipt --limit 20 --offset 0
-  axilio uploads list --sort filename --order asc
-  axilio uploads list -o json`,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			cl, err := newClient()
 			if err != nil {
@@ -194,9 +184,6 @@ func uploadsPushCmd() *cobra.Command {
 			"Pictures, or Movies is selected. By default the command returns after " +
 			"dispatch; --wait blocks for delivered or failed, and --timeout applies " +
 			"only with --wait.",
-		Example: `  axilio uploads push upl_123 --phone-id ph_123
-  axilio uploads push upl_123 --phone-id ph_123 --collection Pictures
-  axilio uploads push upl_123 --phone-id ph_123 --wait --timeout 2m`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cl, err := newClient()
@@ -241,13 +228,11 @@ func uploadsDeleteCmd() *cobra.Command {
 		Aliases: []string{"rm"},
 		Short:   "Delete a file from the library and free its quota.",
 		Long: "Delete an upload from the active organization's library and free its " +
-			"storage quota. Use `uploads list` to discover the upload ID. This does " +
-			"not recall copies already delivered to phones. Interactive use asks for " +
-			"confirmation; JSON, quiet, or redirected use requires --yes. The alias " +
-			"`uploads rm` performs the same operation.",
-		Example: `  axilio uploads list
-  axilio uploads delete upl_123
-  axilio uploads rm upl_123 --yes`,
+			"storage quota. Use `uploads list` to discover the upload ID. Deletion also " +
+			"schedules removal from every phone holding or receiving a copy. Without --yes, " +
+			"table mode reads confirmation from stdin, including redirected input. JSON " +
+			"and quiet modes do not prompt and require --yes. The alias `uploads rm` " +
+			"performs the same operation.",
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cl, err := newClient()
@@ -256,11 +241,10 @@ func uploadsDeleteCmd() *cobra.Command {
 			}
 			id := args[0]
 			p := printer()
-			// Deliberately precise about scope: copies already delivered to
-			// phones are not recalled today. When delete recall ships this
-			// prompt is the copy that has to change with it.
+			// The API tombstones the library object immediately and schedules
+			// removal from every phone holding or receiving a copy.
 			prompt := fmt.Sprintf(
-				"Delete upload %s? Copies already delivered to phones are not removed.", id)
+				"Delete upload %s? Also recall it from phones holding or receiving a copy?", id)
 			if !yes && !p.Confirm(prompt) {
 				return exit.Usagef("aborted (pass --yes to delete non-interactively)")
 			}
@@ -276,13 +260,13 @@ func uploadsDeleteCmd() *cobra.Command {
 			return nil
 		},
 	}
-	cmd.Flags().BoolVarP(&yes, "yes", "y", false, "Delete without prompting; required for non-interactive use")
+	cmd.Flags().BoolVarP(&yes, "yes", "y", false, "Delete without prompting; required in JSON or quiet mode")
 	return cmd
 }
 
-// deletedUpload is the JSON shape of a successful delete. Small on purpose:
-// the API returns only a confirmation message, so inventing richer output
-// would be inventing facts.
+// deletedUpload is the JSON shape of a successful delete. The pinned
+// files.Delete helper returns only an error and discards the API response, so
+// the CLI cannot expose its phones_pending_removal count here.
 type deletedUpload struct {
 	ID      string `json:"id"`
 	Deleted bool   `json:"deleted"`

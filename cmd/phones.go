@@ -23,8 +23,6 @@ func phonesCmd() *cobra.Command {
 			"`phones mine` shows the organization's complete dedicated inventory, " +
 			"including busy and offline phones, and is the place to find a phone ID " +
 			"for `sessions start --phone-id`.",
-		Example: `  axilio phones list
-  axilio phones mine`,
 	}
 	cmd.AddCommand(phonesListCmd())
 	cmd.AddCommand(phonesMineCmd())
@@ -39,8 +37,6 @@ func phonesListCmd() *cobra.Command {
 			"pool, plus your org's own dedicated phones that are currently free. Busy or offline dedicated " +
 			"phones do not appear here; use `axilio phones mine` to see the full dedicated inventory. " +
 			"Results include phone ID, type, model, and status.",
-		Example: `  axilio phones list
-  axilio phones list -o json`,
 		RunE: func(_ *cobra.Command, _ []string) error {
 			cl, err := newClient()
 			if err != nil {
@@ -76,8 +72,6 @@ func phonesMineCmd() *cobra.Command {
 			"busy in an active session, or offline. This is how you discover a phone_id to pin with " +
 			"`axilio sessions start --phone-id`. Results include phone ID, nickname, type, model, " +
 			"status, and the session ID holding a busy phone.",
-		Example: `  axilio phones mine
-  axilio sessions start --phone-id ph_123`,
 		RunE: func(_ *cobra.Command, _ []string) error {
 			cl, err := newClient()
 			if err != nil {

@@ -20,6 +20,7 @@ func main() {
 	if err := fang.Execute(
 		context.Background(),
 		cmd.Root(),
+		fang.WithoutManpage(),
 		fang.WithoutVersion(),
 	); err != nil {
 		os.Exit(int(exit.Classify(err)))

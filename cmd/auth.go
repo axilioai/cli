@@ -26,9 +26,6 @@ func loginCmd() *cobra.Command {
 			"file fallback. Pass --api-key, or pipe a key on stdin, to verify an " +
 			"axl_ API key against the API and persist it in the shared Axilio config " +
 			"file. A --base-url supplied with API-key login is saved with the key.",
-		Example: `  axilio login
-  axilio login --api-key axl_xxx
-  printf '%s\n' "$AXILIO_API_KEY" | axilio login`,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			key := flagAPIKey
 			// A key piped on stdin (echo $KEY | axilio login) selects the key path.
@@ -136,8 +133,6 @@ func logoutCmd() *cobra.Command {
 			"family server-side. The saved API key, OAuth session, and active " +
 			"organization are removed. A saved base URL, environment credentials, " +
 			"and local phone-session lease files are not removed.",
-		Example: `  axilio logout
-  axilio status`,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			cfg := config.Load()
 			hadKey := cfg.APIKey != ""
@@ -182,8 +177,6 @@ func statusCmd() *cobra.Command {
 			"host, active organization selector, and account balance. A valid API " +
 			"key or OAuth session is required. Use -o json for the structured " +
 			"status, api_host, active_org, and balance fields.",
-		Example: `  axilio status
-  axilio status -o json`,
 		RunE: func(_ *cobra.Command, _ []string) error {
 			cl, err := newClient()
 			if err != nil {

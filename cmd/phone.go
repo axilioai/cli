@@ -34,10 +34,6 @@ func phoneCmd() *cobra.Command {
 			"local lease, the saved current-session pointer, then an ambiguity error. " +
 			"The verbs mirror the SDK MobileDriver so an explored interaction maps " +
 			"directly onto SDK code.",
-		Example: `  axilio phone observe
-  axilio phone tap --query "the search box"
-  axilio phone type "Axilio"
-  axilio phone observe`,
 	}
 	cmd.PersistentFlags().StringVar(&flagPhoneSession, "session", "", "Session ID; overrides AXILIO_SESSION, sole-lease, and current-pointer selection")
 	cmd.AddCommand(
@@ -95,9 +91,6 @@ func phoneObserveCmd() *cobra.Command {
 			"text with center coordinates and confidence, then summarizes icons and " +
 			"screen dimensions. JSON returns the complete screen object, including " +
 			"texts, icons, dimensions, screen hash, and capture time.",
-		Example: `  axilio phone observe
-  axilio phone observe --ocr-engine premium
-  axilio phone observe -o json`,
 		RunE: func(_ *cobra.Command, _ []string) error {
 			d, err := currentDriver()
 			if err != nil {
@@ -135,9 +128,6 @@ func phoneFindCmd() *cobra.Command {
 			"engine defaults to free, the vision model is selected by the server, " +
 			"and the effective deadline is 10 seconds when --timeout is omitted. A " +
 			"missing target is an error; use `find-text` for a successful empty result.",
-		Example: `  axilio phone find "the search box"
-  axilio phone find "settings icon" --ocr-engine premium
-  axilio phone find "continue button" --timeout 15s -o json`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
 			d, err := currentDriver()
@@ -172,9 +162,6 @@ func phoneFindTextCmd() *cobra.Command {
 			"case-insensitive substring and return the first element. --exact uses " +
 			"a case-sensitive exact match. No match is successful: table output " +
 			"prints `No match.` and JSON output is null rather than a not-found error.",
-		Example: `  axilio phone find-text "sign in"
-  axilio phone find-text "Sign in" --exact
-  axilio phone find-text "settings" -o json`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
 			d, err := currentDriver()
@@ -213,9 +200,6 @@ func phoneTapCmd() *cobra.Command {
 			"precedence.\n\n" +
 			"Session selection precedence is --session, AXILIO_SESSION, the sole " +
 			"active lease, the saved current-session pointer, then an ambiguity error.",
-		Example: `  axilio phone tap --query "the search box"
-  axilio phone tap 540 1200
-  axilio phone tap --session sess_123 --query "continue"`,
 		Args: cobra.MaximumNArgs(2),
 		RunE: func(_ *cobra.Command, args []string) error {
 			d, err := currentDriver()
@@ -265,8 +249,6 @@ func phoneLongPressCmd() *cobra.Command {
 			"screen's top-left. This command is coordinate-only; use observe or find " +
 			"to inspect the current frame before choosing a point. The default hold " +
 			"duration is 800 milliseconds.",
-		Example: `  axilio phone long-press 540 1080
-  axilio phone long-press 540 1080 --duration-ms 1200`,
 		Args: cobra.ExactArgs(2),
 		RunE: func(_ *cobra.Command, args []string) error {
 			d, err := currentDriver()
@@ -300,8 +282,6 @@ func phoneSwipeCmd() *cobra.Command {
 		Long: "Swipe between two frame-space pixel coordinates, with (0,0) at the " +
 			"screen's top-left. This command is coordinate-only; use observe to " +
 			"inspect the current frame. The default gesture duration is 300 milliseconds.",
-		Example: `  axilio phone swipe 540 1600 540 500
-  axilio phone swipe 200 800 900 800 --duration-ms 500`,
 		Args: cobra.ExactArgs(4),
 		RunE: func(_ *cobra.Command, args []string) error {
 			d, err := currentDriver()
@@ -338,9 +318,6 @@ func phoneTypeCmd() *cobra.Command {
 			"Enclose text in quotes when it contains spaces or shell-special characters. " +
 			"Text is entered through a US-layout keyboard. Printable ASCII characters " +
 			"are supported; emoji and other non-ASCII characters are silently skipped.",
-		Example: `  axilio phone type "hello world"
-  axilio phone type 'user@example.com'
-  axilio phone type "don't split this text"`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
 			d, err := currentDriver()
@@ -367,8 +344,7 @@ func phoneKeyCmd() *cobra.Command {
 		Long: "Press a named key on the selected phone. The only named key currently " +
 			"supported by the CLI and pinned mobile driver is `enter`; back, home, " +
 			"and other key names are not available.",
-		Example: `  axilio phone key enter`,
-		Args:    cobra.ExactArgs(1),
+		Args: cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
 			d, err := currentDriver()
 			if err != nil {
@@ -397,8 +373,6 @@ func phoneScreenshotCmd() *cobra.Command {
 			"directory. If the destination already exists, its contents are overwritten " +
 			"without confirmation; the CLI does not create a backup. On " +
 			"success the human result reports the path and byte count.",
-		Example: `  axilio phone screenshot
-  axilio phone screenshot --out artifacts/login.png`,
 		RunE: func(_ *cobra.Command, _ []string) error {
 			d, err := currentDriver()
 			if err != nil {
@@ -437,9 +411,6 @@ func phoneWaitForCmd() *cobra.Command {
 			"case-sensitive exact match. The default timeout is 10 seconds. A timeout " +
 			"returns the CLI timeout exit code (5). Waiting for presence returns the " +
 			"matching element; waiting for absence is action-only.",
-		Example: `  axilio phone wait-for "Results"
-  axilio phone wait-for "Loading" --gone
-  axilio phone wait-for "Ready" --exact --timeout 30s`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
 			d, err := currentDriver()

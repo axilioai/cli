@@ -19,6 +19,10 @@ jobs:
         with:
           go-version-file: go.mod
           cache: true
+      - name: Install documentation tooling
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends --yes mandoc shellcheck
       - name: gofmt
         run: |
           unformatted="$(gofmt -l .)"
@@ -35,6 +39,12 @@ jobs:
           # (go.mod pins a very new Go). A prebuilt binary compiled against an
           # older Go can't parse newer source; goinstall sidesteps that.
           install-mode: goinstall
+      - name: shellcheck
+        run: shellcheck install.sh scripts/*.sh scripts/testdata/install/*
+      - name: generated manpage
+        run: sh scripts/check_manpage.sh
+      - name: installer fixtures
+        run: sh scripts/test_install.sh
       - name: test (race)
         # TEMPORARY: prod (api.axilio.ai) predates the /skill route
         # (AXI-1527) and 404s TestMain's skill fetch; staging serves it.
@@ -63,3 +73,28 @@ jobs:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
         run: go build -o /dev/null ./cmd/axilio
+
+  # Exercise the actual GoReleaser v2 pipeline and inspect every package. This
+  # catches archive/cask drift that six bare cross-compiles cannot see.
+  release-artifacts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Install packaging tooling
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends --yes mandoc ruby unzip
+      - uses: goreleaser/goreleaser-action@v6
+        with:
+          version: '~> v2'
+          args: release --snapshot --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Inspect release archives and generated cask
+        run: sh scripts/test_release_artifacts.sh

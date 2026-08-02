@@ -40,9 +40,6 @@ func phoneSendCmd() *cobra.Command {
 			"returns after dispatch; --wait blocks for delivered or failed, and " +
 			"--timeout applies only with --wait. This combines `uploads add` and " +
 			"`uploads push` and therefore retains the upload in the org library.",
-		Example: `  axilio phone send ./photo.jpg
-  axilio phone send ./clip.mp4 --collection Movies
-  axilio phone send ./photo.jpg --wait --timeout 2m`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			s, err := session.Resolve(flagPhoneSession)

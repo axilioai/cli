@@ -24,8 +24,10 @@ multi-language SDK support lands. It does three things:
 - **Phone control**: observe the screen and drive it (find, tap, type, swipe,
   key) over the phone's control channel, using the same vision primitives as the
   SDK.
-- **A scripting surface**: every successful command emits valid JSON under
-  `-o json`, quiet non-interactive operation, and stable exit codes.
+- **A scripting surface**: successful runnable application commands emit valid
+  JSON under `-o json` (except for the documented `sessions start --export`
+  shell contract), support quiet non-interactive operation, and return stable
+  exit codes.
 
 ## Install
 
@@ -35,14 +37,24 @@ multi-language SDK support lands. It does three things:
 brew install axilioai/tap/axilio
 ```
 
+Homebrew installs both the executable and its offline manual. Read it with
+`man axilio`.
+
 ### curl (macOS / Linux)
 
 ```bash
 curl -fsSL https://axilio.ai/install.sh | sh
+
+# Optional: choose both destinations explicitly.
+curl -fsSL https://axilio.ai/install.sh |
+  INSTALL_DIR="$HOME/.local/bin" MAN_DIR="$HOME/.local/share/man/man1" sh
 ```
 
-Installs the latest release for your OS/arch. Override the target directory with
-`INSTALL_DIR=…`, or pin a version with `VERSION=v0.1.0`. The script is
+The script installs the latest release for your OS/arch. Set `VERSION=v0.6.1`
+to pin a release. It installs the manual to `MAN_DIR` when set; otherwise it
+derives `<prefix>/share/man/man1` only when `INSTALL_DIR` ends in `/bin` or
+`/sbin`. An arbitrary executable layout or an unavailable manual destination
+produces a warning but does not undo a successful binary install. The script is
 [auditable on GitHub](https://github.com/axilioai/cli/blob/main/install.sh).
 
 ### go install
@@ -51,10 +63,25 @@ Installs the latest release for your OS/arch. Override the target directory with
 go install github.com/axilioai/cli/cmd/axilio@latest
 ```
 
-This puts the `axilio` binary in `$(go env GOPATH)/bin` — make sure that's on
-your `PATH`.
+This puts only the `axilio` binary in `$(go env GOPATH)/bin` — make sure that's
+on your `PATH`. `go install` does not register the manual page.
 
-Update any install with `axilio upgrade`.
+For Homebrew, run `brew upgrade axilio` (`axilio upgrade` prints that guidance).
+For curl installs, rerun the curl installer to update both the executable and
+manual; the standalone `axilio upgrade` replaces only the executable. For
+`go install`, rerun the `go install` command.
+
+## Offline manual
+
+```bash
+man axilio
+```
+
+Homebrew and compatible curl-prefix installs make `axilio(1)` discoverable by
+`man`. Every GitHub release archive also contains the source page at
+`man/axilio.1`. Windows archives carry the same file for reference, but Windows
+and `go install` do not integrate it with a system manual-page viewer. If you
+choose a custom `MAN_DIR`, ensure that directory is on your `MANPATH`.
 
 ## Contributing
 
@@ -115,7 +142,8 @@ axilio sessions stop <id>    # release it
 
 **Browser (OAuth), the default.** Run `axilio login` on a terminal and it opens
 your browser to authorize the CLI. The Axilio session token is stored in your OS
-keychain (with a `0600` file fallback) and refreshed automatically.
+keychain (the file fallback requests mode `0600`, subject to umask; overwrites
+preserve its existing mode) and refreshed automatically.
 
 ```bash
 axilio login                                   # opens the browser (OAuth)
@@ -133,8 +161,11 @@ The API key is written to a language-agnostic config file that every Axilio SDK
 also reads, so one login makes the CLI and the SDKs work:
 
 ```
-$XDG_CONFIG_HOME/axilio/config.json   (else ~/.config/axilio/config.json), mode 0600
+$XDG_CONFIG_HOME/axilio/config.json   (else ~/.config/axilio/config.json)
 ```
+
+New config files request mode `0600`; umask may make that more restrictive.
+Overwriting an existing file preserves its mode.
 
 Precedence rules:
 
@@ -177,46 +208,50 @@ Precedence rules:
 
 | Flag | Meaning |
 | --- | --- |
-| `-o, --output table\|json` | Result format. Every successful command emits valid JSON in json mode (default `table`). |
+| `-o, --output table\|json` | Result format for runnable application commands (default `table`). Built-in help, completion, and version output remains text. |
 | `-q, --quiet` | Suppress stderr notes and prompts; destructive commands still require `--yes`. |
 | `--no-color` | Disable ANSI color in human-oriented output. |
 | `--api-key` | API key for API-backed commands; overrides `AXILIO_API_KEY` and the saved key. |
 | `--base-url` | API host for API-backed commands; overrides `AXILIO_BASE_URL` and saved `base-url`. |
 | `--org` | OAuth organization slug or ID; overrides `AXILIO_ORG` and the saved active org. |
-| `-v, --version` | Print the version. |
 
-Run `axilio <command> --help` for the flags on any command.
+Run `axilio <command> --help` for the flags on any command. The root-only
+`axilio --version` flag prints build information as text.
 
 ## Scripting and agents
 
 The CLI's output is a contract, not just cosmetics.
 
 - **`-o json`** writes a structured result to stdout for every successful
-  command — data verbs emit the API response, action verbs emit a small
-  acknowledgment (e.g. `{"action":"tap","x":540,"y":1200}`), and deletions
-  emit `{"id":...,"deleted":true}` — so any success pipes cleanly into `jq`.
-  Human chrome (notes, prompts, spinners) uses stderr and is suppressed in
-  JSON mode. The one exception is `sessions start --export`, whose output is
-  an eval-able `export` line by contract.
+  runnable application command — data verbs emit the API response, action
+  verbs emit a small acknowledgment (e.g.
+  `{"action":"tap","x":540,"y":1200}`), and deletions emit
+  `{"id":...,"deleted":true}` — so those successes pipe cleanly into `jq`.
+  Human chrome (notes, prompts, spinners) uses stderr and is suppressed in JSON
+  mode. Built-in help and completion commands, bare parent-command help,
+  `--help`, and `--version` remain text. `sessions start --export` emits an
+  eval-able `export` line by contract.
 - **`-q, --quiet`** suppresses the stderr chrome entirely. Destructive commands
-  (`sessions stop`, `runs cancel`, `api-keys delete`) never prompt in `--quiet`
-  or JSON mode; pass `--yes` to proceed non-interactively.
+  (`sessions stop`, `runs cancel`, `api-keys delete`, `uploads delete`) never
+  prompt in `--quiet` or JSON mode; pass `--yes` to proceed non-interactively.
 - **Stable exit codes** let you branch on the outcome without parsing stderr:
 
   | Code | Meaning | Examples |
   | --- | --- | --- |
   | `0` | success | |
-  | `1` | error | unclassified failure, executor-internal error |
-  | `2` | usage | bad flag/arg, unknown command, invalid input |
-  | `3` | auth | no API key, unauthorized (HTTP 401/403) |
-  | `4` | not found | element/session/resource not found (HTTP 404) |
-  | `5` | timeout | a call or wait loop deadline (retryable) |
-  | `6` | unavailable | network / device offline / server error (transient) |
-  | `7` | canceled | the operation was canceled |
+  | `1` | error | unclassified failure, including uncoded local validation/lookup errors |
+  | `2` | usage | explicit usage error, recognized Cobra parse/arity error, mobile `invalid_args`, HTTP 400/422 |
+  | `3` | auth | explicit auth error, mobile unauthorized, HTTP 401/403 |
+  | `4` | not found | mobile element/no-allocation error, HTTP 404 |
+  | `5` | timeout | explicit/mobile timeout, context deadline, HTTP 408 |
+  | `6` | unavailable | mobile connection/offline error, HTTP 429/5xx |
+  | `7` | canceled | explicit, mobile, or context cancellation |
 
   The codes map the phone driver's error taxonomy and the API's HTTP status onto
   one table, so `axilio phone find "..."` returning `4` means "no match"
-  regardless of transport.
+  regardless of transport. Plain local errors that are not explicitly classified
+  fall back to `1`; malformed API-key format, a missing local session, and Cobra's
+  required-flag error currently take that path.
 
 ## Examples
 
@@ -288,7 +323,7 @@ axilio phone send ./photo.jpg --wait          # add + push to selected session
 axilio uploads add ./clip.mp4                  # store once
 axilio uploads list                            # discover id and quota
 axilio uploads push <upload-id> --phone-id <phone-id> --wait
-axilio uploads delete <upload-id> --yes        # delivered copies stay on phones
+axilio uploads delete <upload-id> --yes        # recalls copies held/received on phones
 ```
 
 ## Shell completions
@@ -309,5 +344,7 @@ Run `axilio completion --help` or
 ## Help and support
 
 - `axilio --help` and `axilio <command> --help` for usage.
+- `man axilio` for the comprehensive offline manual when installed through
+  Homebrew or a compatible curl prefix.
 - Docs: [https://docs.axilio.ai](https://docs.axilio.ai)
 - Issues: [https://github.com/axilioai/cli/issues](https://github.com/axilioai/cli/issues)

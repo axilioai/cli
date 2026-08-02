@@ -4,15 +4,13 @@
 // and document it wherever the CLI is documented (README).
 //
 //	0  ok           success
-//	1  error        generic / unclassified failure
-//	2  usage        bad flags, args, or input (invalid_args, HTTP 400/422)
-//	3  auth         missing key or unauthorized (unauthorized, HTTP 401/403)
-//	4  not-found    element/session/resource not found (element_not_found,
-//	                no_allocation, HTTP 404)
-//	5  timeout      deadline exceeded, retryable (timeout, HTTP 408)
-//	6  unavailable  network/device/server, transient (connection, not_connected,
-//	                device_offline, HTTP 429/5xx)
-//	7  canceled     the operation was canceled
+//	1  error        generic / unclassified, including uncoded local errors
+//	2  usage        explicit/recognized Cobra usage, invalid_args, HTTP 400/422
+//	3  auth         explicit auth, unauthorized, HTTP 401/403
+//	4  not-found    element_not_found, no_allocation, HTTP 404
+//	5  timeout      explicit timeout, deadline exceeded, timeout, HTTP 408
+//	6  unavailable  connection, not_connected, device_offline, HTTP 429/5xx
+//	7  canceled     explicit, mobile, or context cancellation
 //
 // Classification precedence: an explicit code stamped with With wins, then the
 // driver's mobile.Error taxonomy, then the SDK's HTTP status, then context

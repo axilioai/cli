@@ -109,7 +109,8 @@ func TestRenderedHelpContracts(t *testing.T) {
 				"each API key is scoped to the organization that created it",
 				"API host resolves from --base-url, AXILIO_BASE_URL",
 				"Phone command session selection precedence is --session, AXILIO_SESSION",
-				"Every successful command emits valid JSON with -o json",
+				"Every successful runnable application command emits valid JSON with -o json",
+				"Built-in help, completion, and version output remains text",
 			},
 		},
 		{
@@ -435,11 +436,21 @@ func TestDocumentationHelpParity(t *testing.T) {
 			t.Errorf("README completion docs missing %q", completion)
 		}
 	}
-	// AXI-1507 made universal JSON success output true: every successful
-	// command emits valid JSON under -o json (json_output_test.go holds the
-	// line), so the README is required to say so rather than forbidden to.
-	if !strings.Contains(readme, "emits valid JSON") {
-		t.Error("README no longer documents universal JSON success output (AXI-1507)")
+	// AXI-1507 made JSON success output true for the runnable application
+	// commands held by json_output_test.go. Cobra's built-in help/completion and
+	// version paths remain text and are documented as explicit exceptions.
+	normalizedReadme := strings.Join(strings.Fields(readme), " ")
+	if !strings.Contains(normalizedReadme,
+		"successful runnable application commands emit valid JSON under `-o json`") {
+		t.Error("README no longer documents runnable-command JSON success output (AXI-1507)")
+	}
+	if !strings.Contains(normalizedReadme,
+		"except for the documented `sessions start --export` shell contract") {
+		t.Error("README no longer documents the sessions export JSON exception")
+	}
+	if !strings.Contains(normalizedReadme,
+		"Built-in help and completion commands, bare parent-command help, `--help`, and `--version` remain text") {
+		t.Error("README no longer documents the non-JSON built-in output paths")
 	}
 
 	// The skill is no longer a file in this repo (AXI-1527): it's hosted at

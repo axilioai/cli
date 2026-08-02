@@ -9,10 +9,11 @@ import (
 	"github.com/zalando/go-keyring"
 )
 
-// AXI-1507: every successful command must leave valid JSON on stdout in
-// -o json mode — including the mutation verbs that used to speak only in
-// stderr chrome, which JSON mode suppresses entirely. These tests parse
-// stdout, so an empty or non-JSON success regresses loudly.
+// AXI-1507: every successful runnable application command must leave valid
+// JSON on stdout in -o json mode — including mutation verbs that used to speak
+// only in stderr chrome, which JSON mode suppresses entirely. Cobra's built-in
+// help/completion and version paths remain text. These tests parse stdout, so
+// an empty or non-JSON success regresses loudly.
 
 // mustJSON fails the test unless out is a single valid JSON document, and
 // returns it decoded for shape assertions.

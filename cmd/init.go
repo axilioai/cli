@@ -101,9 +101,6 @@ func initCmd() *cobra.Command {
 			"quiet, or redirected use requires --agent.\n\n" +
 			"It finishes with a sign-in check: browser login is the one step an agent " +
 			"can't do itself, so init surfaces it while a human is likely at the keyboard.",
-		Example: `  axilio init
-  axilio init --agent codex
-  axilio init --agent claude --force`,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			return runInit(cmd.Context(), agent, force)
 		},

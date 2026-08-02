@@ -23,10 +23,6 @@ func runsCmd() *cobra.Command {
 			"workflow ID with `workflows list`, start one or more runs, list recent " +
 			"run IDs and statuses, inspect a run in detail, or cancel queued and " +
 			"running work.",
-		Example: `  axilio workflows list
-  axilio runs start wf_123
-  axilio runs list --workflow wf_123
-  axilio runs get run_123`,
 	}
 	cmd.AddCommand(runsListCmd(), runsStartCmd(), runsGetCmd(), runsCancelCmd())
 	return cmd
@@ -44,9 +40,6 @@ func runsListCmd() *cobra.Command {
 			"by workflow ID and cap the result count with --limit. Table rows include " +
 			"run ID, status, trigger, workflow ID, and creation time; use a returned " +
 			"run ID with `runs get` or `runs cancel`.",
-		Example: `  axilio runs list
-  axilio runs list --workflow wf_123 --limit 10
-  axilio runs list -o json`,
 		RunE: func(_ *cobra.Command, _ []string) error {
 			cl, err := newClient()
 			if err != nil {
@@ -100,10 +93,6 @@ func runsStartCmd() *cobra.Command {
 			"without client-side range validation.\n\n" +
 			"Successful output contains the " +
 			"created run IDs.",
-		Example: `  axilio runs start wf_123
-  axilio runs start wf_123 --count 3
-  axilio runs start wf_123 --phone-id ph_123
-  axilio runs start wf_123 --start-timeout 300`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
 			cl, err := newClient()
@@ -158,9 +147,6 @@ func runsGetCmd() *cobra.Command {
 		Long: "Fetch one run by the ID returned from `runs list` or `runs start`. The " +
 			"result includes status, trigger, workflow, session, phone, created, " +
 			"started and completed times, error message, and video URL when present.",
-		Example: `  axilio runs list
-  axilio runs get run_123
-  axilio runs get run_123 -o json`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
 			cl, err := newClient()
@@ -197,12 +183,9 @@ func runsCancelCmd() *cobra.Command {
 		Use:   "cancel <run-id>",
 		Short: "Cancel a queued or running run.",
 		Long: "Cancel a queued or running run by an ID discovered with `runs list`. " +
-			"Interactive use asks for confirmation. JSON, quiet, or redirected use " +
-			"cannot confirm, so pass --yes for non-interactive cancellation. JSON " +
-			"success reports the canceled run ID.",
-		Example: `  axilio runs list
-  axilio runs cancel run_123
-  axilio runs cancel run_123 --yes`,
+			"Without --yes, table mode reads confirmation from stdin, including " +
+			"redirected input. JSON and quiet modes do not prompt and require --yes. " +
+			"JSON success reports the canceled run ID.",
 		Args: cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
 			cl, err := newClient()
@@ -223,6 +206,6 @@ func runsCancelCmd() *cobra.Command {
 			return nil
 		},
 	}
-	cmd.Flags().BoolVarP(&yes, "yes", "y", false, "Cancel without prompting; required for non-interactive use")
+	cmd.Flags().BoolVarP(&yes, "yes", "y", false, "Cancel without prompting; required in JSON or quiet mode")
 	return cmd
 }

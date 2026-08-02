@@ -69,7 +69,7 @@ func apiResultHelp(action, result string) commandGlobalFlagHelp {
 	return commandGlobalFlagHelp{
 		apiKey:  fmt.Sprintf("API key for %s; %s", action, apiKeyPrecedence),
 		baseURL: fmt.Sprintf("API host for %s; %s", action, baseURLPrecedence),
-		noColor: fmt.Sprintf("Disable ANSI color in the human-readable %s", result),
+		noColor: fmt.Sprintf("Disable ANSI color in the human-readable form of %s", result),
 		org:     fmt.Sprintf("OAuth org for %s; %s", action, orgPrecedence),
 		output:  fmt.Sprintf("Render %s as table or json", result),
 		quiet:   fmt.Sprintf("Suppress stderr notes for %s; %s remains on stdout", action, result),
@@ -95,7 +95,7 @@ func localResultHelp(command, action, result string) commandGlobalFlagHelp {
 	return commandGlobalFlagHelp{
 		apiKey:  fmt.Sprintf("No effect on %s command; it uses local session data or its control URL", command),
 		baseURL: fmt.Sprintf("No effect on %s command; it does not call the Axilio API", command),
-		noColor: fmt.Sprintf("Disable ANSI color in the human-readable %s", result),
+		noColor: fmt.Sprintf("Disable ANSI color in the human-readable form of %s", result),
 		org:     fmt.Sprintf("No effect on %s command; phone control is selected by session, not org", command),
 		output:  fmt.Sprintf("Render %s as table or json", result),
 		quiet:   fmt.Sprintf("Suppress stderr notes for %s; %s remains on stdout", action, result),

@@ -50,8 +50,6 @@ func doctorCmd() *cobra.Command {
 			"environment rows are informational; without credentials, connectivity " +
 			"is also informational. Each network probe is bounded to 8 seconds. " +
 			"Use -o json for an overall ok value and the complete checks array.",
-		Example: `  axilio doctor
-  axilio doctor -o json`,
 		RunE: func(_ *cobra.Command, _ []string) error {
 			checks := runDoctor(context.Background())
 

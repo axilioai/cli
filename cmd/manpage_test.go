@@ -1,0 +1,303 @@
+package cmd
+
+import (
+	"bytes"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
+	"testing"
+
+	"github.com/spf13/cobra"
+)
+
+func TestGenerateManpageDeterministicAndComplete(t *testing.T) {
+	version := readManpageTestVersion(t)
+	first, err := GenerateManpage(Root(), version)
+	if err != nil {
+		t.Fatal(err)
+	}
+	second, err := GenerateManpage(Root(), version)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(first, second) {
+		t.Fatal("manpage generation is not deterministic across fresh Root calls")
+	}
+
+	root := Root()
+	markdown, err := generateManpageMarkdown(root, version)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, section := range []string{
+		"# NAME\n",
+		"# SYNOPSIS\n",
+		"# DESCRIPTION\n",
+		"# COMMON WORKFLOW\n",
+		"# GLOBAL OPTIONS\n",
+		"# COMMANDS\n",
+		"# ENVIRONMENT\n",
+		"# EXIT STATUS\n",
+		"# FILES\n",
+		"# EXAMPLES\n",
+		"# SEE ALSO\n",
+	} {
+		if !strings.Contains(markdown, section) {
+			t.Errorf("generated Markdown missing %q", strings.TrimSpace(section))
+		}
+	}
+	for _, command := range publicCommands(root) {
+		heading := "## " + command.CommandPath() + "\n"
+		if !strings.Contains(markdown, heading) {
+			t.Errorf("generated Markdown missing public command %q", command.CommandPath())
+		}
+		section := strings.SplitN(markdown, heading, 2)[1]
+		if next := strings.Index(section, "\n## "); next >= 0 {
+			section = section[:next]
+		}
+		if command.Runnable() && !strings.Contains(section, "### Examples and expected output\n") {
+			t.Errorf("runnable command %q has no expected-output section", command.CommandPath())
+		}
+		if !command.Runnable() && strings.Contains(section, "### Examples and expected output\n") {
+			t.Errorf("non-runnable command %q claims expected output", command.CommandPath())
+		}
+	}
+	commonWorkflow := strings.SplitN(markdown, "# COMMON WORKFLOW\n", 2)[1]
+	commonWorkflow = strings.SplitN(commonWorkflow, "# GLOBAL OPTIONS\n", 2)[0]
+	rootDocs, ok := CommandDocs(root)
+	if !ok {
+		t.Fatal("root command has no structured documentation")
+	}
+	for _, sample := range rootDocs.Samples {
+		if !strings.Contains(commonWorkflow, sample.Invocation) {
+			t.Errorf("common workflow missing root invocation %q", sample.Invocation)
+		}
+	}
+	observeDocs, ok := CommandDocs(findManpageTestCommand(t, root, "phone observe"))
+	if !ok || strings.TrimSpace(observeDocs.Walkthrough) == "" {
+		t.Fatal("phone observe has no structured walkthrough")
+	}
+	if got := strings.Count(markdown, strings.TrimSpace(observeDocs.Walkthrough)); got != 1 {
+		t.Errorf("phone observe walkthrough occurs %d times, want exactly once", got)
+	}
+	if strings.Contains(markdown, "```\nnone\n```") {
+		t.Error("an explicit none stream was rendered as literal command output")
+	}
+	for _, literal := range []string{
+		"AXILIO_API_KEY",
+		"AXILIO_BASE_URL",
+		"AXILIO_ORG",
+		"AXILIO_SESSION",
+		"AXILIO_DASHBOARD_URL",
+		"XDG_CONFIG_HOME",
+		"update-check.json",
+		"screenshot.png",
+		"https://docs.axilio.ai",
+		"https://github.com/axilioai/cli/issues",
+	} {
+		if !strings.Contains(markdown, literal) {
+			t.Errorf("generated Markdown missing contract literal %q", literal)
+		}
+	}
+	if !bytes.Contains(first, []byte(`.TH "AXILIO" "1"`)) {
+		t.Errorf("roff header is not an AXILIO(1) title:\n%s", first[:min(len(first), 400)])
+	}
+	for _, entity := range []string{"&lt;", "&gt;", "&amp;"} {
+		if bytes.Contains(first, []byte(entity)) {
+			t.Errorf("roff output leaked Markdown entity %q", entity)
+		}
+	}
+	for _, literal := range []string{"<session-id>", "source <(axilio completion bash)", "->"} {
+		if !bytes.Contains(first, []byte(literal)) {
+			t.Errorf("roff output lost literal %q", literal)
+		}
+	}
+}
+
+func TestGeneratedManpageMatchesCheckedInPage(t *testing.T) {
+	generated, err := GenerateManpage(Root(), readManpageTestVersion(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join("..", "man", "axilio.1")
+	checkedIn, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read %s: %v; run `go generate ./...`", path, err)
+	}
+	if !bytes.Equal(generated, checkedIn) {
+		t.Fatalf("%s is stale; run `go generate ./...`", path)
+	}
+}
+
+func TestGeneratedManpageUsesEffectiveGlobalFlagHelp(t *testing.T) {
+	root := Root()
+	markdown, err := generateManpageMarkdown(root, readManpageTestVersion(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	command, _, err := root.Find([]string{"phone", "tap"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	normalized := strings.Join(strings.Fields(markdown), " ")
+	if strings.Contains(normalized, "human-readable the ") {
+		t.Errorf("manpage contains malformed effective flag help: human-readable the ...")
+	}
+	for _, name := range []string{"api-key", "base-url", "no-color", "org", "output", "quiet"} {
+		usage, ok := commandGlobalFlagUsage(command, name)
+		if !ok {
+			t.Fatalf("phone tap has no effective --%s help", name)
+		}
+		if !strings.Contains(normalized, strings.Join(strings.Fields(usage), " ")) {
+			t.Errorf("manpage does not reuse effective --%s help %q", name, usage)
+		}
+	}
+}
+
+func TestGeneratedManpageDocumentsPinnedNonTTYColorPrecedence(t *testing.T) {
+	markdown, err := generateManpageMarkdown(Root(), readManpageTestVersion(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	normalized := strings.Join(strings.Fields(markdown), " ")
+	for _, want := range []string{
+		"CLICOLOR_FORCE can still force ANSI for non-terminal output",
+		"For non-terminal output in the pinned dependency, this also overrides NO_COLOR",
+	} {
+		if !strings.Contains(normalized, want) {
+			t.Errorf("manpage does not document pinned Fang precedence %q", want)
+		}
+	}
+}
+
+func TestManpageExternalSampleDoesNotGuessProcessContract(t *testing.T) {
+	var rendered strings.Builder
+	writeSample(&rendered, externalSample(
+		"brew upgrade axilio",
+		"Output and exit status are owned by Homebrew, not the axilio CLI.",
+	))
+	got := rendered.String()
+	if !strings.Contains(got, "**External command behavior**") ||
+		!strings.Contains(got, "owned by Homebrew") {
+		t.Fatalf("external behavior is missing:\n%s", got)
+	}
+	for _, forbidden := range []string{"**Standard output**", "**Standard error**", "**Exit status:**"} {
+		if strings.Contains(got, forbidden) {
+			t.Errorf("external sample guessed %s:\n%s", forbidden, got)
+		}
+	}
+}
+
+func TestGenerateManpageProtectsLiteralRoffInput(t *testing.T) {
+	root := &cobra.Command{Use: "axilio", Short: "Test command", Long: "Test command."}
+	child := AttachCommandDocumentation(&cobra.Command{
+		Use:   "literal",
+		Short: "Print difficult literal input",
+		Long:  "Print difficult literal input.",
+		RunE:  func(*cobra.Command, []string) error { return nil },
+	}, CommandDocumentation{Samples: []CommandSample{{
+		Invocation: "axilio literal",
+		Stdout:     ".leading-control\n'apostrophe-control\nback\\slash",
+	}}})
+	root.AddCommand(child)
+
+	rendered, err := GenerateManpage(root, "test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(t.TempDir(), "literal.1")
+	if err := os.WriteFile(path, rendered, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	mandoc, err := exec.LookPath("mandoc")
+	if err != nil {
+		t.Skip("mandoc not installed")
+	}
+	out, err := exec.Command(mandoc, "-Tutf8", path).CombinedOutput()
+	if err != nil {
+		t.Fatalf("render literal manpage: %v\n%s", err, out)
+	}
+	for _, literal := range []string{".leading-control", "'apostrophe-control", "back\\slash"} {
+		if !bytes.Contains(out, []byte(literal)) {
+			t.Errorf("rendered manpage lost literal %q\n%s", literal, out)
+		}
+	}
+}
+
+func TestGeneratedManpageMandocClean(t *testing.T) {
+	mandoc, err := exec.LookPath("mandoc")
+	if err != nil {
+		t.Skip("mandoc not installed")
+	}
+	rendered, err := GenerateManpage(Root(), readManpageTestVersion(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(t.TempDir(), "axilio.1")
+	if err := os.WriteFile(path, rendered, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	out, err := exec.Command(mandoc, "-Tlint", path).CombinedOutput()
+	if err != nil || len(out) != 0 {
+		t.Fatalf("mandoc -Tlint must exit successfully with no diagnostics: %v\n%s", err, out)
+	}
+}
+
+func TestGeneratedManpagePreservesPhoneObserveWalkthrough(t *testing.T) {
+	mandoc, err := exec.LookPath("mandoc")
+	if err != nil {
+		t.Skip("mandoc not installed")
+	}
+	rendered, err := GenerateManpage(Root(), readManpageTestVersion(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(t.TempDir(), "axilio.1")
+	if err := os.WriteFile(path, rendered, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	out, err := exec.Command(mandoc, "-Tutf8", path).CombinedOutput()
+	if err != nil {
+		t.Fatalf("render manpage: %v\n%s", err, out)
+	}
+	for _, literal := range []string{
+		"+----------------------------+",
+		"540,1120",
+		"axilio phone tap 540 1120",
+	} {
+		if !bytes.Contains(out, []byte(literal)) {
+			t.Errorf("rendered walkthrough lost %q", literal)
+		}
+	}
+}
+
+func TestGenerateManpageRejectsInvalidInputs(t *testing.T) {
+	if _, err := GenerateManpage(nil, "0.7.0"); err == nil {
+		t.Error("nil root did not fail")
+	}
+	if _, err := GenerateManpage(Root(), "\n"); err == nil {
+		t.Error("empty version did not fail")
+	}
+	if _, err := GenerateManpage(Root(), "bad\nversion"); err == nil {
+		t.Error("version containing a newline did not fail")
+	}
+}
+
+func readManpageTestVersion(t *testing.T) string {
+	t.Helper()
+	b, err := os.ReadFile(filepath.Join("..", "VERSION"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return strings.TrimSpace(string(b))
+}
+
+func findManpageTestCommand(t *testing.T, root *cobra.Command, path string) *cobra.Command {
+	t.Helper()
+	command, _, err := root.Find(strings.Fields(path))
+	if err != nil || command == nil {
+		t.Fatalf("find command %q: %v", path, err)
+	}
+	return command
+}
