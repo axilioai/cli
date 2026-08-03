@@ -204,7 +204,8 @@ func TestRenderedHelpContracts(t *testing.T) {
 			name: "config",
 			args: []string{"config", "--help"},
 			want: []string{
-				"does not detect a stored OAuth session",
+				"matching browser-session authentication summary",
+				"status` verifies that the effective credentials are usable",
 				"config unset",
 				"set XDG_CONFIG_HOME; file is [value]/axilio/config.json",
 				"directory is [value]/axilio/sessions",
@@ -230,7 +231,7 @@ func TestRenderedHelpContracts(t *testing.T) {
 		{
 			name: "upgrade",
 			args: []string{"upgrade", "--help"},
-			want: []string{"checksum-verified", "Homebrew", "returns before checking", "brew upgrade axilio"},
+			want: []string{"checksum-verified", "including for Homebrew-managed installations", "Check for a newer release without installing it", "brew upgrade axilio"},
 		},
 		{
 			name: "phones",
@@ -303,6 +304,25 @@ func TestRenderedHelpContracts(t *testing.T) {
 				"runs start",
 				"runs get",
 				"cancel",
+			},
+		},
+		{
+			name: "runs start",
+			args: []string{"runs", "start", "--help"},
+			want: []string{
+				"must be between 1 and 1000, inclusive",
+				"Number of run configurations to create (1-1000)",
+				"--count must be between 1 and 1000 (got 0)",
+				"range is validated before credentials, allocation, or an API request",
+			},
+		},
+		{
+			name: "sessions current",
+			args: []string{"sessions", "current", "--help"},
+			want: []string{
+				"exits with not-found status 4",
+				"all output modes leave stdout empty",
+				"selected session keeps the same JSON shape",
 			},
 		},
 		{

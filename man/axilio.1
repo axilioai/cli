@@ -529,10 +529,10 @@ axilio config
 .PP
 Inspect and edit CLI configuration without hand-editing files. Bare
 \fBaxilio config\fR reports the effective API host, API-key authentication
-summary, active organization, config path, and sessions directory. The
-current summary does not detect a stored OAuth session, so an OAuth-only
-login may be shown as auth method \fBnone\fR; \fBstatus\fR verifies effective
-credentials. The only editable key is base-url.
+or matching browser-session authentication summary, active organization,
+config path, and sessions directory. This is a local summary; \fBstatus\fR
+verifies that the effective credentials are usable. The only editable
+key is base-url.
 
 .PP
 Current ways to change these values are:
@@ -583,12 +583,15 @@ configuration summary remains on stdout
 .EX
 user@host ~ % axilio config
 API host     https://api.axilio.ai
-Auth method  api-key (source: config)
+Auth method  oauth (source: browser-session)
 Active org   (session default)
 Config file  <config-path>
 Sessions dir <sessions-directory>
 .sp
 # Exit status: 0
+# Notes: The effective method follows request precedence. API keys
+#        report flag, environment, or config as their source; a stored
+#        OAuth session is effective only for the selected API host.
 .EE
 
 .PP
@@ -2813,8 +2816,8 @@ axilio runs start <workflow-id> [flags]
 Create runs for a workflow ID discovered with \fBworkflows list\fR\&.
 
 .PP
---count creates that many run configurations; v0.5.0 does not validate
-its range locally, so use a positive count.
+--count creates that many run configurations and must be between 1 and
+1000, inclusive.
 
 .PP
 --phone-id pins every created run to a specific dedicated phone.
@@ -2831,8 +2834,8 @@ Successful output contains the created run IDs.
 .PP
 \fBCommand options\fP
 .IP \(bu 2
-\fB--count\fP=\fInumber\fP - Number of run configurations to create; v0.5.0
-does not validate the range (default "1")
+\fB--count\fP=\fInumber\fP - Number of run configurations to create (1-1000)
+(default "1")
 .IP \(bu 2
 \fB--phone-id\fP=\fIvalue\fP - Dedicated phone ID to pin to every created
 run
@@ -2874,7 +2877,8 @@ user@host ~ % axilio runs start wf_123
 Started run <run-id>
 .sp
 # Exit status: 0
-# Notes: -o json emits the complete run_ids response on stdout.
+# Notes: -o json emits the complete run_ids response on stdout. --count
+#        accepts 1 through 1000, inclusive.
 .EE
 
 .PP
@@ -2895,6 +2899,20 @@ Started run <run-id-3>
 \fBSample 3\fP
 
 .EX
+user@host ~ % axilio runs start wf_123 --count 0
+.sp
+# Standard error:
+--count must be between 1 and 1000 (got 0)
+.sp
+# Exit status: 2
+# Notes: The range is validated before credentials, allocation, or an
+#        API request.
+.EE
+
+.PP
+\fBSample 4\fP
+
+.EX
 user@host ~ % axilio runs start wf_123 --phone-id ph_123
 .sp
 # Standard error:
@@ -2904,7 +2922,7 @@ Started run <run-id>
 .EE
 
 .PP
-\fBSample 4\fP
+\fBSample 5\fP
 
 .EX
 user@host ~ % axilio runs start wf_123 --start-timeout 300
@@ -3055,8 +3073,8 @@ Resolve and show the session selected for phone commands.
 Phone command session selection precedence is --session, AXILIO_SESSION,
 the only locally saved session, the most recently started session, then
 an ambiguity error. This command has no --session flag, so it starts at
-AXILIO_SESSION. If no session is selected, the command prints a note and
-exits 0.
+AXILIO_SESSION. If no session can be selected, the command exits with
+not-found status 4.
 
 .PP
 \fBGlobal-option behavior\fP
@@ -3086,7 +3104,8 @@ Phone    <phone-id>
 Type     android
 .sp
 # Exit status: 0
-# Notes: No selected session is an exit-0 answer; JSON prints null.
+# Notes: When no session can be selected, all output modes leave stdout
+#        empty and exit with not-found status 4.
 .EE
 
 .PP
@@ -3117,7 +3136,8 @@ user@host ~ % axilio sessions current -o json
 }
 .sp
 # Exit status: 0
-# Notes: With no selected session, the successful JSON result is null.
+# Notes: A selected session keeps the same JSON shape. With no selected
+#        session, stdout is empty and exit status is 4.
 .EE
 
 .SS start
@@ -3404,16 +3424,14 @@ Download the latest release from GitHub and replace this binary in place
 
 .PP
 Homebrew installs defer to \fBbrew upgrade\fR, and development or \fBgo
-install\fR builds are left to the Go toolchain. On a standalone release,
---check reports whether a newer release exists without installing it. A
-Homebrew invocation currently prints \fBbrew upgrade axilio\fR guidance and
-returns before checking, even when --check is supplied.
+install\fR builds are left to the Go toolchain. On a release build,
+--check reports whether a newer release exists without installing it,
+including for Homebrew-managed installations.
 
 .PP
 \fBCommand options\fP
 .IP \(bu 2
-\fB--check\fP - Check a standalone release without installing; Homebrew
-currently prints upgrade guidance
+\fB--check\fP - Check for a newer release without installing it
 
 .PP
 \fBGlobal-option behavior\fP
@@ -3440,9 +3458,10 @@ user@host ~ % axilio upgrade --check
 A newer release is available: <old> -> <new>. Run `axilio upgrade` to install.
 .sp
 # Exit status: 0
-# Notes: The version placeholders vary. This is the newer-release
-#        branch; up-to-date, no-release, development, and
-#        Homebrew-managed installations report their own state instead.
+# Notes: The version placeholders vary. Homebrew installations perform
+#        the same release check but name `brew upgrade axilio` as the
+#        next command. Up-to-date, no-release, and development builds
+#        report their own state.
 .EE
 
 .PP
