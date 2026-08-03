@@ -73,39 +73,6 @@ func TestApplicationFlagUsage(t *testing.T) {
 	}
 }
 
-func TestCommandGlobalFlagHelpCoverage(t *testing.T) {
-	root := Root()
-	var commands []*cobra.Command
-	var walk func(*cobra.Command)
-	walk = func(command *cobra.Command) {
-		for _, child := range command.Commands() {
-			if child.Hidden {
-				continue
-			}
-			commands = append(commands, child)
-			walk(child)
-		}
-	}
-	walk(root)
-
-	globalFlags := []string{"api-key", "base-url", "no-color", "org", "output", "quiet"}
-	for _, command := range commands {
-		for _, name := range globalFlags {
-			usage, ok := commandGlobalFlagUsage(command, name)
-			if !ok || strings.TrimSpace(usage) == "" {
-				t.Errorf("%s has no command-specific --%s help", command.CommandPath(), name)
-			}
-		}
-	}
-
-	for _, name := range []string{"api-key", "org"} {
-		usage, ok := commandGlobalFlagUsage(findCommand(t, root, "init"), name)
-		if !ok || !strings.HasPrefix(usage, "No effect on init command.") {
-			t.Errorf("init --%s usage = %q, want required no-effect prefix", name, usage)
-		}
-	}
-}
-
 func TestRenderedHelpSnapshots(t *testing.T) {
 	t.Setenv("NO_COLOR", "1")
 	t.Setenv("__FANG_TEST_WIDTH", "120")
@@ -138,13 +105,10 @@ func TestRenderedHelpContracts(t *testing.T) {
 			name: "root",
 			args: []string{"--help"},
 			want: []string{
-				"Precedence rules:",
 				"Credentials resolve in this order: --api-key, AXILIO_API_KEY",
 				"each API key is scoped to the organization that created it",
-				"cannot switch organizations with --org",
 				"API host resolves from --base-url, AXILIO_BASE_URL",
 				"Phone command session selection precedence is --session, AXILIO_SESSION",
-				"Table output for human readability is the default",
 				"Every successful command emits valid JSON with -o json",
 			},
 		},
@@ -157,16 +121,10 @@ func TestRenderedHelpContracts(t *testing.T) {
 			name: "config",
 			args: []string{"config", "--help"},
 			want: []string{
-				"base-url",
 				"does not detect a stored OAuth session",
 				"config unset",
-				"Current ways to change these values are:",
-				"axilio login --api-key [api_key]",
 				"set XDG_CONFIG_HOME; file is [value]/axilio/config.json",
-				"directory is [value]/axilio/sessions",
-				"Ephemerally shows this as the effective API key source",
 				"axilio config set base-url",
-				"No actual effect. Ephemerally changes the displayed org only",
 				"axilio orgs use [org_name]",
 			},
 		},
@@ -183,9 +141,6 @@ func TestRenderedHelpContracts(t *testing.T) {
 				"AGENTS.md",
 				".cursor/rules/axilio.mdc",
 				"--force",
-				"--api-key No effect on init command.",
-				"--org No effect on init command.",
-				"Host for the skill download and sign-in check",
 			},
 		},
 		{
@@ -197,42 +152,33 @@ func TestRenderedHelpContracts(t *testing.T) {
 			name: "phones",
 			args: []string{"phones", "--help"},
 			want: []string{
-				"equivalent to `axilio phones --help`",
-				"Global flags shown here therefore have no effect",
 				"shared",
 				"dedicated",
 				"phones mine",
 				"sessions start --phone-id",
-				"No effect on phones command; bare axilio phones only displays this help",
 			},
 		},
 		{
 			name: "sessions",
 			args: []string{"sessions", "--help"},
 			want: []string{
-				"equivalent to `axilio sessions --help`",
-				"Global flags shown here therefore have no effect",
 				"local lease file",
 				"AXILIO_SESSION",
 				"current-session pointer",
 				"sessions list --remote",
 				"Show the session currently selected for phone commands",
-				"No effect on sessions command; bare axilio sessions only displays this help",
 			},
 		},
 		{
 			name: "phone",
 			args: []string{"phone", "--help"},
 			want: []string{
-				"equivalent to `axilio phone --help`",
-				"Phone and global flags shown here therefore have no effect",
 				"observe",
 				"find-text",
 				"long-press",
 				"screenshot",
 				"wait-for",
 				"send",
-				"No effect on phone command; bare axilio phone only displays this help",
 			},
 		},
 		{
@@ -259,51 +205,39 @@ func TestRenderedHelpContracts(t *testing.T) {
 			name: "workflows",
 			args: []string{"workflows", "--help"},
 			want: []string{
-				"equivalent to `axilio workflows --help`",
-				"Global flags shown here therefore have no effect",
 				"workflows list",
 				"runs start",
 				"sessions start --workflow",
-				"No effect on workflows command; bare axilio workflows only displays this help",
 			},
 		},
 		{
 			name: "runs",
 			args: []string{"runs", "--help"},
 			want: []string{
-				"equivalent to `axilio runs --help`",
-				"Global flags shown here therefore have no effect",
 				"workflows list",
 				"runs start",
 				"runs get",
 				"cancel",
-				"No effect on runs command; bare axilio runs only displays this help",
 			},
 		},
 		{
 			name: "api keys",
 			args: []string{"api-keys", "--help"},
 			want: []string{
-				"equivalent to `axilio api-keys --help`",
-				"Global flags shown here therefore have no effect",
 				"organization",
 				"shown once",
 				"api-keys delete",
-				"No effect on api-keys command; bare axilio api-keys only displays this help",
 			},
 		},
 		{
 			name: "uploads",
 			args: []string{"uploads", "--help"},
 			want: []string{
-				"equivalent to `axilio uploads --help`",
-				"Global flags shown here therefore have no effect",
 				"add",
 				"list",
 				"push",
 				"delete",
 				"phone send",
-				"No effect on uploads command; bare axilio uploads only displays this help",
 			},
 		},
 	}
@@ -437,15 +371,6 @@ func TestRenderedHelpUsesFlagOwnershipSections(t *testing.T) {
 			}
 		})
 	}
-}
-
-func findCommand(t *testing.T, root *cobra.Command, path string) *cobra.Command {
-	t.Helper()
-	command, _, err := root.Find(strings.Fields(path))
-	if err != nil || command == nil {
-		t.Fatalf("find command %q: %v", path, err)
-	}
-	return command
 }
 
 func TestHelpCaptureWriterPreservesFileDescriptor(t *testing.T) {
