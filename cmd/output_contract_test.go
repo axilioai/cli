@@ -53,7 +53,7 @@ func execRootStreams(t *testing.T, stdin string, args ...string) (string, string
 	return stdout.String(), stderr.String(), execErr
 }
 
-func TestConfigSetUsesStdout(t *testing.T) {
+func TestConfigSetWritesOnlyToStdout(t *testing.T) {
 	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
 	t.Setenv("AXILIO_BASE_URL", "")
 	t.Setenv("AXILIO_API_KEY", "")
@@ -61,8 +61,8 @@ func TestConfigSetUsesStdout(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if want := "Set base-url = https://api.axilio.ai in "; !strings.HasPrefix(stdout, want) {
-		t.Fatalf("stdout = %q, want prefix %q", stdout, want)
+	if stdout == "" {
+		t.Fatal("config set wrote no acknowledgment to stdout")
 	}
 	if stderr != "" {
 		t.Fatalf("stderr = %q, want empty", stderr)

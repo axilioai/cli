@@ -18,39 +18,47 @@ func testPrinter(format string, quiet, tty bool, stdin string) (*Printer, *bytes
 	}), stdout, stderr
 }
 
-func TestHumanOutputClasses(t *testing.T) {
-	p, stdout, stderr := testPrinter("table", false, true, "")
-	p.Result("data")
-	p.Ack("ack")
-	p.Success("success")
-	p.Note("note")
-	p.Step("step")
-	p.Warn("warning")
-	p.Prompt("prompt")
-
-	if got := stdout.String(); !strings.Contains(got, "data\nack\n") || !strings.Contains(got, "✓ success\n") {
-		t.Fatalf("stdout = %q", got)
+func TestOutputClassRouting(t *testing.T) {
+	type routedOutput struct {
+		stdout string
+		stderr string
 	}
-	if got := stderr.String(); !strings.Contains(got, "note\n") || !strings.Contains(got, "→ step\n") || !strings.Contains(got, "warning: warning\n") || !strings.Contains(got, "prompt") {
-		t.Fatalf("stderr = %q", got)
+	tests := []struct {
+		name               string
+		write              func(*Printer)
+		human, quiet, json routedOutput
+	}{
+		{name: "result", write: func(p *Printer) { p.Result("data") }, human: routedOutput{stdout: "data\n"}, quiet: routedOutput{stdout: "data\n"}},
+		{name: "ack", write: func(p *Printer) { p.Ack("ack") }, human: routedOutput{stdout: "ack\n"}},
+		{name: "success", write: func(p *Printer) { p.Success("success") }, human: routedOutput{stdout: "✓ success\n"}},
+		{name: "note", write: func(p *Printer) { p.Note("note") }, human: routedOutput{stderr: "note\n"}},
+		{name: "step", write: func(p *Printer) { p.Step("step") }, human: routedOutput{stderr: "→ step\n"}},
+		{name: "warning", write: func(p *Printer) { p.Warn("warning") }, human: routedOutput{stderr: "warning: warning\n"}, quiet: routedOutput{stderr: "warning: warning\n"}, json: routedOutput{stderr: "warning: warning\n"}},
+		{name: "prompt", write: func(p *Printer) { p.Prompt("prompt") }, human: routedOutput{stderr: "prompt"}},
 	}
-}
 
-func TestQuietPreservesDataWarningsAndErrors(t *testing.T) {
-	p, stdout, stderr := testPrinter("table", true, false, "")
-	p.Result("data")
-	p.Ack("ack")
-	p.Success("success")
-	p.Note("note")
-	p.Step("step")
-	p.Warn("warning")
-	p.Prompt("prompt")
-
-	if got := stdout.String(); got != "data\n" {
-		t.Fatalf("stdout = %q", got)
-	}
-	if got := stderr.String(); got != "warning: warning\n" {
-		t.Fatalf("stderr = %q", got)
+	for _, tc := range tests {
+		for _, mode := range []struct {
+			name   string
+			format string
+			quiet  bool
+			want   routedOutput
+		}{
+			{name: "human", format: "table", want: tc.human},
+			{name: "quiet", format: "table", quiet: true, want: tc.quiet},
+			{name: "json", format: "json", want: tc.json},
+		} {
+			t.Run(tc.name+"/"+mode.name, func(t *testing.T) {
+				p, stdout, stderr := testPrinter(mode.format, mode.quiet, true, "")
+				tc.write(p)
+				if got := stdout.String(); got != mode.want.stdout {
+					t.Errorf("stdout = %q, want %q", got, mode.want.stdout)
+				}
+				if got := stderr.String(); got != mode.want.stderr {
+					t.Errorf("stderr = %q, want %q", got, mode.want.stderr)
+				}
+			})
+		}
 	}
 }
 
@@ -71,20 +79,6 @@ func TestJSONEmitsOneDocumentAndSuppressesHumanRenderer(t *testing.T) {
 	}
 	if stderr.Len() != 0 {
 		t.Fatalf("stderr = %q", stderr.String())
-	}
-}
-
-func TestJSONWarningStaysOnStderr(t *testing.T) {
-	p, stdout, stderr := testPrinter("json", true, false, "")
-	p.Warn("partial result")
-	if err := p.Emit(map[string]string{"status": "ok"}, nil); err != nil {
-		t.Fatal(err)
-	}
-	if !strings.HasPrefix(stdout.String(), "{\n") {
-		t.Fatalf("stdout = %q", stdout.String())
-	}
-	if got := stderr.String(); got != "warning: partial result\n" {
-		t.Fatalf("stderr = %q", got)
 	}
 }
 
