@@ -299,6 +299,6 @@ func printDelivery(p *output.Printer, d *platformgo.FileDeliverySummary, waited 
 	if d.Error != nil && *d.Error != "" {
 		p.Note("phone reported: %s", *d.Error)
 	} else if !waited {
-		p.Note("pushed; re-run with --wait to confirm delivery")
+		p.Note("pushed without requesting delivery receipt. In the future, add --wait if you want the cli to wait for delivery confirmation and report result.")
 	}
 }
