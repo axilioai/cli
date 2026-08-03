@@ -11,6 +11,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const (
+	minRunCount int64 = 1
+	maxRunCount int64 = 1000
+)
+
 func runsCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "runs",
@@ -84,8 +89,8 @@ func runsStartCmd() *cobra.Command {
 		Use:   "start <workflow-id>",
 		Short: "Start one or more runs of a workflow.",
 		Long: "Create runs for a workflow ID discovered with `workflows list`.\n\n" +
-			"--count creates that many run configurations; v0.5.0 does not validate " +
-			"its range locally, so use a positive count.\n\n" +
+			"--count creates that many run configurations and must be between 1 and " +
+			"1000, inclusive.\n\n" +
 			"--phone-id pins every created run to a specific dedicated phone.\n\n" +
 			"--start-timeout is the number " +
 			"of whole seconds a queued run may wait for a phone before auto-cancel. " +
@@ -95,6 +100,9 @@ func runsStartCmd() *cobra.Command {
 			"created run IDs.",
 		Args: cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
+			if count < minRunCount || count > maxRunCount {
+				return exit.Usagef("--count must be between %d and %d (got %d)", minRunCount, maxRunCount, count)
+			}
 			cl, err := newClient()
 			if err != nil {
 				return err
@@ -134,7 +142,7 @@ func runsStartCmd() *cobra.Command {
 			return nil
 		},
 	}
-	cmd.Flags().Int64Var(&count, "count", 1, "Number of run configurations to create; v0.5.0 does not validate the range")
+	cmd.Flags().Int64Var(&count, "count", 1, "Number of run configurations to create (1-1000)")
 	cmd.Flags().StringVar(&phoneID, "phone-id", "", "Dedicated phone ID to pin to every created run")
 	cmd.Flags().Int64Var(&startTimeout, "start-timeout", 0, startTimeoutHelp)
 	return cmd
