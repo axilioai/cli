@@ -132,7 +132,7 @@ func logoutCmd() *cobra.Command {
 		Long: "Sign out locally and, when present, revoke the OAuth refresh-token " +
 			"family server-side. The saved API key, OAuth session, and active " +
 			"organization are removed. A saved base URL, environment credentials, " +
-			"and local phone-session lease files are not removed.",
+			"and locally saved phone-session files are not removed.",
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			cfg := config.Load()
 			hadKey := cfg.APIKey != ""

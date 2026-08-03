@@ -3,11 +3,11 @@ package cmd
 import (
 	"bytes"
 	"fmt"
+	"html"
 	"html/template"
+	"os/exec"
+	"regexp"
 	"strings"
-
-	"github.com/russross/blackfriday/v2"
-	"github.com/spf13/cobra"
 )
 
 type manpageHTMLSection struct {
@@ -30,30 +30,38 @@ var manpageHTMLSections = []manpageHTMLSection{
 	{ID: "SEE_ALSO", Label: "SEE ALSO"},
 }
 
-// GenerateManpageHTML renders a self-contained browser manual from the same
-// validated Markdown source as GenerateManpage. It contains no script, remote
-// stylesheet, wall-clock value, or host-specific input.
-func GenerateManpageHTML(root *cobra.Command, version string) ([]byte, error) {
-	markdown, err := generateValidatedManpageMarkdown(root, version)
+var (
+	manpageTitlePattern    = regexp.MustCompile(`(?m)^\.TH "AXILIO" "1" "([^"]+)" "axilio ([^"]+)" "Axilio CLI Manual"$`)
+	mandocHeadingPattern   = regexp.MustCompile(`(?s)<h([12]) class="(Sh|Ss)" id="([^"]+)"><a class="permalink" href="#[^"]+">(.*?)</a></h[12]>`)
+	mandocTagPattern       = regexp.MustCompile(`<[^>]+>`)
+	mandocPrePattern       = regexp.MustCompile(`(?s)<pre>(.*?)</pre>`)
+	commandSynopsisPattern = regexp.MustCompile(`(?s)(<h[34] id="COMMAND_[^"]+">[^<]*</h[34]>\s*)<pre>(axilio .*?)</pre>`)
+	terminalBlockPattern   = regexp.MustCompile(`(?s)<pre>(user@host .*?)</pre>`)
+	trailingSpacePattern   = regexp.MustCompile(`(?m)[\t ]+$`)
+)
+
+// GenerateManpageHTML converts the exact roff page shipped in release
+// artifacts into a self-contained browser manual. mandoc is the sole semantic
+// renderer; this function only restores the browser hierarchy, navigation, and
+// styling that surround its HTML fragment.
+func GenerateManpageHTML(manpage []byte) ([]byte, error) {
+	metadata := manpageTitlePattern.FindSubmatch(manpage)
+	if metadata == nil {
+		return nil, fmt.Errorf("generate manpage HTML: invalid or missing AXILIO .TH header")
+	}
+
+	mandoc := exec.Command("mandoc", "-Thtml", "-Ofragment")
+	mandoc.Stdin = bytes.NewReader(manpage)
+	var stderr bytes.Buffer
+	mandoc.Stderr = &stderr
+	fragment, err := mandoc.Output()
+	if err != nil {
+		return nil, fmt.Errorf("generate manpage HTML with mandoc: %w: %s", err, strings.TrimSpace(stderr.String()))
+	}
+	body, err := manpageHTMLBody(fragment)
 	if err != nil {
 		return nil, err
 	}
-
-	// The first line is md2man's title block. The browser shell renders the
-	// equivalent metadata itself, so exclude it from the semantic page body.
-	if lineEnd := strings.IndexByte(markdown, '\n'); lineEnd >= 0 {
-		markdown = markdown[lineEnd+1:]
-	}
-	renderer := blackfriday.NewHTMLRenderer(blackfriday.HTMLRendererParameters{
-		HeadingLevelOffset: 1,
-		Flags:              blackfriday.SkipHTML | blackfriday.Safelink | blackfriday.NoreferrerLinks | blackfriday.NoopenerLinks,
-	})
-	body := blackfriday.Run(
-		[]byte(markdown),
-		blackfriday.WithRenderer(renderer),
-		blackfriday.WithExtensions(blackfriday.CommonExtensions|blackfriday.AutoHeadingIDs|blackfriday.HeadingIDs),
-	)
-	body = addHTMLTopLinks(body)
 
 	var output bytes.Buffer
 	err = manpageHTMLTemplate.Execute(&output, struct {
@@ -62,11 +70,10 @@ func GenerateManpageHTML(root *cobra.Command, version string) ([]byte, error) {
 		Sections   []manpageHTMLSection
 		Body       template.HTML
 	}{
-		Version:    strings.TrimSpace(version),
-		SourceDate: manpageSourceDate,
+		Version:    string(metadata[2]),
+		SourceDate: string(metadata[1]),
 		Sections:   manpageHTMLSections,
-		// Blackfriday generated this fragment from repository-owned Markdown
-		// with raw HTML explicitly disabled on the renderer.
+		// mandoc generated this fragment from the checked-in roff source.
 		Body: template.HTML(body), //nolint:gosec
 	})
 	if err != nil {
@@ -75,14 +82,103 @@ func GenerateManpageHTML(root *cobra.Command, version string) ([]byte, error) {
 	return output.Bytes(), nil
 }
 
-func addHTMLTopLinks(body []byte) []byte {
-	page := string(body)
-	for _, section := range manpageHTMLSections {
-		heading := fmt.Sprintf(`<h2 id="%s">%s</h2>`, section.ID, section.Label)
-		withTopLink := fmt.Sprintf(`<h2 id="%s">%s &nbsp; &nbsp; &nbsp; &nbsp; <a href="#top_of_page"><span class="top-link">top</span></a></h2>`, section.ID, section.Label)
-		page = strings.Replace(page, heading, withTopLink, 1)
+func manpageHTMLBody(fragment []byte) ([]byte, error) {
+	const open = `<div class="manual-text">`
+	start := bytes.Index(fragment, []byte(open))
+	end := bytes.LastIndex(fragment, []byte(`</div>`))
+	if start < 0 || end < start {
+		return nil, fmt.Errorf("generate manpage HTML: mandoc output has no manual body")
 	}
-	return []byte(page)
+	page := string(fragment[start+len(open) : end])
+	page = rewriteMandocHeadings(page)
+	page = mandocPrePattern.ReplaceAllStringFunc(page, func(block string) string {
+		return strings.ReplaceAll(block, "\n<br/>\n", "\n")
+	})
+	page = commandSynopsisPattern.ReplaceAllString(page, `$1<pre class="command-synopsis"><code>$2</code></pre>`)
+	page = terminalBlockPattern.ReplaceAllString(page, `<pre class="terminal"><code class="language-console">$1</code></pre>`)
+	page = strings.ReplaceAll(page, `<p class="Pp"></p>`, "")
+	for _, url := range []string{
+		"https://docs.axilio.ai",
+		"https://github.com/axilioai/cli/issues",
+		"https://axilio.ai",
+	} {
+		page = strings.ReplaceAll(page, url, `<a href="`+url+`">`+url+`</a>`)
+	}
+	page = trailingSpacePattern.ReplaceAllString(page, "")
+	return []byte(strings.TrimSpace(page) + "\n"), nil
+}
+
+func rewriteMandocHeadings(page string) string {
+	matches := mandocHeadingPattern.FindAllStringSubmatchIndex(page, -1)
+	if len(matches) == 0 {
+		return page
+	}
+	mainSections := make(map[string]bool, len(manpageHTMLSections))
+	for _, section := range manpageHTMLSections {
+		mainSections[section.ID] = true
+	}
+
+	var output strings.Builder
+	last := 0
+	inCommands := false
+	commandFamily := ""
+	for i, match := range matches {
+		output.WriteString(page[last:match[0]])
+		class := page[match[4]:match[5]]
+		id := page[match[6]:match[7]]
+		label := compactHTMLText(page[match[8]:match[9]])
+
+		switch {
+		case class == "Sh" && mainSections[id]:
+			inCommands = id == "COMMANDS"
+			commandFamily = ""
+			fmt.Fprintf(&output, `<h2 id="%s">%s &nbsp; &nbsp; &nbsp; &nbsp; <a href="#top_of_page"><span class="top-link">top</span></a></h2>`, id, html.EscapeString(label))
+		case class == "Sh" && inCommands:
+			commandFamily = label
+			fmt.Fprintf(&output, `<h3 id="COMMAND_%s">%s</h3>`, anchorPart(label), html.EscapeString(label))
+		case class == "Ss" && inCommands && commandReferenceFollows(page, matches, i, commandFamily, label):
+			fmt.Fprintf(&output, `<h4 id="COMMAND_%s-%s">%s</h4>`, anchorPart(commandFamily), anchorPart(label), html.EscapeString(label))
+		case class == "Ss" && inCommands:
+			fmt.Fprintf(&output, `<h5 id="%s">%s</h5>`, html.EscapeString(id), html.EscapeString(label))
+		case class == "Ss":
+			fmt.Fprintf(&output, `<h3 id="%s">%s</h3>`, html.EscapeString(id), html.EscapeString(label))
+		default:
+			output.WriteString(page[match[0]:match[1]])
+		}
+		last = match[1]
+	}
+	output.WriteString(page[last:])
+	return output.String()
+}
+
+func commandReferenceFollows(page string, matches [][]int, index int, family, command string) bool {
+	end := len(page)
+	if index+1 < len(matches) {
+		end = matches[index+1][0]
+	}
+	section := page[matches[index][1]:end]
+	preStart := strings.Index(section, "<pre>")
+	if preStart < 0 {
+		return false
+	}
+	preStart += len("<pre>")
+	preEnd := strings.Index(section[preStart:], "</pre>")
+	if preEnd < 0 {
+		return false
+	}
+	invocation := html.UnescapeString(section[preStart : preStart+preEnd])
+	invocation = strings.TrimSpace(strings.SplitN(invocation, "\n", 2)[0])
+	want := "axilio " + family + " " + command
+	return invocation == want || strings.HasPrefix(invocation, want+" ")
+}
+
+func compactHTMLText(value string) string {
+	value = mandocTagPattern.ReplaceAllString(value, "")
+	return strings.Join(strings.Fields(html.UnescapeString(value)), " ")
+}
+
+func anchorPart(value string) string {
+	return strings.ReplaceAll(strings.TrimSpace(value), " ", "-")
 }
 
 var manpageHTMLTemplate = template.Must(template.New("axilio-manpage").Parse(`<!doctype html>
@@ -99,6 +195,7 @@ var manpageHTMLTemplate = template.Must(template.New("axilio-manpage").Parse(`<!
     h2 { color: #A00000; padding-top: 15px; font-size: 100%; font-weight: bold; }
     h3 { color: #600000; font-size: 100%; padding-top: 10px; padding-left: 20px; font-style: italic; }
     h4 { color: #502000; font-size: 100%; padding-top: 8px; padding-left: 40px; font-weight: bold; }
+    h5 { color: #502000; font-size: 95%; padding-top: 6px; padding-left: 56px; font-style: italic; }
     p { margin-left: 8px; margin-right: 8px; margin-bottom: 0.5em; max-width: 750px; }
     table { max-width: 750px; }
     hr { max-width: 750px; margin: 8px; }
@@ -125,16 +222,19 @@ var manpageHTMLTemplate = template.Must(template.New("axilio-manpage").Parse(`<!
     span.headline, span.footline { font-weight: bold; }
     span.top-link { font-size: 70%; }
     main.manual-text { font-family: monospace, courier; }
-    main.manual-text > p, main.manual-text > ul, main.manual-text > ol, main.manual-text > dl, main.manual-text > pre { margin-left: 64px; max-width: 686px; }
+    main.manual-text section > p, main.manual-text section > ul, main.manual-text section > ol, main.manual-text section > dl, main.manual-text section > pre { margin-left: 64px; max-width: 686px; }
+    main.manual-text p.Pp:empty { display: none; }
+    pre.command-synopsis { box-sizing: border-box; margin-top: 0.45em; margin-bottom: 0.9em; padding: 8px 11px; border: 1px solid #dedede; border-left: 3px solid #b0b0b0; background-color: #f6f6f6; line-height: 1.35; white-space: pre; overflow-x: auto; overflow-wrap: normal; }
+    pre.command-synopsis code { color: #181818; font-weight: normal; }
     code.language-console { display: block; box-sizing: border-box; padding: 12px 14px; border: 1px solid #d8d8d8; border-left: 4px solid #008000; background-color: #f5f5f5; color: #181818; line-height: 1.45; white-space: pre; overflow-x: auto; overflow-wrap: normal; box-shadow: inset 0 0 0 1px #fff; }
     code.language-console::first-line { color: #006000; font-weight: bold; }
-    main.manual-text h3 + p, main.manual-text h3 + pre, main.manual-text h4 + p, main.manual-text h4 + pre { margin-left: 64px; }
+    main.manual-text h3 + p, main.manual-text h3 + pre, main.manual-text h4 + p, main.manual-text h4 + pre, main.manual-text h5 + p, main.manual-text h5 + pre { margin-left: 64px; }
     main.manual-text dl dt { margin-top: 0.6em; }
     main.manual-text dl dd { margin-left: 32px; }
     .footer p { margin-top: 0.7em; margin-bottom: 0.7em; }
     @media (max-width: 760px) {
       td.training-cell { display: none; }
-      main.manual-text > p, main.manual-text > ul, main.manual-text > ol, main.manual-text > dl, main.manual-text > pre { margin-left: 24px; max-width: calc(100% - 32px); }
+      main.manual-text section > p, main.manual-text section > ul, main.manual-text section > ol, main.manual-text section > dl, main.manual-text section > pre { margin-left: 24px; max-width: calc(100% - 32px); }
       h3 { padding-left: 8px; }
       h4 { padding-left: 16px; }
     }
@@ -162,7 +262,7 @@ var manpageHTMLTemplate = template.Must(template.New("axilio-manpage").Parse(`<!
   <main id="manual" class="manual-text">
 {{ .Body }}  </main>
   <hr class="nav-end">
-  <div class="footer"><p>Generated from the axilio {{ .Version }} command tree · source date {{ .SourceDate }} · <a href="#top_of_page">top</a></p></div>
+  <div class="footer"><p>Generated from man/axilio.1 for axilio {{ .Version }} · source date {{ .SourceDate }} · <a href="#top_of_page">top</a></p></div>
 </body>
 </html>
 `))

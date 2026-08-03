@@ -88,14 +88,18 @@ func Root() *cobra.Command {
 the resources that support them.
 
 Start with login, acquire a session, observe its phone, then act on what is
-visible. Sessions persist locally until stopped.
+visible. Sessions remain active in Axilio until stopped. The CLI also saves
+session information locally so later phone commands can reconnect.
 
 The main command families are:
-  phones / sessions   discover phones and manage interactive leases
+  phones / sessions   discover phones and manage active phone sessions
   phone               observe and control the selected session's phone
   workflows / runs    discover workflows and create or inspect runs
   uploads             store media and deliver it to phones
   api-keys            manage organization-scoped API keys
+
+For detailed offline documentation, run man axilio. Run axilio help --html to
+print a clickable file:// URL for the browser-friendly version.
 
 Precedence rules:
 
@@ -110,7 +114,8 @@ API host resolves from --base-url, AXILIO_BASE_URL, saved base-url, then
 https://api.axilio.ai.
 
 Phone command session selection precedence is --session, AXILIO_SESSION, the
-sole active lease, the saved current-session pointer, then an ambiguity error.
+only locally saved session, the most recently started session, then an ambiguity
+error.
 
 Table output for human readability is the default. Every successful runnable
 application command emits valid JSON with -o json; action commands return a
@@ -153,6 +158,7 @@ they do not select a local phone session.`,
 	// word); cobra adds the --version flag when root.Version is set.
 	root.Version = versionString()
 	root.SetVersionTemplate("{{.Name}} {{.Version}}\n")
+	configureHelpCommand(root)
 	groupCommandHelpFlags(root)
 	attachApplicationCommandDocumentation(root)
 	attachGeneratedCommandDocumentation(root)

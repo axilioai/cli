@@ -5,7 +5,7 @@ terminal, and inspect sessions, runs, and API keys. A single static Go binary,
 built to be driven by people and coding agents alike.
 
 ```bash
-axilio sessions start                 # lease a phone
+axilio sessions start                 # start a phone session
 axilio phone observe                  # see what's on screen
 axilio phone tap --query "the search box"
 axilio phone type "androiddev"
@@ -37,8 +37,9 @@ multi-language SDK support lands. It does three things:
 brew install axilioai/tap/axilio
 ```
 
-Homebrew installs both the executable and its offline manual. Read it with
-`man axilio`.
+Homebrew installs the executable and both offline manual formats. Read the
+terminal page with `man axilio`, or run `axilio help --html` to print a
+clickable `file://` URL for the browser edition.
 
 ### curl (macOS / Linux)
 
@@ -51,7 +52,7 @@ curl -fsSL https://axilio.ai/install.sh |
 ```
 
 The script installs the latest release for your OS/arch. Set `VERSION=v0.6.1`
-to pin a release. It installs the manual to `MAN_DIR` when set; otherwise it
+to pin a release. It installs both manuals to `MAN_DIR` when set; otherwise it
 derives `<prefix>/share/man/man1` only when `INSTALL_DIR` ends in `/bin` or
 `/sbin`. An arbitrary executable layout or an unavailable manual destination
 produces a warning but does not undo a successful binary install. The script is
@@ -78,7 +79,8 @@ man axilio
 ```
 
 Homebrew and compatible curl-prefix installs make `axilio(1)` discoverable by
-`man`. Every GitHub release archive also contains the source page at
+`man` and make the browser edition discoverable through `axilio help --html`.
+Every GitHub release archive also contains the source page at
 `man/axilio.1` and a self-contained browser edition at `man/axilio.1.html`:
 
 ```bash
@@ -140,7 +142,7 @@ Own dedicated phones? Point the session at one: `axilio phones mine` for the
 axilio login                 # sign in (browser OAuth, or --api-key)
 axilio doctor                # one-shot check: auth, connectivity, account, environment
 axilio phones list           # phones you can claim
-axilio sessions start        # acquire a phone; the lease persists until you stop it
+axilio sessions start        # acquire a phone; the session remains active until stopped
 axilio phone observe         # see the screen
 axilio sessions stop <id>    # release it
 ```
@@ -187,8 +189,8 @@ Precedence rules:
 - API host resolves from `--base-url`, `AXILIO_BASE_URL`, saved `base-url`,
   then `https://api.axilio.ai`.
 - Phone command session selection precedence is `--session`, `AXILIO_SESSION`,
-  the sole active lease, the saved current-session pointer, then an ambiguity
-  error.
+  the only locally saved session, the most recently started session, then an
+  ambiguity error.
 
 `axilio logout` clears the saved key, OAuth session, and active organization.
 
@@ -204,7 +206,7 @@ Precedence rules:
 | `init` | Drop an agent skill into the repo so a coding agent can drive phones via the CLI and emit SDK code. Bare `init` auto-detects the agent(s) from repo markers and checks you're signed in; `--agent claude\|codex\|cursor` picks one. Re-run with `--force` after `axilio upgrade` to refresh. |
 | `phones list` | List phones you can start a session on right now (shared pool + your free dedicated phones). |
 | `phones mine` | List your org's dedicated phones, including ones currently in use (find a `phone_id` to pin). |
-| `sessions start` / `stop` / `list` / `current` | Acquire, release, and inspect phone leases. |
+| `sessions start` / `stop` / `list` / `current` | Start, stop, and inspect phone sessions. |
 | `phone observe` / `find` / `find-text` / `tap` / `long-press` / `swipe` / `type` / `key` / `screenshot` / `wait-for` | Observe and control the selected phone session. |
 | `phone send` | Upload a local image/video and push it to the selected session's phone. |
 | `workflows list` | Discover workflow IDs by recency or name search. |
@@ -248,19 +250,17 @@ The CLI's output is a contract, not just cosmetics.
   | Code | Meaning | Examples |
   | --- | --- | --- |
   | `0` | success | |
-  | `1` | error | unclassified failure, including uncoded local validation/lookup errors |
-  | `2` | usage | explicit usage error, recognized Cobra parse/arity error, mobile `invalid_args`, HTTP 400/422 |
-  | `3` | auth | explicit auth error, mobile unauthorized, HTTP 401/403 |
-  | `4` | not found | mobile element/no-allocation error, HTTP 404 |
-  | `5` | timeout | explicit/mobile timeout, context deadline, HTTP 408 |
-  | `6` | unavailable | mobile connection/offline error, HTTP 429/5xx |
-  | `7` | canceled | explicit, mobile, or context cancellation |
+  | `1` | error | failure that does not fit a more specific category |
+  | `2` | usage | invalid command syntax, argument count, or value; HTTP 400/422 |
+  | `3` | auth | missing or invalid credentials, unauthorized access, or permission denied; HTTP 401/403 |
+  | `4` | not found | requested resource, phone allocation, or on-screen element not found; HTTP 404 |
+  | `5` | timeout | operation exceeded its timeout or deadline; HTTP 408 |
+  | `6` | unavailable | service or phone unavailable/offline, rate limit, or server failure; HTTP 429/5xx |
+  | `7` | canceled | operation canceled by the user, shell, or system |
 
-  The codes map the phone driver's error taxonomy and the API's HTTP status onto
-  one table, so `axilio phone find "..."` returning `4` means "no match"
-  regardless of transport. Plain local errors that are not explicitly classified
-  fall back to `1`; malformed API-key format, a missing local session, and Cobra's
-  required-flag error currently take that path.
+  For example, `axilio phone find "..."` returning `4` means no matching
+  element was found. Failures without a more specific classification return
+  `1`.
 
 ## Examples
 
@@ -286,8 +286,8 @@ axilio sessions stop <id>
 
 ### Parallel sessions
 
-Each terminal or agent process can hold its own lease and drive its own phone at
-once, with no shared state. Pin a phone to a shell with `AXILIO_SESSION`:
+Each terminal or agent process can select its own session and drive its own
+phone at once. Pin a phone to a shell with `AXILIO_SESSION`:
 
 ```bash
 # in terminal A
@@ -299,11 +299,12 @@ eval "$(axilio sessions start --export)"
 axilio phone observe                          # drives B's phone
 ```
 
-`axilio sessions list` shows the leases this CLI holds (a `*` marks the one the
-phone verbs target in the current shell); `--remote` lists all active sessions
-on the server. Phone command session selection precedence is `--session`,
-`AXILIO_SESSION`, the sole active lease, the saved current-session pointer, then
-an ambiguity error.
+Sessions remain active in Axilio until stopped. The CLI saves connection
+information locally so later phone commands can reconnect. `axilio sessions
+list` shows sessions saved locally (a `*` marks the one selected in the current
+shell); `--remote` lists all active Axilio sessions. Phone command session
+selection precedence is `--session`, `AXILIO_SESSION`, the only locally saved
+session, the most recently started session, then an ambiguity error.
 
 ### Start and inspect runs
 
@@ -355,5 +356,6 @@ Run `axilio completion --help` or
 - `axilio --help` and `axilio <command> --help` for usage.
 - `man axilio` for the comprehensive offline manual when installed through
   Homebrew or a compatible curl prefix.
+- `axilio help --html` for a clickable URL to the installed HTML manual.
 - Docs: [https://docs.axilio.ai](https://docs.axilio.ai)
 - Issues: [https://github.com/axilioai/cli/issues](https://github.com/axilioai/cli/issues)

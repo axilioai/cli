@@ -48,7 +48,7 @@ func doctorCmd() *cobra.Command {
 			"credentials and authenticated connectivity failures are required " +
 			"failures and make the command exit non-zero. Account, plan, and local " +
 			"environment rows are informational; without credentials, connectivity " +
-			"is also informational. Each network probe is bounded to 8 seconds. " +
+			"is also informational. Each network check times out after 8 seconds. " +
 			"Use -o json for an overall ok value and the complete checks array.",
 		RunE: func(_ *cobra.Command, _ []string) error {
 			checks := runDoctor(context.Background())

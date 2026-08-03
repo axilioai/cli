@@ -15,14 +15,14 @@ func runsCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "runs",
 		Short: "Start, inspect, and cancel workflow runs.",
-		Long: "Running `axilio runs` without a subcommand is equivalent to " +
-			"`axilio runs --help`: it only displays this help and does not list, " +
-			"start, inspect, or cancel runs. Global flags shown here therefore have " +
-			"no effect. Pass flags to a runs subcommand instead.\n\n" +
-			"Manage workflow executions in the active organization. Discover a " +
+		Long: "Manage workflow executions in the active organization. Discover a " +
 			"workflow ID with `workflows list`, start one or more runs, list recent " +
 			"run IDs and statuses, inspect a run in detail, or cancel queued and " +
-			"running work.",
+			"running work.\n\n" +
+			"Running `axilio runs` without a subcommand is equivalent to " +
+			"`axilio runs --help`: it only displays this help and does not list, " +
+			"start, inspect, or cancel runs. Global flags shown here therefore have " +
+			"no effect. Pass flags to a runs subcommand instead.",
 	}
 	cmd.AddCommand(runsListCmd(), runsStartCmd(), runsGetCmd(), runsCancelCmd())
 	return cmd
@@ -88,9 +88,9 @@ func runsStartCmd() *cobra.Command {
 			"its range locally, so use a positive count.\n\n" +
 			"--phone-id pins every created run to a specific dedicated phone.\n\n" +
 			"--start-timeout is the number " +
-			"of seconds a queued run may wait for a phone before auto-cancel; zero " +
-			"omits the value and uses the server default, and nonzero values are sent " +
-			"without client-side range validation.\n\n" +
+			"of whole seconds a queued run may wait for a phone before auto-cancel. " +
+			"Positive values are sent to the server, which may reject unsupported " +
+			"values; zero or negative values omit the field and use the server default.\n\n" +
 			"Successful output contains the " +
 			"created run IDs.",
 		Args: cobra.ExactArgs(1),
@@ -136,7 +136,7 @@ func runsStartCmd() *cobra.Command {
 	}
 	cmd.Flags().Int64Var(&count, "count", 1, "Number of run configurations to create; v0.5.0 does not validate the range")
 	cmd.Flags().StringVar(&phoneID, "phone-id", "", "Dedicated phone ID to pin to every created run")
-	cmd.Flags().Int64Var(&startTimeout, "start-timeout", 0, "Queued-phone wait in seconds; 0 uses the server default, nonzero is sent as-is")
+	cmd.Flags().Int64Var(&startTimeout, "start-timeout", 0, startTimeoutHelp)
 	return cmd
 }
 

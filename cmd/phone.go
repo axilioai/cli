@@ -19,23 +19,23 @@ func phoneCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "phone",
 		Short: "Observe and control the selected session's phone.",
-		Long: "Running `axilio phone` without a subcommand is equivalent to " +
-			"`axilio phone --help`: it only displays this help and does not observe " +
-			"or control a phone. Phone and global flags shown here therefore have no " +
-			"effect. Pass flags to a phone subcommand instead.\n\n" +
-			"Drive a phone leased with `axilio sessions start`.\n\n" +
+		Long: "Drive a phone session started with `axilio sessions start`.\n\n" +
 			"A reliable loop is " +
 			"observe the screen, find or semantically target an element, act, then " +
 			"observe again to verify.\n\n" +
 			"Available verbs are observe, find, find-text, " +
 			"tap, long-press, swipe, type, key, screenshot, wait-for, and send. " +
 			"Every successful verb emits a structured result with -o json.\n\n" +
-			"Session selection precedence is --session, AXILIO_SESSION, the sole active " +
-			"local lease, the saved current-session pointer, then an ambiguity error. " +
-			"The verbs mirror the SDK MobileDriver so an explored interaction maps " +
-			"directly onto SDK code.",
+			"Session selection precedence is --session, AXILIO_SESSION, the only locally " +
+			"saved session, the most recently started session, then an ambiguity error. " +
+			"Phone command names match the Axilio SDKs, so an interaction explored in " +
+			"the CLI can be transferred directly into Python or Go code.\n\n" +
+			"Running `axilio phone` without a subcommand is equivalent to " +
+			"`axilio phone --help`: it only displays this help and does not observe " +
+			"or control a phone. Phone and global flags shown here therefore have no " +
+			"effect. Pass flags to a phone subcommand instead.",
 	}
-	cmd.PersistentFlags().StringVar(&flagPhoneSession, "session", "", "Session ID; overrides AXILIO_SESSION, sole-lease, and current-pointer selection")
+	cmd.PersistentFlags().StringVar(&flagPhoneSession, "session", "", "Session ID; overrides AXILIO_SESSION and automatic session selection")
 	cmd.AddCommand(
 		phoneObserveCmd(), phoneFindCmd(), phoneFindTextCmd(),
 		phoneTapCmd(), phoneLongPressCmd(), phoneSwipeCmd(),
@@ -149,7 +149,7 @@ func phoneFindCmd() *cobra.Command {
 	}
 	cmd.Flags().StringVar(&engine, "ocr-engine", "", "OCR engine: free or premium; omitted uses free")
 	cmd.Flags().StringVar(&model, "model", "", "Vision model override; omitted lets the server select the model")
-	cmd.Flags().DurationVar(&timeout, "timeout", 0, "Vision deadline such as 15s; omitted uses 10s")
+	documentedDurationVar(cmd.Flags(), &timeout, "timeout", 10*time.Second, visionTimeoutHelp)
 	return cmd
 }
 
@@ -198,8 +198,9 @@ func phoneTapCmd() *cobra.Command {
 			"Use --query to find an element by natural-language description and tap " +
 			"its center. If --query and coordinates are both provided, --query takes " +
 			"precedence.\n\n" +
-			"Session selection precedence is --session, AXILIO_SESSION, the sole " +
-			"active lease, the saved current-session pointer, then an ambiguity error.",
+			"Session selection precedence is --session, AXILIO_SESSION, the only " +
+			"locally saved session, the most recently started session, then an " +
+			"ambiguity error.",
 		Args: cobra.MaximumNArgs(2),
 		RunE: func(_ *cobra.Command, args []string) error {
 			d, err := currentDriver()
@@ -341,9 +342,8 @@ func phoneKeyCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "key <name>",
 		Short: "Press the supported named key: enter.",
-		Long: "Press a named key on the selected phone. The only named key currently " +
-			"supported by the CLI and pinned mobile driver is `enter`; back, home, " +
-			"and other key names are not available.",
+		Long: "Press a named key on the selected phone. The only supported named key " +
+			"is `enter`; back, home, and other key names are not available.",
 		Args: cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
 			d, err := currentDriver()
@@ -436,7 +436,7 @@ func phoneWaitForCmd() *cobra.Command {
 			return nil
 		},
 	}
-	cmd.Flags().DurationVar(&timeout, "timeout", 10*time.Second, "Maximum OCR polling time before exit code 5")
+	documentedDurationVar(cmd.Flags(), &timeout, "timeout", 10*time.Second, ocrTimeoutHelp)
 	cmd.Flags().BoolVar(&exact, "exact", false, "Require a case-sensitive exact match instead of substring")
 	cmd.Flags().BoolVar(&gone, "gone", false, "Wait for the text to disappear instead of appear")
 	return cmd

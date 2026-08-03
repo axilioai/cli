@@ -15,18 +15,24 @@ import (
 func main() {
 	var (
 		check       bool
+		htmlOnly    bool
 		versionFile string
 	)
 	flag.BoolVar(&check, "check", false, "verify the checked-in page without writing it")
+	flag.BoolVar(&htmlOnly, "html-only", false, "convert an existing roff page to HTML")
 	flag.StringVar(&versionFile, "version-file", "VERSION", "path to the source version file")
 	flag.Parse()
 
 	if flag.NArg() > 1 {
-		fatalf("usage: go run ./cmd/manpage [--check] [--version-file VERSION] [man/axilio.1]")
+		fatalf("usage: go run ./cmd/manpage [--check] [--html-only] [--version-file VERSION] [man/axilio.1]")
 	}
 	output := "man/axilio.1"
 	if flag.NArg() == 1 {
 		output = flag.Arg(0)
+	}
+	if htmlOnly {
+		generateHTML(output, check)
+		return
 	}
 
 	versionBytes, err := os.ReadFile(versionFile)
@@ -38,15 +44,8 @@ func main() {
 	if err != nil {
 		fatalf("generate %s: %v", output, err)
 	}
-	htmlOutput := output + ".html"
-	generatedHTML, err := cmd.GenerateManpageHTML(cmd.Root(), version)
-	if err != nil {
-		fatalf("generate %s: %v", htmlOutput, err)
-	}
-
 	if check {
 		checkGenerated(output, generated)
-		checkGenerated(htmlOutput, generatedHTML)
 		return
 	}
 
@@ -54,7 +53,23 @@ func main() {
 		fatalf("create manpage directory: %v", err)
 	}
 	writeGenerated(output, generated)
-	writeGenerated(htmlOutput, generatedHTML)
+}
+
+func generateHTML(manpage string, check bool) {
+	roff, err := os.ReadFile(manpage)
+	if err != nil {
+		fatalf("read %s: %v", manpage, err)
+	}
+	generated, err := cmd.GenerateManpageHTML(roff)
+	if err != nil {
+		fatalf("generate %s.html: %v", manpage, err)
+	}
+	output := manpage + ".html"
+	if check {
+		checkGenerated(output, generated)
+		return
+	}
+	writeGenerated(output, generated)
 }
 
 func checkGenerated(path string, generated []byte) {

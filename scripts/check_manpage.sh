@@ -12,6 +12,7 @@ command -v mandoc >/dev/null 2>&1 || {
 }
 
 go run ./cmd/manpage --check man/axilio.1
+sh scripts/generate_manpage_html.sh --check man/axilio.1
 
 lint_output=$(mktemp)
 trap 'rm -f "$lint_output"' EXIT

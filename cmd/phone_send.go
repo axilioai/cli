@@ -74,7 +74,7 @@ func phoneSendCmd() *cobra.Command {
 		},
 	}
 	cmd.Flags().BoolVar(&wait, "wait", false, "Block until the phone reports delivered or failed instead of returning at dispatch")
-	cmd.Flags().DurationVar(&timeout, "timeout", 60*time.Second, "Maximum delivery wait; applies only with --wait")
+	documentedDurationVar(cmd.Flags(), &timeout, "timeout", time.Minute, deliveryTimeoutHelp)
 	cmd.Flags().StringVar(&collection, "collection", "", "Target DCIM, Pictures, or Movies; omitted infers from media type")
 	return cmd
 }

@@ -39,9 +39,10 @@ mkdir -p "$fixtures" "$payload/man"
 printf '%s\n' '#!/bin/sh' 'printf "%s\n" "axilio version v0.0.0"' >"$payload/axilio"
 printf '%s\n' '# Axilio test release' >"$payload/README.md"
 printf '%s\n' '.TH AXILIO 1' '.SH NAME' 'axilio \- fixture manual' >"$payload/man/axilio.1"
+printf '%s\n' '<!doctype html>' '<title>Axilio fixture manual</title>' >"$payload/man/axilio.1.html"
 chmod 0755 "$payload/axilio"
 archive="$fixtures/axilio_0.0.0_linux_amd64.tar.gz"
-tar -czf "$archive" -C "$payload" axilio README.md man/axilio.1
+tar -czf "$archive" -C "$payload" axilio README.md man/axilio.1 man/axilio.1.html
 if command -v sha256sum >/dev/null 2>&1; then
 	sum=$(sha256sum "$archive" | awk '{print $1}')
 else
@@ -123,32 +124,40 @@ standard="$tmp/usr/local"
 run_install standard "$standard/bin" - - -
 assert_file "$standard/bin/axilio"
 assert_file "$standard/share/man/man1/axilio.1"
+assert_file "$standard/share/man/man1/axilio.1.html"
 assert_mode 755 "$standard/bin/axilio"
 assert_mode 644 "$standard/share/man/man1/axilio.1"
+assert_mode 644 "$standard/share/man/man1/axilio.1.html"
 cmp "$payload/man/axilio.1" "$standard/share/man/man1/axilio.1" >/dev/null || fail "standard manual differs from archive"
+cmp "$payload/man/axilio.1.html" "$standard/share/man/man1/axilio.1.html" >/dev/null || fail "standard HTML manual differs from archive"
 assert_log "Downloading axilio v0.0.0" "$tmp/standard.log"
 
 # A rerun replaces stale contents and restores the intended modes.
 printf '%s\n' stale >"$standard/bin/axilio"
 printf '%s\n' stale >"$standard/share/man/man1/axilio.1"
-chmod 0600 "$standard/bin/axilio" "$standard/share/man/man1/axilio.1"
+printf '%s\n' stale >"$standard/share/man/man1/axilio.1.html"
+chmod 0600 "$standard/bin/axilio" "$standard/share/man/man1/axilio.1" "$standard/share/man/man1/axilio.1.html"
 run_install rerun "$standard/bin/" - v0.0.0 -
 cmp "$payload/axilio" "$standard/bin/axilio" >/dev/null || fail "rerun did not replace binary"
 cmp "$payload/man/axilio.1" "$standard/share/man/man1/axilio.1" >/dev/null || fail "rerun did not replace manual"
+cmp "$payload/man/axilio.1.html" "$standard/share/man/man1/axilio.1.html" >/dev/null || fail "rerun did not replace HTML manual"
 assert_mode 755 "$standard/bin/axilio"
 assert_mode 644 "$standard/share/man/man1/axilio.1"
+assert_mode 644 "$standard/share/man/man1/axilio.1.html"
 
 # A user-local bin directory has the same prefix contract.
 local_prefix="$test_home/.local"
 run_install local "$local_prefix/bin" - v0.0.0 -
 assert_file "$local_prefix/bin/axilio"
 assert_file "$local_prefix/share/man/man1/axilio.1"
+assert_file "$local_prefix/share/man/man1/axilio.1.html"
 
 # sbin is also a conventional executable directory.
 sbin_prefix="$tmp/opt/axilio"
 run_install sbin "$sbin_prefix/sbin" - v0.0.0 -
 assert_file "$sbin_prefix/sbin/axilio"
 assert_file "$sbin_prefix/share/man/man1/axilio.1"
+assert_file "$sbin_prefix/share/man/man1/axilio.1.html"
 
 # MAN_DIR is authoritative, including with an otherwise arbitrary binary path.
 explicit_bin="$tmp/custom/tools"
@@ -156,13 +165,16 @@ explicit_man="$tmp/custom/manuals/section-one"
 run_install explicit "$explicit_bin" "$explicit_man" v0.0.0 -
 assert_file "$explicit_bin/axilio"
 assert_file "$explicit_man/axilio.1"
+assert_file "$explicit_man/axilio.1.html"
 assert_mode 644 "$explicit_man/axilio.1"
+assert_mode 644 "$explicit_man/axilio.1.html"
 
 # Arbitrary layouts do not invite prefix guessing; the binary still succeeds.
 arbitrary="$tmp/arbitrary/executables"
 run_install arbitrary "$arbitrary" - v0.0.0 -
 assert_file "$arbitrary/axilio"
 assert_no_file "$tmp/arbitrary/share/man/man1/axilio.1"
+assert_no_file "$tmp/arbitrary/share/man/man1/axilio.1.html"
 assert_log "cannot infer a manual directory" "$tmp/arbitrary.log"
 assert_log "set MAN_DIR explicitly" "$tmp/arbitrary.log"
 
@@ -173,6 +185,7 @@ printf '%s\n' blocker >"$blocked_prefix/share"
 run_install blocked-man "$blocked_prefix/bin" - v0.0.0 -
 assert_file "$blocked_prefix/bin/axilio"
 assert_no_file "$blocked_prefix/share/man/man1/axilio.1"
+assert_no_file "$blocked_prefix/share/man/man1/axilio.1.html"
 assert_log "sudo is unavailable; the binary remains installed" "$tmp/blocked-man.log"
 
 # A binary destination that cannot be created remains a hard failure.
@@ -190,6 +203,7 @@ if run_install bad-checksum "$bad_prefix/bin" - v0.0.0 "$fixtures/bad-checksums.
 fi
 assert_no_file "$bad_prefix/bin/axilio"
 assert_no_file "$bad_prefix/share/man/man1/axilio.1"
+assert_no_file "$bad_prefix/share/man/man1/axilio.1.html"
 assert_log "checksum mismatch" "$tmp/bad-checksum.log"
 
 # A published checksum file that omits this platform is not permission to run

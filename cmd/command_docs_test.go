@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -53,9 +54,8 @@ func TestCommandDocumentationCoverage(t *testing.T) {
 			if sample.ExitStatus < 0 || sample.ExitStatus > 7 {
 				t.Errorf("%s has undocumented exit status %d", command.CommandPath(), sample.ExitStatus)
 			}
-			if sample.ExitStatus != 0 &&
-				!strings.Contains(sample.Notes, "Fang adds ERROR framing") {
-				t.Errorf("%s nonzero sample %q omits Fang's stderr presentation layer",
+			if sample.ExitStatus != 0 && strings.TrimSpace(sample.Notes) == "" {
+				t.Errorf("%s nonzero sample %q does not explain its exit behavior",
 					command.CommandPath(), sample.Invocation)
 			}
 			if sample.ExternalBehavior != "" &&
@@ -66,7 +66,7 @@ func TestCommandDocumentationCoverage(t *testing.T) {
 
 		if command.Runnable() {
 			runnable++
-			if !hasRepresentativeOutput {
+			if !hasRepresentativeOutput && !strings.HasPrefix(command.CommandPath(), "axilio completion ") {
 				t.Errorf("%s has no representative stdout or stderr", command.CommandPath())
 			}
 		}
@@ -88,6 +88,32 @@ func TestCommandDocumentationCoverage(t *testing.T) {
 	for command, found := range wantGenerated {
 		if !found {
 			t.Errorf("generated runnable command %s was not documented", command)
+		}
+	}
+}
+
+func TestCompletionDocumentationModelsInstallationInsteadOfGeneratedScript(t *testing.T) {
+	root := Root()
+	for _, path := range []string{
+		"completion bash",
+		"completion zsh",
+		"completion fish",
+		"completion powershell",
+	} {
+		command := findCommand(t, root, path)
+		docs, ok := CommandDocs(command)
+		if !ok || len(docs.Samples) != 1 {
+			t.Fatalf("%s setup samples = %#v, documented=%v", path, docs.Samples, ok)
+		}
+		sample := docs.Samples[0]
+		if sample.Stdout != "" || sample.Stderr != "" {
+			t.Errorf("%s exposes generated-script output instead of a consumed installation example: %#v", path, sample)
+		}
+		if !strings.Contains(sample.Invocation, "axilio completion ") {
+			t.Errorf("%s setup invocation does not run completion: %q", path, sample.Invocation)
+		}
+		if sample.Notes == "" {
+			t.Errorf("%s setup invocation does not explain its effect", path)
 		}
 	}
 }
@@ -121,6 +147,87 @@ func TestStructuredJSONSamplesAreValidJSON(t *testing.T) {
 	walk(root)
 }
 
+func TestDoctorJSONSampleMatchesHumanTable(t *testing.T) {
+	docs, ok := CommandDocs(findCommand(t, Root(), "doctor"))
+	if !ok {
+		t.Fatal("doctor has no structured documentation")
+	}
+	var human, jsonOutput string
+	for _, sample := range docs.Samples {
+		switch sample.Invocation {
+		case "axilio doctor":
+			human = sample.Stdout
+		case "axilio doctor -o json":
+			jsonOutput = sample.Stdout
+			if strings.Contains(sample.Notes, "Shortened") {
+				t.Errorf("doctor JSON sample is still described as shortened: %q", sample.Notes)
+			}
+		}
+	}
+	if human == "" || jsonOutput == "" {
+		t.Fatalf("doctor samples incomplete: human=%v json=%v", human != "", jsonOutput != "")
+	}
+
+	var result struct {
+		Checks []struct {
+			Name   string `json:"name"`
+			Status string `json:"status"`
+			Detail string `json:"detail"`
+		} `json:"checks"`
+		OK bool `json:"ok"`
+	}
+	if err := json.Unmarshal([]byte(jsonOutput), &result); err != nil {
+		t.Fatalf("decode doctor JSON sample: %v", err)
+	}
+	if !result.OK {
+		t.Error("successful doctor JSON sample has ok=false")
+	}
+	if got, want := len(strings.Split(human, "\n"))-1, len(result.Checks); got != want {
+		t.Errorf("doctor table data rows = %d, JSON checks = %d", got, want)
+	}
+	for _, check := range result.Checks {
+		row := fmt.Sprintf("%-15s | %-6s | %s", check.Name, check.Status, check.Detail)
+		if !strings.Contains(human, row) {
+			t.Errorf("doctor table does not contain JSON check row %q", row)
+		}
+	}
+}
+
+func TestStructuredDocumentationOmitsRedundantWorkflowSamples(t *testing.T) {
+	root := Root()
+	for path, forbidden := range map[string][]string{
+		"orgs use":        {"axilio orgs list"},
+		"sessions stop":   {"axilio sessions list --remote", "axilio sessions stop <session-id> --yes"},
+		"runs get":        {"axilio runs list", "axilio runs get <run-id>"},
+		"runs cancel":     {"axilio runs list", "axilio runs cancel <run-id> --yes"},
+		"api-keys delete": {"axilio api-keys list", "axilio api-keys delete <key-id> --yes"},
+		"uploads push":    {"axilio uploads push <upload-id> --phone-id <phone-id>"},
+		"uploads delete":  {"axilio uploads list", "axilio uploads delete <upload-id> --yes"},
+	} {
+		docs, ok := CommandDocs(findCommand(t, root, path))
+		if !ok {
+			t.Fatalf("%s has no structured documentation", path)
+		}
+		for _, sample := range docs.Samples {
+			for _, invocation := range forbidden {
+				if sample.Invocation == invocation {
+					t.Errorf("%s retains redundant sample %q", path, invocation)
+				}
+			}
+		}
+	}
+
+	create, ok := CommandDocs(findCommand(t, root, "api-keys create"))
+	if !ok {
+		t.Fatal("api-keys create has no structured documentation")
+	}
+	for _, sample := range create.Samples {
+		if sample.Notes != "" {
+			t.Errorf("api-keys create sample %q has non-runtime placeholder note %q", sample.Invocation, sample.Notes)
+		}
+	}
+}
+
 func TestCommandDocumentationIsPerTree(t *testing.T) {
 	first := Root()
 	second := Root()
@@ -137,59 +244,56 @@ func TestCommandDocumentationIsPerTree(t *testing.T) {
 	}
 }
 
-func TestStructuredDocumentationPreservesLegacyInvocations(t *testing.T) {
+func TestStructuredDocumentationPreservesSelectedInvocations(t *testing.T) {
 	legacy := map[string][]string{
 		"axilio":           {"axilio login", `eval "$(axilio sessions start --export)"`, "axilio phone observe", `axilio phone tap --query "the search box"`},
 		"api-keys":         {"axilio api-keys list", "axilio api-keys create ci", "axilio api-keys delete key_123 --yes"},
 		"api-keys list":    {"axilio api-keys list", "axilio api-keys list -o json"},
 		"api-keys create":  {"axilio api-keys create ci", `axilio api-keys create "release automation" -o json`},
-		"api-keys delete":  {"axilio api-keys list", "axilio api-keys delete key_123", "axilio api-keys delete key_123 --yes"},
+		"api-keys delete":  {"axilio api-keys delete key_123", "axilio api-keys delete key_123 --yes"},
 		"login":            {"axilio login", "axilio login --api-key axl_xxx", `printf '%s\n' "$AXILIO_API_KEY" | axilio login`},
-		"logout":           {"axilio logout", "axilio status"},
+		"logout":           {"axilio logout"},
 		"status":           {"axilio status", "axilio status -o json"},
 		"config":           {"axilio config", "axilio config set base-url https://api.axilio.ai", "axilio config unset base-url"},
-		"config set":       {"axilio config set base-url https://api.axilio.ai", "axilio config"},
-		"config unset":     {"axilio config unset base-url", "axilio config"},
+		"config set":       {"axilio config set base-url https://api.axilio.ai"},
+		"config unset":     {"axilio config unset base-url"},
 		"doctor":           {"axilio doctor", "axilio doctor -o json"},
 		"init":             {"axilio init", "axilio init --agent codex", "axilio init --agent claude --force"},
 		"orgs":             {"axilio orgs list", "axilio orgs use example-org", "axilio --org another-org workflows list", "axilio orgs clear"},
 		"orgs list":        {"axilio orgs list", "axilio orgs list -o json"},
-		"orgs use":         {"axilio orgs list", "axilio orgs use example-org"},
-		"orgs clear":       {"axilio orgs clear", "axilio orgs list"},
+		"orgs use":         {"axilio orgs use example-org"},
+		"orgs clear":       {"axilio orgs clear"},
 		"phone":            {"axilio phone observe", `axilio phone tap --query "the search box"`, `axilio phone type "Axilio"`, "axilio phone observe"},
 		"phone observe":    {"axilio phone observe", "axilio phone observe --ocr-engine premium", "axilio phone observe -o json"},
 		"phone find":       {`axilio phone find "the search box"`, `axilio phone find "settings icon" --ocr-engine premium`, `axilio phone find "continue button" --timeout 15s -o json`},
-		"phone find-text":  {`axilio phone find-text "sign in"`, `axilio phone find-text "Sign in" --exact`, `axilio phone find-text "settings" -o json`},
+		"phone find-text":  {`axilio phone find-text "sign in"`, `axilio phone find-text "Sign in" --exact -o json`, `axilio phone find-text "settings" -o json`},
 		"phone tap":        {`axilio phone tap --query "the search box"`, "axilio phone tap 540 1200", `axilio phone tap --session sess_123 --query "continue"`},
 		"phone long-press": {"axilio phone long-press 540 1080", "axilio phone long-press 540 1080 --duration-ms 1200"},
 		"phone swipe":      {"axilio phone swipe 540 1600 540 500", "axilio phone swipe 200 800 900 800 --duration-ms 500"},
 		"phone type":       {`axilio phone type "hello world"`, `axilio phone type 'user@example.com'`, `axilio phone type "don't split this text"`},
 		"phone key":        {"axilio phone key enter"},
-		// The old artifacts/login.png target could fail because screenshot does
-		// not create parent directories. Preserve the scenario with a path whose
-		// parent (the current directory) already exists.
-		"phone screenshot": {"axilio phone screenshot", "axilio phone screenshot --out ./login.png"},
+		"phone screenshot": {"axilio phone screenshot", "axilio phone screenshot --out login.png"},
 		"phone wait-for":   {`axilio phone wait-for "Results"`, `axilio phone wait-for "Loading" --gone`, `axilio phone wait-for "Ready" --exact --timeout 30s`},
 		"phone send":       {"axilio phone send ./photo.jpg", "axilio phone send ./clip.mp4 --collection Movies", "axilio phone send ./photo.jpg --wait --timeout 2m"},
 		"phones":           {"axilio phones list", "axilio phones mine"},
 		"phones list":      {"axilio phones list", "axilio phones list -o json"},
-		"phones mine":      {"axilio phones mine", "axilio sessions start --phone-id ph_123"},
+		"phones mine":      {"axilio phones mine"},
 		"runs":             {"axilio workflows list", "axilio runs start wf_123", "axilio runs list --workflow wf_123", "axilio runs get run_123"},
 		"runs list":        {"axilio runs list", "axilio runs list --workflow wf_123 --limit 10", "axilio runs list -o json"},
 		"runs start":       {"axilio runs start wf_123", "axilio runs start wf_123 --count 3", "axilio runs start wf_123 --phone-id ph_123", "axilio runs start wf_123 --start-timeout 300"},
-		"runs get":         {"axilio runs list", "axilio runs get run_123", "axilio runs get run_123 -o json"},
-		"runs cancel":      {"axilio runs list", "axilio runs cancel run_123", "axilio runs cancel run_123 --yes"},
+		"runs get":         {"axilio runs get run_123", "axilio runs get run_123 -o json"},
+		"runs cancel":      {"axilio runs cancel run_123", "axilio runs cancel run_123 --yes"},
 		"sessions":         {"axilio sessions start", "axilio sessions list", "axilio sessions current", "axilio sessions stop sess_123"},
 		"sessions list":    {"axilio sessions list", "axilio sessions list --remote", "axilio sessions list -o json"},
 		"sessions current": {"axilio sessions current", "AXILIO_SESSION=sess_123 axilio sessions current", "axilio sessions current -o json"},
 		"sessions start":   {"axilio sessions start", "axilio sessions start --phone-type iphone", "axilio sessions start --phone-id ph_123", "axilio sessions start --workflow wf_123", `eval "$(axilio sessions start --export)"`},
-		"sessions stop":    {"axilio sessions list --remote", "axilio sessions stop sess_123", "axilio sessions stop ph_123 --yes"},
+		"sessions stop":    {"axilio sessions stop sess_123", "axilio sessions stop ph_123 --yes"},
 		"upgrade":          {"axilio upgrade --check", "axilio upgrade", "brew upgrade axilio"},
 		"uploads":          {"axilio uploads add ./photo.jpg", "axilio uploads list", "axilio uploads push upl_123 --phone-id ph_123", "axilio uploads delete upl_123 --yes"},
 		"uploads add":      {"axilio uploads add ./photo.jpg", "axilio uploads add ./asset --filename photo.jpg --mime-type image/jpeg"},
 		"uploads list":     {"axilio uploads list", "axilio uploads list --search receipt --limit 20 --offset 0", "axilio uploads list --sort filename --order asc", "axilio uploads list -o json"},
 		"uploads push":     {"axilio uploads push upl_123 --phone-id ph_123", "axilio uploads push upl_123 --phone-id ph_123 --collection Pictures", "axilio uploads push upl_123 --phone-id ph_123 --wait --timeout 2m"},
-		"uploads delete":   {"axilio uploads list", "axilio uploads delete upl_123", "axilio uploads rm upl_123 --yes"},
+		"uploads delete":   {"axilio uploads delete upl_123", "axilio uploads rm upl_123 --yes"},
 		"workflows":        {"axilio workflows list", "axilio workflows list --search checkout", "axilio runs start wf_123"},
 		"workflows list":   {"axilio workflows list", "axilio workflows list --search checkout --limit 10", "axilio workflows list -o json"},
 	}
@@ -215,16 +319,6 @@ func TestStructuredDocumentationPreservesLegacyInvocations(t *testing.T) {
 		}
 	}
 
-	screenshot, _ := CommandDocs(findCommand(t, root, "phone screenshot"))
-	for _, sample := range screenshot.Samples {
-		if sample.Invocation == "axilio phone screenshot --out ./login.png" &&
-			!strings.Contains(sample.Notes, "Deliberate correction") {
-			t.Error("corrected screenshot invocation does not explain the legacy path change")
-		}
-		if strings.Contains(sample.Invocation, "artifacts/login.png") {
-			t.Error("unsafe legacy screenshot destination was restored")
-		}
-	}
 	sessionsStart, _ := CommandDocs(findCommand(t, root, "sessions start"))
 	foundBareExport := false
 	foundEval := false

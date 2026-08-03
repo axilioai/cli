@@ -5,7 +5,7 @@
 #
 # Downloads the latest release for your OS/arch, verifies its checksum, and
 # installs the `axilio` binary onto your PATH and, for conventional prefixes,
-# installs its manual page. Environment overrides:
+# installs its terminal and HTML manuals. Environment overrides:
 #
 #   VERSION       release tag to install (default: latest, e.g. VERSION=v0.6.1)
 #   INSTALL_DIR   target directory (default: /usr/local/bin, else ~/.local/bin)
@@ -110,10 +110,11 @@ fi
 
 info "Installed $BIN $version to $dir/$BIN"
 
-# --- install manual page (best effort) ------------------------------------
+# --- install manuals (best effort) ----------------------------------------
 man_source="$tmp/man/$BIN.1"
+html_man_source="$tmp/man/$BIN.1.html"
 if [ ! -f "$man_source" ]; then
-	warn "$archive does not contain man/$BIN.1; the binary is installed without a manual page"
+	warn "$archive does not contain man/$BIN.1; the binary is installed without offline manuals"
 else
 	man_dir=""
 	if [ "${MAN_DIR+x}" = x ]; then
@@ -123,7 +124,7 @@ else
 				man_dir=${man_dir%/}
 			done
 		else
-			warn "MAN_DIR is empty; the binary is installed without a manual page"
+			warn "MAN_DIR is empty; the binary is installed without offline manuals"
 		fi
 	else
 		case "$dir" in
@@ -170,6 +171,23 @@ else
 
 		if [ "$man_ready" = true ]; then
 			info "Installed manual page to $man_dir/$BIN.1"
+			if [ ! -f "$html_man_source" ]; then
+				warn "$archive does not contain man/$BIN.1.html; the terminal manual remains installed"
+			elif [ -w "$man_dir" ]; then
+				if install -m 0644 "$html_man_source" "$man_dir/$BIN.1.html"; then
+					info "Installed HTML manual to $man_dir/$BIN.1.html"
+				else
+					warn "cannot install $man_dir/$BIN.1.html; the terminal manual remains installed"
+				fi
+			elif command -v sudo >/dev/null 2>&1; then
+				if sudo install -m 0644 "$html_man_source" "$man_dir/$BIN.1.html"; then
+					info "Installed HTML manual to $man_dir/$BIN.1.html"
+				else
+					warn "cannot install $man_dir/$BIN.1.html with elevated permissions; the terminal manual remains installed"
+				fi
+			else
+				warn "cannot write $man_dir/$BIN.1.html and sudo is unavailable; the terminal manual remains installed"
+			fi
 		fi
 	fi
 fi

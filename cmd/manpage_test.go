@@ -67,7 +67,7 @@ func TestGenerateManpageDeterministicAndComplete(t *testing.T) {
 		}
 	}
 	for _, ordered := range [][]string{
-		{"## api-keys {#COMMAND_api-keys}", "### create {#COMMAND_api-keys-create}", "### delete {#COMMAND_api-keys-delete}", "### list {#COMMAND_api-keys-list}"},
+		{"## api-keys {#COMMAND_api-keys}", "### list {#COMMAND_api-keys-list}", "### create {#COMMAND_api-keys-create}", "### delete {#COMMAND_api-keys-delete}"},
 		{"## completion {#COMMAND_completion}", "### bash {#COMMAND_completion-bash}", "### fish {#COMMAND_completion-fish}", "### powershell {#COMMAND_completion-powershell}", "### zsh {#COMMAND_completion-zsh}"},
 	} {
 		last := -1
@@ -108,6 +108,9 @@ func TestGenerateManpageDeterministicAndComplete(t *testing.T) {
 	}
 	notes := strings.SplitN(markdown, "# NOTES {#NOTES}\n", 2)[1]
 	notes = strings.SplitN(notes, "# EXAMPLES {#EXAMPLES}\n", 2)[0]
+	if !strings.Contains(markdown, "axilio help --html") {
+		t.Error("generated manual does not point readers to the installed HTML manual")
+	}
 	for _, want := range []string{
 		"Credentials resolve in this order",
 		"Phone command session selection precedence",
@@ -164,6 +167,50 @@ func commandMarkdownSection(markdown, anchor string) (string, bool) {
 	return section, true
 }
 
+func TestGeneratedManpageKeepsCompletionReferenceFocused(t *testing.T) {
+	markdown, err := generateManpageMarkdown(Root(), readManpageTestVersion(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	completion, ok := commandMarkdownSection(markdown, "COMMAND_completion")
+	if !ok {
+		t.Fatal("completion section not found")
+	}
+	normalizedCompletion := strings.Join(strings.Fields(completion), " ")
+	for _, want := range []string{
+		"axilio api-<Tab>",
+		"axilio phone <Tab>",
+		"axilio sessions start --<Tab>",
+		"complete command names, subcommands, and flags",
+		"resource IDs and names are not fetched dynamically",
+	} {
+		if !strings.Contains(normalizedCompletion, want) {
+			t.Errorf("completion section missing %q", want)
+		}
+	}
+	for _, path := range []string{
+		"COMMAND_completion",
+		"COMMAND_completion-bash",
+		"COMMAND_completion-fish",
+		"COMMAND_completion-powershell",
+		"COMMAND_completion-zsh",
+	} {
+		section, ok := commandMarkdownSection(markdown, path)
+		if !ok {
+			t.Errorf("%s section not found", path)
+			continue
+		}
+		if strings.Contains(section, "Global-option behavior") {
+			t.Errorf("%s repeats unrelated global-option behavior", path)
+		}
+	}
+	for _, unwanted := range []string{"__axilio_debug", "#compdef axilio"} {
+		if strings.Contains(markdown, unwanted) {
+			t.Errorf("manpage embeds generated completion script excerpt %q", unwanted)
+		}
+	}
+}
+
 func TestGeneratedManpageMatchesCheckedInPage(t *testing.T) {
 	generated, err := GenerateManpage(Root(), readManpageTestVersion(t))
 	if err != nil {
@@ -198,24 +245,115 @@ func TestGeneratedManpageUsesEffectiveGlobalFlagHelp(t *testing.T) {
 		if !ok {
 			t.Fatalf("phone tap has no effective --%s help", name)
 		}
+		if commandGlobalFlagHasNoEffect(command, name) {
+			continue
+		}
 		if !strings.Contains(normalized, strings.Join(strings.Fields(usage), " ")) {
 			t.Errorf("manpage does not reuse effective --%s help %q", name, usage)
 		}
 	}
 }
 
-func TestGeneratedManpageDocumentsPinnedNonTTYColorPrecedence(t *testing.T) {
+func TestGeneratedManpageGroupsNoEffectGlobalFlagsFirst(t *testing.T) {
+	markdown, err := generateManpageMarkdown(Root(), readManpageTestVersion(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tests := []struct {
+		anchor      string
+		group       string
+		firstDetail string
+	}{
+		{
+			anchor: "COMMAND_help",
+			group: "**--api-key**, **--base-url**, **--no-color**, **--org**, **--output** / **-o**, **--quiet** / **-q** - " +
+				"No effect on help command or the help content it renders",
+		},
+		{
+			anchor:      "COMMAND_init",
+			group:       "**--api-key**, **--org** - No effect on init command",
+			firstDetail: "**--base-url**=*value* - Host for the skill download and sign-in check",
+		},
+		{
+			anchor: "COMMAND_phone-tap",
+			group: "**--api-key**, **--base-url**, **--no-color**, **--org** - " +
+				"No effect on phone tap command",
+			firstDetail: "**-o**, **--output**=*value* - Emit a human confirmation or JSON tap result",
+		},
+		{
+			anchor: "COMMAND_api-keys",
+			group: "**--api-key**, **--base-url**, **--no-color**, **--org**, **--output** / **-o**, **--quiet** / **-q** - " +
+				"No effect on api-keys command; bare axilio api-keys only displays this help",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.anchor, func(t *testing.T) {
+			section, ok := commandMarkdownSection(markdown, tc.anchor)
+			if !ok {
+				t.Fatalf("%s section not found", tc.anchor)
+			}
+			normalized := strings.Join(strings.Fields(section), " ")
+			groupAt := strings.Index(normalized, tc.group)
+			if groupAt < 0 {
+				t.Fatalf("%s is missing grouped no-effect flags %q\n%s", tc.anchor, tc.group, section)
+			}
+			behaviorAt := strings.Index(normalized, "Global-option behavior")
+			if behaviorAt < 0 || groupAt < behaviorAt {
+				t.Fatalf("%s grouped row is not in Global-option behavior\n%s", tc.anchor, section)
+			}
+			if tc.firstDetail != "" {
+				detailAt := strings.Index(normalized, tc.firstDetail)
+				if detailAt < 0 {
+					t.Fatalf("%s is missing effective flag detail %q\n%s", tc.anchor, tc.firstDetail, section)
+				}
+				if groupAt > detailAt {
+					t.Fatalf("%s lists effective flag details before the no-effect group\n%s", tc.anchor, section)
+				}
+			}
+			if tc.anchor == "COMMAND_api-keys" && strings.Contains(normalized, "Global-option behavior None.") {
+				t.Fatalf("%s adds an empty marker after the grouped row\n%s", tc.anchor, section)
+			}
+		})
+	}
+}
+
+func TestGeneratedManpageUsesUserFacingOperationalLanguage(t *testing.T) {
 	markdown, err := generateManpageMarkdown(Root(), readManpageTestVersion(t))
 	if err != nil {
 		t.Fatal(err)
 	}
 	normalized := strings.Join(strings.Fields(markdown), " ")
 	for _, want := range []string{
-		"CLICOLOR_FORCE can still force ANSI for non-terminal output",
-		"For non-terminal output in the pinned dependency, this also overrides NO_COLOR",
+		"Error examples show the message text without terminal formatting. Actual error output may include an ERROR heading, spacing, and ANSI color.",
+		"When help is redirected, CLICOLOR_FORCE=1 takes precedence and can restore ANSI color",
+		"For redirected help, it takes precedence over NO_COLOR",
+		"Invalid command syntax, argument count, or value",
+		"A requested resource, phone allocation, or on-screen element was not found",
+		"Sessions remain active in Axilio until stopped",
+		"The CLI also saves session information locally so later phone commands can reconnect",
 	} {
 		if !strings.Contains(normalized, want) {
-			t.Errorf("manpage does not document pinned Fang precedence %q", want)
+			t.Errorf("manpage does not document user-facing behavior %q", want)
+		}
+	}
+	for _, unwanted := range []string{
+		"Fang",
+		"pinned dependency",
+		"recognized Cobra",
+		"mobile invalid_args",
+		"representative SDK response",
+		"pinned mobile driver",
+		"current implementation",
+		"client-side range validation",
+		"structured documentation",
+		"network probe",
+		"local lease",
+		"current-session pointer",
+	} {
+		if strings.Contains(normalized, unwanted) {
+			t.Errorf("manpage exposes implementation-oriented wording %q", unwanted)
 		}
 	}
 }

@@ -26,15 +26,15 @@ func uploadsCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "uploads",
 		Short: "Add, list, push, and delete files in your organization's library.",
-		Long: "Running `axilio uploads` without a subcommand is equivalent to " +
-			"`axilio uploads --help`: it only displays this help and does not add, " +
-			"list, push, or delete uploads. Global flags shown here therefore have no " +
-			"effect. Pass flags to an uploads subcommand instead.\n\n" +
-			"Manage the org file library. Files live here until deleted and can be " +
+		Long: "Manage the org file library. Files live here until deleted and can be " +
 			"pushed to any phone the org holds, so one upload serves many phones. " +
 			"`add` stores a local file, `list` discovers uploads and quota, `push` " +
 			"delivers a stored upload, and `delete` frees library quota. `phone send` " +
-			"combines add and push for the selected session's phone.",
+			"combines add and push for the selected session's phone.\n\n" +
+			"Running `axilio uploads` without a subcommand is equivalent to " +
+			"`axilio uploads --help`: it only displays this help and does not add, " +
+			"list, push, or delete uploads. Global flags shown here therefore have no " +
+			"effect. Pass flags to an uploads subcommand instead.",
 	}
 	cmd.AddCommand(uploadsAddCmd(), uploadsListCmd(), uploadsPushCmd(), uploadsDeleteCmd())
 	return cmd
@@ -216,7 +216,7 @@ func uploadsPushCmd() *cobra.Command {
 	cmd.Flags().StringVar(&phoneID, "phone-id", "", "Target phone ID from `phones mine` or remote sessions (required)")
 	cmd.Flags().StringVar(&collection, "collection", "", "Target DCIM, Pictures, or Movies; omitted infers from media type")
 	cmd.Flags().BoolVar(&wait, "wait", false, "Block until the phone reports delivered or failed instead of returning at dispatch")
-	cmd.Flags().DurationVar(&timeout, "timeout", 60*time.Second, "Maximum delivery wait; applies only with --wait")
+	documentedDurationVar(cmd.Flags(), &timeout, "timeout", time.Minute, deliveryTimeoutHelp)
 	_ = cmd.MarkFlagRequired("phone-id")
 	return cmd
 }

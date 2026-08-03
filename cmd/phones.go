@@ -14,15 +14,15 @@ func phonesCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "phones",
 		Short: "Discover shared and dedicated phones.",
-		Long: "Running `axilio phones` without a subcommand is equivalent to " +
-			"`axilio phones --help`: it only displays this help and does not list or " +
-			"change phones. Global flags shown here therefore have no effect. Pass " +
-			"flags to `phones list` or `phones mine` instead.\n\n" +
-			"Discover phones before starting a session. `phones list` shows shared " +
+		Long: "Discover phones before starting a session. `phones list` shows shared " +
 			"phones and currently free dedicated phones that can be allocated now. " +
 			"`phones mine` shows the organization's complete dedicated inventory, " +
 			"including busy and offline phones, and is the place to find a phone ID " +
-			"for `sessions start --phone-id`.",
+			"for `sessions start --phone-id`.\n\n" +
+			"Running `axilio phones` without a subcommand is equivalent to " +
+			"`axilio phones --help`: it only displays this help and does not list or " +
+			"change phones. Global flags shown here therefore have no effect. Pass " +
+			"flags to `phones list` or `phones mine` instead.",
 	}
 	cmd.AddCommand(phonesListCmd())
 	cmd.AddCommand(phonesMineCmd())

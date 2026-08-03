@@ -1,6 +1,7 @@
 package cmd
 
 //go:generate go run ./manpage --version-file ../VERSION ../man/axilio.1
+//go:generate sh ../scripts/generate_manpage_html.sh ../man/axilio.1
 
 import (
 	"bytes"
@@ -39,7 +40,29 @@ func GenerateManpage(root *cobra.Command, version string) ([]byte, error) {
 		blackfriday.WithRenderer(renderer),
 		blackfriday.WithExtensions(renderer.GetExtensions()|blackfriday.HeadingIDs),
 	), "\n")
+	roff = preserveLiteralBlankLines(roff)
 	return append(roff, '\n'), nil
+}
+
+// mandoc's HTML renderer drops empty source lines inside .EX/.EE blocks. Use
+// the standard vertical-space request so both terminal and HTML renderers keep
+// the intentional separation between stdout, stderr, exit status, and notes.
+func preserveLiteralBlankLines(roff []byte) []byte {
+	lines := bytes.Split(roff, []byte("\n"))
+	inLiteral := false
+	for i, line := range lines {
+		switch string(line) {
+		case ".EX":
+			inLiteral = true
+		case ".EE":
+			inLiteral = false
+		default:
+			if inLiteral && len(line) == 0 {
+				lines[i] = []byte(".sp")
+			}
+		}
+	}
+	return bytes.Join(lines, []byte("\n"))
 }
 
 func generateValidatedManpageMarkdown(root *cobra.Command, version string) (string, error) {
@@ -99,7 +122,7 @@ func generateManpageMarkdown(root *cobra.Command, version string) (string, error
 	writeFlagList(&b, root, rootGlobalFlags(root), false)
 
 	writeManpageHeading(&b, 1, "COMMANDS", "COMMANDS")
-	writeWrapped(&b, "Commands are grouped by their top-level family. Each runnable command includes representative output and exit behavior from its structured documentation.")
+	writeWrapped(&b, "Commands are grouped by their top-level family. Each runnable command includes representative examples, output, and exit statuses.")
 	for _, command := range publicCommandChildren(root) {
 		writeCommandTree(&b, root, command, 2)
 	}
@@ -114,10 +137,12 @@ func generateManpageMarkdown(root *cobra.Command, version string) (string, error
 	writeFiles(&b)
 
 	writeManpageHeading(&b, 1, "NOTES", "NOTES")
-	writeManpageHeading(&b, 2, "Resolution precedence", "NOTES_resolution_precedence")
+	writeManpageHeading(&b, 3, "Resolution precedence", "NOTES_resolution_precedence")
 	writeDescription(&b, resolution)
-	writeManpageHeading(&b, 2, "Output behavior", "NOTES_output_behavior")
+	writeManpageHeading(&b, 3, "Output behavior", "NOTES_output_behavior")
 	writeDescription(&b, outputBehavior)
+	writeManpageHeading(&b, 3, "Error presentation", "NOTES_error_presentation")
+	writeWrapped(&b, "Error examples show the message text without terminal formatting. Actual error output may include an ERROR heading, spacing, and ANSI color.")
 
 	writeManpageHeading(&b, 1, "EXAMPLES", "EXAMPLES")
 	writeWrapped(&b, "Observe and act on a selected phone session:")
@@ -128,6 +153,7 @@ func generateManpageMarkdown(root *cobra.Command, version string) (string, error
 	writeLiteral(&b, "axilio workflows list -o json\naxilio runs start <workflow-id> --count 2 -o json")
 
 	writeManpageHeading(&b, 1, "SEE ALSO", "SEE_ALSO")
+	writeWrapped(&b, "Local browser manual: run `axilio help --html` to print its installed `file://` URL.")
 	writeWrapped(&b, "Axilio documentation: https://docs.axilio.ai")
 	writeWrapped(&b, "CLI issue tracker: https://github.com/axilioai/cli/issues")
 	writeWrapped(&b, "Axilio product site: https://axilio.ai")
@@ -164,8 +190,10 @@ func writeCommandReference(b *strings.Builder, root, command *cobra.Command) {
 		writeFlagList(b, command, inherited, true)
 	}
 
-	writeManpageLabel(b, "Global-option behavior")
-	writeFlagList(b, command, rootGlobalFlags(root), true)
+	if !isCompletionCommand(root, command) {
+		writeManpageLabel(b, "Global-option behavior")
+		writeGlobalFlagBehavior(b, command, rootGlobalFlags(root))
+	}
 
 	if hasDocs && len(docs.Samples) > 0 {
 		if command.Runnable() {
@@ -192,6 +220,11 @@ func writeCommandReference(b *strings.Builder, root, command *cobra.Command) {
 		writeManpageLabel(b, "Walkthrough")
 		writeLiteral(b, docs.Walkthrough)
 	}
+}
+
+func isCompletionCommand(root, command *cobra.Command) bool {
+	path := strings.TrimPrefix(command.CommandPath(), root.CommandPath()+" ")
+	return path == "completion" || strings.HasPrefix(path, "completion ")
 }
 
 func writeManpageHeading(b *strings.Builder, level int, label, id string) {
@@ -272,6 +305,12 @@ func publicCommands(root *cobra.Command) []*cobra.Command {
 func publicCommandChildren(parent *cobra.Command) []*cobra.Command {
 	children := append([]*cobra.Command(nil), parent.Commands()...)
 	sort.Slice(children, func(i, j int) bool {
+		if children[i].Name() == "list" && children[j].Name() != "list" {
+			return true
+		}
+		if children[j].Name() == "list" {
+			return false
+		}
 		return children[i].Name() < children[j].Name()
 	})
 	visible := children[:0]
@@ -387,6 +426,37 @@ func writeFlagList(b *strings.Builder, command *cobra.Command, flags []*pflag.Fl
 	}
 }
 
+func writeGlobalFlagBehavior(b *strings.Builder, command *cobra.Command, flags []*pflag.Flag) {
+	noEffect := make([]*pflag.Flag, 0, len(flags))
+	effective := make([]*pflag.Flag, 0, len(flags))
+	for _, flag := range flags {
+		if commandGlobalFlagHasNoEffect(command, flag.Name) {
+			noEffect = append(noEffect, flag)
+			continue
+		}
+		effective = append(effective, flag)
+	}
+	if len(noEffect) > 0 {
+		signatures := make([]string, 0, len(noEffect))
+		for _, flag := range noEffect {
+			signatures = append(signatures, groupedGlobalFlagSignature(flag))
+		}
+		writeWrapped(b, fmt.Sprintf("* %s - %s",
+			strings.Join(signatures, ", "), commandGlobalNoEffectHelp(command)))
+	}
+	if len(effective) > 0 {
+		writeFlagList(b, command, effective, true)
+	}
+}
+
+func groupedGlobalFlagSignature(flag *pflag.Flag) string {
+	long := "**--" + flag.Name + "**"
+	if flag.Shorthand == "" || flag.ShorthandDeprecated != "" {
+		return long
+	}
+	return long + " / **-" + flag.Shorthand + "**"
+}
+
 func flagSignature(flag *pflag.Flag) string {
 	parts := make([]string, 0, 2)
 	if flag.Shorthand != "" && flag.ShorthandDeprecated == "" {
@@ -425,13 +495,13 @@ func writeEnvironment(b *strings.Builder) {
 		{"AXILIO_API_KEY", "API credential. Precedence: --api-key, AXILIO_API_KEY, saved config key, then the saved OAuth session."},
 		{"AXILIO_BASE_URL", "API host. Precedence: --base-url, AXILIO_BASE_URL, saved base-url, then https://api.axilio.ai."},
 		{"AXILIO_ORG", "OAuth organization slug or ID. Precedence: --org, AXILIO_ORG, saved active organization, then the OAuth session default. API keys remain scoped to the organization that created them."},
-		{"AXILIO_SESSION", "Selects a local phone lease. Precedence: --session, AXILIO_SESSION, the sole active lease, saved current-session pointer, then an ambiguity error."},
+		{"AXILIO_SESSION", "Selects a locally saved phone session. Precedence: --session, AXILIO_SESSION, the only locally saved session, the most recently started session, then an ambiguity error."},
 		{"AXILIO_DASHBOARD_URL", "Overrides the dashboard host used for browser OAuth. It does not change the API host."},
-		{"XDG_CONFIG_HOME", "Moves config, OAuth fallback, lease, and update-check state from $HOME/.config to $XDG_CONFIG_HOME."},
-		{"NO_COLOR", "Set to 1 to disable color in Fang help; text decoration may remain. For terminal output it takes precedence over CLICOLOR and CLICOLOR_FORCE. With the pinned Fang color-profile dependency, CLICOLOR_FORCE can still force ANSI for non-terminal output."},
-		{"CLICOLOR", "Set to 1 to request ANSI color in Fang help when output is a terminal and TERM is not dumb."},
-		{"CLICOLOR_FORCE", "Set to 1 to force ANSI color in Fang help for non-terminal or dumb-terminal output. For non-terminal output in the pinned dependency, this also overrides NO_COLOR."},
-		{"TERM", "TERM=dumb disables Fang help styling unless CLICOLOR_FORCE=1 is set."},
+		{"XDG_CONFIG_HOME", "Moves config, OAuth fallback, locally saved session, and update-check state from $HOME/.config to $XDG_CONFIG_HOME."},
+		{"NO_COLOR", "Set to 1 to disable ANSI color in help shown on a terminal; text decoration may remain. When help is redirected, CLICOLOR_FORCE=1 takes precedence and can restore ANSI color."},
+		{"CLICOLOR", "Set to 1 to request ANSI color in help when output is a terminal and TERM is not dumb."},
+		{"CLICOLOR_FORCE", "Set to 1 to force ANSI color when help is redirected or TERM=dumb. For redirected help, it takes precedence over NO_COLOR."},
+		{"TERM", "TERM=dumb disables ANSI color in help unless CLICOLOR_FORCE=1 is set."},
 	}
 	for _, entry := range entries {
 		writeWrapped(b, fmt.Sprintf("**%s**\n: %s", entry[0], entry[1]))
@@ -445,13 +515,13 @@ func writeExitStatuses(b *strings.Builder) {
 		desc string
 	}{
 		{exit.OK, "ok", "Success."},
-		{exit.Err, "error", "Generic or unclassified failure, including local validation or lookup errors that were not explicitly coded."},
-		{exit.Usage, "usage", "Explicit usage errors, recognized Cobra parse or arity errors, mobile invalid_args, or HTTP 400 or 422."},
-		{exit.Auth, "auth", "Explicit authentication errors, mobile unauthorized, or HTTP 401 or 403."},
-		{exit.NotFound, "not-found", "Mobile element_not_found or no_allocation, or HTTP 404."},
-		{exit.Timeout, "timeout", "Explicit or mobile timeout, context deadline, or HTTP 408."},
-		{exit.Unavailable, "unavailable", "Mobile connection, not_connected, or device_offline, or HTTP 429 or 5xx."},
-		{exit.Canceled, "canceled", "Explicit, mobile, or context cancellation."},
+		{exit.Err, "error", "The command failed for a reason that does not fit a more specific category."},
+		{exit.Usage, "usage", "Invalid command syntax, argument count, or value; or the API rejected the request as invalid (HTTP 400 or 422)."},
+		{exit.Auth, "auth", "Missing or invalid credentials, unauthorized access, or permission denied (HTTP 401 or 403)."},
+		{exit.NotFound, "not-found", "A requested resource, phone allocation, or on-screen element was not found (HTTP 404)."},
+		{exit.Timeout, "timeout", "The operation exceeded its timeout or deadline (HTTP 408)."},
+		{exit.Unavailable, "unavailable", "The Axilio service or phone connection was unavailable, the phone was offline, the request was rate-limited, or the server failed (HTTP 429 or 5xx)."},
+		{exit.Canceled, "canceled", "The operation was canceled by the user, shell, or system."},
 	}
 	for _, entry := range entries {
 		writeWrapped(b, fmt.Sprintf("**%d (%s)**\n: %s", entry.code, entry.name, entry.desc))
@@ -463,8 +533,8 @@ func writeFiles(b *strings.Builder) {
 		{"${XDG_CONFIG_HOME:-$HOME/.config}/axilio/config.json", "Saved API key, API host, and active organization. A new file requests mode 0600; umask may make it more restrictive. Overwriting preserves its mode."},
 		{"OS keychain: service axilio-cli, account oauth-tokens", "Preferred storage for browser-OAuth access and refresh tokens."},
 		{"${XDG_CONFIG_HOME:-$HOME/.config}/axilio/oauth.json", "OAuth-token fallback when the OS keychain is unavailable. A new file requests mode 0600; umask may make it more restrictive. Overwriting preserves its mode."},
-		{"${XDG_CONFIG_HOME:-$HOME/.config}/axilio/sessions/<session-id>.json", "Mode-0600 local lease record containing the session's control URL."},
-		{"${XDG_CONFIG_HOME:-$HOME/.config}/axilio/current-session", "Pointer to the last-started local session. A new file requests mode 0600; umask may make it more restrictive. Overwriting preserves its mode."},
+		{"${XDG_CONFIG_HOME:-$HOME/.config}/axilio/sessions/<session-id>.json", "One mode-0600 locally saved session record containing the session ID, phone ID, type, control URL, and creation time. These local records let phone commands reconnect; deleting one does not stop the corresponding Axilio session."},
+		{"${XDG_CONFIG_HOME:-$HOME/.config}/axilio/current-session", "Stores the ID of the most recently started locally saved session. A new file requests mode 0600; umask may make it more restrictive. Overwriting preserves its mode."},
 		{"${XDG_CONFIG_HOME:-$HOME/.config}/axilio/update-check.json", "Daily release-check cache. Failures reading or writing it do not fail commands."},
 		{"./screenshot.png", "Default output of `axilio phone screenshot`; --out selects another path and existing contents are overwritten."},
 		{".claude/skills/axilio/SKILL.md", "Agent instructions written by `axilio init --agent claude`."},
@@ -512,12 +582,12 @@ func splitParagraphs(text string) []string {
 		if strings.TrimSpace(line) != "" {
 			continue
 		}
-		if paragraph := strings.TrimSpace(strings.Join(lines[start:i], "\n")); paragraph != "" {
+		if paragraph := strings.Join(lines[start:i], "\n"); strings.TrimSpace(paragraph) != "" {
 			paragraphs = append(paragraphs, paragraph)
 		}
 		start = i + 1
 	}
-	if paragraph := strings.TrimSpace(strings.Join(lines[start:], "\n")); paragraph != "" {
+	if paragraph := strings.Join(lines[start:], "\n"); strings.TrimSpace(paragraph) != "" {
 		paragraphs = append(paragraphs, paragraph)
 	}
 	return paragraphs

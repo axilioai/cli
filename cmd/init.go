@@ -86,7 +86,8 @@ func initCmd() *cobra.Command {
 		Use:   "init",
 		Short: "Drop an agent skill into this repo so a coding agent can drive phones via the CLI.",
 		Long: "Write an instruction file that teaches your coding agent to drive a phone " +
-			"through the axilio CLI and then hand back a runnable SDK script. The agent " +
+			"through the axilio CLI and then hand back a runnable Python or Go script " +
+			"using the Axilio SDK. The agent " +
 			"asks whether you want Python or Go.\n\n" +
 			"Bare `axilio init` detects which agents this repo uses (.claude/, AGENTS.md, " +
 			".cursor/) and writes a skill for each; on a terminal with nothing detected it " +
