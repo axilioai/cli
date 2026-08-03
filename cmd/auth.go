@@ -9,7 +9,6 @@ import (
 
 	"github.com/axilioai/cli/internal/config"
 	"github.com/axilioai/cli/internal/oauth"
-	"github.com/axilioai/cli/internal/output"
 	"github.com/axilioai/cli/internal/util"
 	"github.com/axilioai/platform-go/client"
 	"github.com/axilioai/platform-go/option"
@@ -63,7 +62,7 @@ func loginWithAPIKey(ctx context.Context, key string) error {
 	}
 	p := printer()
 	apiHost := util.FirstNonEmpty(host, defaultAPIHost)
-	p.Emit(
+	return p.Emit(
 		map[string]string{"status": "signed_in", "method": "api-key", "api_host": apiHost},
 		func() {
 			p.Success("Signed in to %s", apiHost)
@@ -71,7 +70,6 @@ func loginWithAPIKey(ctx context.Context, key string) error {
 			p.Note("  Saved to %s", config.Path())
 		},
 	)
-	return nil
 }
 
 // loginWithBrowser runs the PKCE browser flow and stores the session in the
@@ -81,6 +79,9 @@ func loginWithBrowser(ctx context.Context) error {
 	apiHost := util.FirstNonEmpty(host, defaultAPIHost)
 	p := printer()
 	p.Step("Opening your browser to authorize the CLI…")
+	if err := p.Err(); err != nil {
+		return err
+	}
 	tokens, err := oauth.Login(ctx, apiHost, dashboardBaseURL(apiHost), func(u string) {
 		p.Note("  If it doesn't open, visit:\n  %s", u)
 	})
@@ -91,24 +92,26 @@ func loginWithBrowser(ctx context.Context) error {
 		return err
 	}
 	org := sessionOrgLabel(tokens)
-	p.Emit(
+	cl := client.NewClient(option.WithHTTPHeader(cliHeader(tokens.AccessToken)), option.WithBaseURL(sdkBaseURL(host)))
+	bal, balErr := cl.Billing.GetBalance(ctx)
+	if err := p.Emit(
 		map[string]string{"status": "signed_in", "method": "oauth", "api_host": apiHost, "org": org},
 		func() {
 			p.Success("Signed in to %s", apiHost)
 			if org != "" {
 				p.Note("  Org      %s", org)
 			}
-			// Balance is informational chrome, so the fetch lives inside the
-			// closure and is skipped entirely in JSON mode.
-			cl := client.NewClient(option.WithHTTPHeader(cliHeader(tokens.AccessToken)), option.WithBaseURL(sdkBaseURL(host)))
-			if bal, err := cl.Billing.GetBalance(ctx); err != nil {
-				p.Note("  (could not fetch balance: %v)", err)
-			} else {
+			if balErr == nil {
 				p.Note("  Balance  %s", bal.BalanceDisplay)
 			}
 		},
-	)
-	return nil
+	); err != nil {
+		return err
+	}
+	if balErr != nil {
+		p.Warn("could not fetch balance: %v", balErr)
+	}
+	return p.Err()
 }
 
 // sessionOrgLabel renders the org an OAuth session was authorized into as
@@ -134,6 +137,7 @@ func logoutCmd() *cobra.Command {
 			"organization are removed. A saved base URL, environment credentials, " +
 			"and locally saved phone-session files are not removed.",
 		RunE: func(cmd *cobra.Command, _ []string) error {
+			p := printer()
 			cfg := config.Load()
 			hadKey := cfg.APIKey != ""
 			hadOAuth := oauth.HasSession()
@@ -142,7 +146,7 @@ func logoutCmd() *cobra.Command {
 			// (AXI-1279). Best-effort: clear locally regardless.
 			if hadOAuth {
 				if err := oauth.Revoke(cmd.Context()); err != nil {
-					printer().Note("Could not revoke the session server-side (%v); clearing locally.", err)
+					p.Warn("could not revoke the session server-side (%v); clearing locally", err)
 				}
 			}
 			oauth.Clear()
@@ -154,17 +158,14 @@ func logoutCmd() *cobra.Command {
 					return err
 				}
 			}
-			p := printer()
 			if !hadKey && !hadOAuth {
-				p.Emit(map[string]string{"status": "already_signed_out"}, func() {
-					p.Note("Already signed out.")
+				return p.Emit(map[string]string{"status": "already_signed_out"}, func() {
+					p.Ack("Already signed out.")
 				})
-				return nil
 			}
-			p.Emit(map[string]string{"status": "signed_out"}, func() {
+			return p.Emit(map[string]string{"status": "signed_out"}, func() {
 				p.Success("Signed out.")
 			})
-			return nil
 		},
 	}
 }
@@ -189,10 +190,11 @@ func statusCmd() *cobra.Command {
 			_, host := resolvedCreds()
 			apiHost := sdkBaseURL(host)
 			activeOrg := resolvedOrg()
-			printer().Emit(
+			p := printer()
+			return p.Emit(
 				map[string]string{"status": "ok", "api_host": apiHost, "balance": bal.BalanceDisplay, "active_org": activeOrg},
 				func() {
-					output.KV([][2]string{
+					p.KV([][2]string{
 						{"Status", "ok"},
 						{"API host", apiHost},
 						{"Active org", orgDisplay(activeOrg)},
@@ -200,7 +202,6 @@ func statusCmd() *cobra.Command {
 					})
 				},
 			)
-			return nil
 		},
 	}
 }

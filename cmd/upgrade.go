@@ -73,29 +73,31 @@ func runUpgrade(ctx context.Context, check bool) error {
 		decision = decideUpgrade(state)
 	}
 	if decision.action == upgradeApply {
-		p.Note("Upgrading axilio %s -> %s...", Version, state.release.Tag)
+		p.Step("Upgrading axilio %s -> %s...", Version, state.release.Tag)
+		if err := p.Err(); err != nil {
+			return err
+		}
 		if err := update.Apply(ctx, state.release); err != nil {
 			return err
 		}
 	}
 
-	p.Emit(decision.result, func() {
+	return p.Emit(decision.result, func() {
 		switch decision.result.Status {
 		case "dev-build":
-			p.Note("This is a development build (%s). Install a release with:\n  go install github.com/axilioai/cli@latest", versionString())
+			p.Ack("This is a development build (%s). Install a release with:\n  go install github.com/axilioai/cli@latest", versionString())
 		case "homebrew-managed":
-			p.Note("This axilio was installed with Homebrew. Upgrade with:\n  brew upgrade axilio")
+			p.Ack("This axilio was installed with Homebrew. Upgrade with:\n  brew upgrade axilio")
 		case "no-releases":
-			p.Note("No releases have been published yet.")
+			p.Ack("No releases have been published yet.")
 		case "up-to-date":
-			p.Note("axilio is up to date (%s).", Version)
+			p.Ack("axilio is up to date (%s).", Version)
 		case "update-available":
-			p.Note("A newer release is available: %s -> %s. Run `%s` to install.", Version, decision.result.Latest, decision.result.NextCommand)
+			p.Ack("A newer release is available: %s -> %s. Run `%s` to install.", Version, decision.result.Latest, decision.result.NextCommand)
 		case "upgraded":
-			p.Note("Upgraded to %s.", decision.result.Latest)
+			p.Ack("Upgraded to %s.", decision.result.Latest)
 		}
 	})
-	return nil
 }
 
 func decideUpgrade(state upgradeState) upgradeDecision {

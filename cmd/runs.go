@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/axilioai/cli/internal/exit"
-	"github.com/axilioai/cli/internal/output"
 	"github.com/axilioai/cli/internal/util"
 	platformgo "github.com/axilioai/platform-go"
 	"github.com/spf13/cobra"
@@ -58,9 +57,10 @@ func runsListCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			printer().Emit(resp, func() {
+			p := printer()
+			return p.Emit(resp, func() {
 				if len(resp.Runs) == 0 {
-					fmt.Println("No runs found.")
+					p.Result("No runs found.")
 					return
 				}
 				rows := [][]string{{"RUN ID", "STATUS", "TRIGGER", "WORKFLOW", "CREATED"}}
@@ -69,9 +69,8 @@ func runsListCmd() *cobra.Command {
 						r.ID, string(r.Status), string(r.Trigger), r.WorkflowID, ts(r.CreatedAt),
 					})
 				}
-				output.Table(rows)
+				p.Table(rows)
 			})
-			return nil
 		},
 	}
 	cmd.Flags().Int64Var(&limit, "limit", 20, "Maximum number of most-recent runs to return")
@@ -130,16 +129,16 @@ func runsStartCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			printer().Emit(resp, func() {
+			p := printer()
+			return p.Emit(resp, func() {
 				if len(resp.RunIDs) == 0 {
-					fmt.Println("No runs created.")
+					p.Ack("No runs created.")
 					return
 				}
 				for _, id := range resp.RunIDs {
-					printer().Note("Started run %s", id)
+					p.Ack("Started run %s", id)
 				}
 			})
-			return nil
 		},
 	}
 	cmd.Flags().Int64Var(&count, "count", 1, "Number of run configurations to create (1-1000)")
@@ -165,8 +164,9 @@ func runsGetCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			printer().Emit(r, func() {
-				output.KV([][2]string{
+			p := printer()
+			return p.Emit(r, func() {
+				p.KV([][2]string{
 					{"Run", r.ID},
 					{"Status", string(r.Status)},
 					{"Trigger", string(r.Trigger)},
@@ -180,7 +180,6 @@ func runsGetCmd() *cobra.Command {
 					{"Video", util.OrDash(strv(r.VideoURL))},
 				})
 			})
-			return nil
 		},
 	}
 }
@@ -191,29 +190,31 @@ func runsCancelCmd() *cobra.Command {
 		Use:   "cancel <run-id>",
 		Short: "Cancel a queued or running run.",
 		Long: "Cancel a queued or running run by an ID discovered with `runs list`. " +
-			"Without --yes, table mode reads confirmation from stdin, including " +
-			"redirected input. JSON and quiet modes do not prompt and require --yes. " +
+			"Without --yes, table mode prompts only when stdin is a terminal. " +
+			"Redirected, JSON, and quiet execution do not prompt and require --yes. " +
 			"JSON success reports the canceled run ID.",
 		Args: cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
+			p := printer()
+			id := args[0]
+			if !yes && !p.Confirm(fmt.Sprintf("Cancel run %s?", id)) {
+				if err := p.Err(); err != nil {
+					return err
+				}
+				return exit.Usagef("aborted (pass --yes to cancel non-interactively)")
+			}
 			cl, err := newClient()
 			if err != nil {
 				return err
 			}
-			id := args[0]
-			if !yes && !printer().Confirm(fmt.Sprintf("Cancel run %s?", id)) {
-				return exit.Usagef("aborted (pass --yes to cancel non-interactively)")
-			}
 			if _, err := cl.Runs.Cancel(context.Background(), &platformgo.RunsCancelRequest{RunID: id}); err != nil {
 				return err
 			}
-			p := printer()
-			p.Emit(map[string]any{"id": id, "canceled": true}, func() {
-				p.Note("Canceled %s", id)
+			return p.Emit(map[string]any{"id": id, "canceled": true}, func() {
+				p.Ack("Canceled %s", id)
 			})
-			return nil
 		},
 	}
-	cmd.Flags().BoolVarP(&yes, "yes", "y", false, "Cancel without prompting; required in JSON or quiet mode")
+	cmd.Flags().BoolVarP(&yes, "yes", "y", false, "Cancel without prompting; required in JSON, quiet, or redirected execution")
 	return cmd
 }

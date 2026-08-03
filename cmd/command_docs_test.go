@@ -95,8 +95,8 @@ func TestFangRendersStructuredExamples(t *testing.T) {
 	help := renderHelp(t, "phone", "tap", "--help")
 	for _, want := range []string{
 		`axilio phone tap --query "the search box"`,
-		`# stdout: none`,
-		`# stderr: Tapped "the search box" at 540,620`,
+		`# stdout: Tapped "the search box" at 540,620`,
+		`# stderr: none`,
 		`# exit status: 0`,
 	} {
 		if !strings.Contains(help, want) {

@@ -11,7 +11,6 @@ import (
 	"github.com/axilioai/cli/internal/config"
 	"github.com/axilioai/cli/internal/exit"
 	"github.com/axilioai/cli/internal/oauth"
-	"github.com/axilioai/cli/internal/output"
 	"github.com/axilioai/cli/internal/session"
 	"github.com/axilioai/platform-go/client"
 	"github.com/axilioai/platform-go/core"
@@ -54,13 +53,15 @@ func doctorCmd() *cobra.Command {
 			checks := runDoctor(context.Background())
 
 			p := printer()
-			p.Emit(doctorResult(checks), func() {
+			if err := p.Emit(doctorResult(checks), func() {
 				rows := [][]string{{"CHECK", "STATUS", "DETAIL"}}
 				for _, c := range checks {
 					rows = append(rows, []string{c.Name, string(c.Status), c.Detail})
 				}
-				output.Table(rows)
-			})
+				p.Table(rows)
+			}); err != nil {
+				return err
+			}
 
 			// Gate on required checks: return the worst one's coded error so the
 			// exit status is both non-zero and meaningful (auth vs unavailable).

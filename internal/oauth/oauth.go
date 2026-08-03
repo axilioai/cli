@@ -9,9 +9,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"net/url"
+	"sync"
 	"time"
 
 	"github.com/pkg/browser"
@@ -27,6 +29,20 @@ const (
 
 // ErrNoSession means no usable OAuth session is stored for the target host.
 var ErrNoSession = errors.New("oauth: no session; run `axilio login`")
+
+// pkg/browser inherits the parent process streams by default. Keep browser
+// launcher diagnostics out of the CLI's result channels: the caller already
+// prints the authorization URL as the supported fallback.
+var browserOpenMu sync.Mutex
+
+func openBrowser(rawURL string) error {
+	browserOpenMu.Lock()
+	defer browserOpenMu.Unlock()
+	stdout, stderr := browser.Stdout, browser.Stderr
+	browser.Stdout, browser.Stderr = io.Discard, io.Discard
+	defer func() { browser.Stdout, browser.Stderr = stdout, stderr }()
+	return browser.OpenURL(rawURL)
+}
 
 // tokenResponse is the token endpoint's success body. Organization names the
 // org the session was bound to (AXI-1348); absent on older backends.
@@ -105,7 +121,7 @@ func Login(ctx context.Context, apiBase, dashboardBase string, notify func(url s
 	if notify != nil {
 		notify(consent)
 	}
-	_ = browser.OpenURL(consent)
+	_ = openBrowser(consent)
 
 	select {
 	case res := <-resCh:

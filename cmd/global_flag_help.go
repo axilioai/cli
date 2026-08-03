@@ -185,7 +185,7 @@ func buildGlobalFlagHelp() map[string]commandGlobalFlagHelp {
 			noColor: "Disable ANSI color in login progress and success messages",
 			org:     "Does not choose the login org; only scopes the post-login OAuth balance request",
 			output:  "Emit human login messages or a JSON sign-in result",
-			quiet:   "Suppress human login messages; browser OAuth still opens; JSON still prints",
+			quiet:   "Suppress login acknowledgments, notes, progress, and prompts; warnings remain; browser OAuth still opens; JSON still prints",
 		},
 		"logout": {
 			apiKey:  "No effect on logout command; saved credentials are cleared regardless",
@@ -193,7 +193,7 @@ func buildGlobalFlagHelp() map[string]commandGlobalFlagHelp {
 			noColor: "Disable ANSI color in the signed-out success message",
 			org:     "No effect on logout command; the saved active org is cleared regardless",
 			output:  "Emit a human sign-out message or JSON sign-out result",
-			quiet:   "Suppress human logout warnings and results; JSON still prints",
+			quiet:   "Suppress logout acknowledgments and notes; revocation warnings remain; JSON still prints",
 		},
 		"config": {
 			apiKey: "Temporarily shows this as the effective API key source;\n" +
@@ -255,7 +255,7 @@ func buildGlobalFlagHelp() map[string]commandGlobalFlagHelp {
 			noColor: "Disable ANSI color in init success messages",
 			org:     "No effect on init command. Skill download and generated files are not org-scoped",
 			output:  "Emit human init messages or JSON written and skipped path lists",
-			quiet:   "Suppress human init prompts and messages; --agent may be required; JSON still prints",
+			quiet:   "Suppress init acknowledgments, notes, and prompts; warnings remain; --agent may be required; JSON still prints",
 		},
 		"sessions":  helpOnlyCommandHelp("sessions"),
 		"phones":    helpOnlyCommandHelp("phones"),
@@ -290,7 +290,7 @@ func buildGlobalFlagHelp() map[string]commandGlobalFlagHelp {
 	help["sessions current"] = localResultHelp("sessions current", "session resolution", "the current-session result")
 	help["sessions start"] = apiResultHelp("the phone-allocation request", "the allocated-session result")
 	help["sessions start"] = withOutput(help["sessions start"],
-		"Render the allocated session as table or json; --export always emits shell text",
+		"Render the allocated session as table or json; --export emits shell text and rejects json",
 		"Suppress session guidance; the result or --export text remains on stdout")
 	help["sessions stop"] = apiActionHelp("session release", true)
 
@@ -328,7 +328,7 @@ func buildGlobalFlagHelp() map[string]commandGlobalFlagHelp {
 	help["api-keys list"] = apiResultHelp("the API-key list request", "the API-key list")
 	help["api-keys create"] = apiResultHelp("the API-key create request", "the created API key")
 	help["api-keys create"] = withQuiet(help["api-keys create"],
-		"Suppress the save-now warning; the created key remains on stdout")
+		"Suppress optional notes; the created key and save-now warning remain visible")
 	help["api-keys delete"] = apiActionHelp("API-key deletion", true)
 
 	help["uploads add"] = apiResultHelp("the file-upload request", "the stored-upload result")

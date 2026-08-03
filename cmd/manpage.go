@@ -23,7 +23,7 @@ const (
 	manpageWrapWidth = 72
 	// TH requires a parseable date for a diagnostic-free mandoc lint. Keep the
 	// source date fixed instead of introducing a wall-clock generation input.
-	manpageSourceDate = "2026-08-02"
+	manpageSourceDate = "2026-08-03"
 )
 
 // GenerateManpage renders one comprehensive axilio(1) page from a freshly

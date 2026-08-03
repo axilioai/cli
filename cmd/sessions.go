@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/axilioai/cli/internal/exit"
-	"github.com/axilioai/cli/internal/output"
 	"github.com/axilioai/cli/internal/session"
 	"github.com/axilioai/cli/internal/util"
 	platformgo "github.com/axilioai/platform-go"
@@ -51,9 +50,10 @@ func sessionsListCmd() *cobra.Command {
 			// The lease the phone verbs would target in this shell (best-effort;
 			// an ambiguous resolve just leaves nothing marked).
 			sel, _ := session.Resolve("")
-			printer().Emit(leases, func() {
+			p := printer()
+			return p.Emit(leases, func() {
 				if len(leases) == 0 {
-					fmt.Println("No sessions saved locally. Run `axilio sessions start` to start one.")
+					p.Result("No sessions saved locally. Run `axilio sessions start` to start one.")
 					return
 				}
 				rows := [][]string{{"", "SESSION", "PHONE", "TYPE"}}
@@ -64,9 +64,8 @@ func sessionsListCmd() *cobra.Command {
 					}
 					rows = append(rows, []string{marker, s.SessionID, s.PhoneID, util.OrDash(s.PhoneType)})
 				}
-				output.Table(rows)
+				p.Table(rows)
 			})
-			return nil
 		},
 	}
 	cmd.Flags().BoolVar(&remote, "remote", false, "List all active Axilio sessions instead of sessions saved locally")
@@ -82,9 +81,10 @@ func listRemoteSessions() error {
 	if err != nil {
 		return err
 	}
-	printer().Emit(resp, func() {
+	p := printer()
+	return p.Emit(resp, func() {
 		if len(resp.Sessions) == 0 {
-			fmt.Println("No active sessions.")
+			p.Result("No active sessions.")
 			return
 		}
 		rows := [][]string{{"SESSION", "PHONE", "TYPE", "MODEL"}}
@@ -93,9 +93,8 @@ func listRemoteSessions() error {
 				s.SessionID, s.PhoneID, util.OrDash(enumv(s.PhoneType)), util.OrDash(strv(s.ModelName)),
 			})
 		}
-		output.Table(rows)
+		p.Table(rows)
 	})
-	return nil
 }
 
 func sessionsCurrentCmd() *cobra.Command {
@@ -112,14 +111,14 @@ func sessionsCurrentCmd() *cobra.Command {
 			if err != nil {
 				return exit.With(exit.NotFound, err)
 			}
-			printer().Emit(s, func() {
-				output.KV([][2]string{
+			p := printer()
+			return p.Emit(s, func() {
+				p.KV([][2]string{
 					{"Session", s.SessionID},
 					{"Phone", s.PhoneID},
 					{"Type", util.OrDash(s.PhoneType)},
 				})
 			})
-			return nil
 		},
 	}
 }
@@ -137,13 +136,17 @@ func sessionsStartCmd() *cobra.Command {
 			"it as the most recently started session. Pin a dedicated phone discovered " +
 			"through `phones mine` with --phone-id, or " +
 			"attach the session to a workflow with --workflow. --export prints only " +
-			"`export AXILIO_SESSION=<id>` for shell eval; that shell syntax also wins " +
-			"when -o json is supplied.",
+			"`export AXILIO_SESSION=<id>` for shell eval and cannot be combined with " +
+			"-o json.",
 		RunE: func(_ *cobra.Command, _ []string) error {
+			if export && flagOutput == "json" {
+				return exit.Usagef("--export cannot be combined with --output json")
+			}
 			normalizedPhoneType := strings.ToLower(strings.TrimSpace(phoneType))
 			if normalizedPhoneType != string(platformgo.PhoneAllocateRequestPhoneTypeAndroid) {
 				return exit.Usagef("unsupported --phone-type %q; supported value: android", phoneType)
 			}
+			p := printer()
 			cl, err := newClient()
 			if err != nil {
 				return err
@@ -175,25 +178,26 @@ func sessionsStartCmd() *cobra.Command {
 			// --export: emit ONLY the eval-able line so a shell/agent can pin this
 			// phone to the process: eval "$(axilio sessions start --export ...)".
 			if export {
-				fmt.Printf("export %s=%s\n", session.EnvVar, a.SessionID)
-				return nil
+				p.Result("export %s=%s", session.EnvVar, a.SessionID)
+				return p.Err()
 			}
-			p := printer()
-			p.Emit(a, func() {
-				output.KV([][2]string{
+			if err := p.Emit(a, func() {
+				p.KV([][2]string{
 					{"Session", a.SessionID},
 					{"Phone", a.PhoneID},
 					{"Region", util.OrDash(strv(a.Region))},
 					{"Live view", util.OrDash(strv(a.LiveViewURL))},
 					{"Control URL", util.OrDash(strv(a.ControlURL))},
 				})
-			})
+			}); err != nil {
+				return err
+			}
 			if a.ControlURL != nil {
 				p.Note("\nDrive it:  axilio phone observe")
 				p.Note("Pin it to this shell (for parallel work):  export %s=%s", session.EnvVar, a.SessionID)
 			}
 			p.Note("Release it with:  axilio sessions stop %s", a.SessionID)
-			return nil
+			return p.Err()
 		},
 	}
 	cmd.Flags().StringVar(&phoneType, "phone-type", "android", "Phone platform to allocate (currently only android)")
@@ -211,11 +215,11 @@ func sessionsStopCmd() *cobra.Command {
 		Long: "Release an active phone allocation using either its session ID or phone " +
 			"ID. Discover IDs with `sessions list --remote`; matching locally saved " +
 			"session information and the most-recent-session marker are removed after " +
-			"release. Without --yes, table " +
-			"mode reads confirmation from stdin, including redirected input. JSON and " +
-			"quiet modes do not prompt and require --yes.",
+			"release. Without --yes, table mode prompts only when stdin is a terminal. " +
+			"Redirected, JSON, and quiet execution do not prompt and require --yes.",
 		Args: cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
+			p := printer()
 			cl, err := newClient()
 			if err != nil {
 				return err
@@ -231,7 +235,10 @@ func sessionsStopCmd() *cobra.Command {
 					}
 				}
 			}
-			if !yes && !printer().Confirm(fmt.Sprintf("Release %s?", phoneID)) {
+			if !yes && !p.Confirm(fmt.Sprintf("Release %s?", phoneID)) {
+				if err := p.Err(); err != nil {
+					return err
+				}
 				return exit.Usagef("aborted (pass --yes to release non-interactively)")
 			}
 			if _, err := cl.Phones.Deallocate(context.Background(), &platformgo.PhonesDeallocateRequest{PhoneID: phoneID}); err != nil {
@@ -239,13 +246,11 @@ func sessionsStopCmd() *cobra.Command {
 			}
 			// Drop the lease from the registry (clears the current pointer if it was it).
 			_ = session.Remove(id)
-			p := printer()
-			p.Emit(map[string]any{"phone_id": phoneID, "released": true}, func() {
-				p.Note("Released %s.", phoneID)
+			return p.Emit(map[string]any{"phone_id": phoneID, "released": true}, func() {
+				p.Ack("Released %s.", phoneID)
 			})
-			return nil
 		},
 	}
-	cmd.Flags().BoolVarP(&yes, "yes", "y", false, "Release without prompting; required in JSON or quiet mode")
+	cmd.Flags().BoolVarP(&yes, "yes", "y", false, "Release without prompting; required in JSON, quiet, or redirected execution")
 	return cmd
 }

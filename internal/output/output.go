@@ -1,102 +1,204 @@
-// Package output renders command results either as human tables or as clean
-// JSON, and keeps the two disciplined: data (JSON, tables) goes to stdout, human
-// chrome (notes, prompts) to stderr, and in JSON mode the chrome is suppressed
-// so a pipe into jq never sees stray text.
+// Package output renders command results while preserving a stable process
+// contract: primary results use stdout; notes, progress, prompts, warnings, and
+// errors use stderr. JSON success is exactly one document on stdout.
 package output
 
 import (
 	"bufio"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 
 	"github.com/pterm/pterm"
+	"golang.org/x/term"
 )
 
-// Printer carries the chosen output mode.
+// Streams is the process boundary used by Printer. Production uses the real
+// process streams; tests and embedded callers can inject isolated buffers.
+type Streams struct {
+	Stdout   io.Writer
+	Stderr   io.Writer
+	Stdin    io.Reader
+	StdinTTY bool
+}
+
+// Printer carries the output mode and all process I/O used by a command.
 type Printer struct {
 	JSON  bool
 	Quiet bool
+
+	stdout   io.Writer
+	stderr   io.Writer
+	stdin    io.Reader
+	stdinTTY bool
+	err      error
 }
 
-// New builds a Printer for the given --output value, --no-color, and --quiet.
+// New builds a Printer for the real process streams.
 func New(format string, noColor, quiet bool) *Printer {
+	return NewWithStreams(format, noColor, quiet, Streams{
+		Stdout:   os.Stdout,
+		Stderr:   os.Stderr,
+		Stdin:    os.Stdin,
+		StdinTTY: term.IsTerminal(int(os.Stdin.Fd())),
+	})
+}
+
+// NewWithStreams builds a Printer with an explicit I/O boundary.
+func NewWithStreams(format string, noColor, quiet bool, streams Streams) *Printer {
 	if noColor {
 		pterm.DisableColor()
 	}
-	return &Printer{JSON: format == "json", Quiet: quiet}
+	if streams.Stdout == nil {
+		streams.Stdout = io.Discard
+	}
+	if streams.Stderr == nil {
+		streams.Stderr = io.Discard
+	}
+	if streams.Stdin == nil {
+		streams.Stdin = strings.NewReader("")
+	}
+	return &Printer{
+		JSON:     format == "json",
+		Quiet:    quiet,
+		stdout:   streams.Stdout,
+		stderr:   streams.Stderr,
+		stdin:    streams.Stdin,
+		stdinTTY: streams.StdinTTY,
+	}
 }
 
-// silent reports whether human chrome is suppressed (JSON or --quiet).
-func (p *Printer) silent() bool { return p.JSON || p.Quiet }
+// silentHuman reports whether optional human presentation is suppressed.
+func (p *Printer) silentHuman() bool { return p.JSON || p.Quiet }
 
-// Emit prints v as indented JSON to stdout in JSON mode; otherwise it runs the
-// table builder. The generated SDK response types marshal cleanly (omitempty
-// drops nil pointers), so JSON stays faithful without leaking defaults.
-func (p *Printer) Emit(v any, table func()) {
+// Emit writes v as one indented JSON document in JSON mode; otherwise it runs
+// the human renderer. Encoding and rendering errors propagate to the command.
+func (p *Printer) Emit(v any, human func()) error {
+	if p.err != nil {
+		return p.err
+	}
 	if p.JSON {
 		b, err := json.MarshalIndent(v, "", "  ")
 		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			return
+			return err
 		}
-		fmt.Println(string(b))
-		return
+		_, err = fmt.Fprintln(p.stdout, string(b))
+		return err
 	}
-	table()
+	if human != nil {
+		human()
+	}
+	return p.err
 }
 
-// Note prints human chrome to stderr, suppressed in JSON or --quiet mode.
-func (p *Printer) Note(format string, a ...any) {
-	if p.silent() {
+// Result prints primary human result data to stdout. Unlike Ack, Result is not
+// suppressed by --quiet. JSON callers should represent the value through Emit.
+func (p *Printer) Result(format string, a ...any) {
+	if p.JSON {
 		return
 	}
-	fmt.Fprintf(os.Stderr, format+"\n", a...)
+	p.write(p.stdout, format+"\n", a...)
 }
 
-// Success prints a green check-marked line to stderr (human chrome), suppressed
-// in JSON/quiet mode. For terminal confirmations like "Signed in".
+// Ack prints a primary human success acknowledgment to stdout. It is replaced
+// by structured output in JSON mode and suppressed by --quiet.
+func (p *Printer) Ack(format string, a ...any) {
+	if p.silentHuman() {
+		return
+	}
+	p.write(p.stdout, format+"\n", a...)
+}
+
+// Success is a styled primary acknowledgment. It follows the same stream and
+// mode rules as Ack.
 func (p *Printer) Success(format string, a ...any) {
-	if p.silent() {
+	if p.silentHuman() {
 		return
 	}
-	fmt.Fprintf(os.Stderr, "%s %s\n", pterm.Green("✓"), fmt.Sprintf(format, a...))
+	p.write(p.stdout, "%s %s\n", pterm.Green("✓"), fmt.Sprintf(format, a...))
 }
 
-// Step prints a progress line to stderr with a dim arrow prefix, suppressed in
-// JSON/quiet mode. For "doing X…" chrome ahead of a result.
+// Note prints supplemental human guidance to stderr. JSON and quiet suppress
+// notes because they are not required to understand success or failure.
+func (p *Printer) Note(format string, a ...any) {
+	if p.silentHuman() {
+		return
+	}
+	p.write(p.stderr, format+"\n", a...)
+}
+
+// Step prints line-oriented progress to stderr. JSON and quiet suppress it.
 func (p *Printer) Step(format string, a ...any) {
-	if p.silent() {
+	if p.silentHuman() {
 		return
 	}
-	fmt.Fprintf(os.Stderr, "%s %s\n", pterm.Gray("→"), fmt.Sprintf(format, a...))
+	p.write(p.stderr, "%s %s\n", pterm.Gray("→"), fmt.Sprintf(format, a...))
 }
 
-// Confirm asks a yes/no question on stderr and reads the answer from stdin.
-// When output is non-interactive (JSON or --quiet), it never prompts and
-// returns false, so a destructive command declines rather than hanging — pass
-// an explicit --yes to proceed in that mode.
+// Warn prints actionable degradation to stderr in every mode, including JSON
+// and quiet. Warnings never contaminate a successful result on stdout.
+func (p *Printer) Warn(format string, a ...any) {
+	p.write(p.stderr, "%s %s\n", pterm.Yellow("warning:"), fmt.Sprintf(format, a...))
+}
+
+// Prompt writes an interactive prompt fragment to stderr without adding a
+// newline. It is available only for human TTY execution.
+func (p *Printer) Prompt(format string, a ...any) {
+	if p.silentHuman() || !p.stdinTTY {
+		return
+	}
+	p.write(p.stderr, format, a...)
+}
+
+// Confirm asks a yes/no question on stderr and reads from stdin only when stdin
+// is a TTY. JSON, quiet, and redirected execution never prompt; destructive
+// commands must use their explicit --yes flag in those modes.
 func (p *Printer) Confirm(prompt string) bool {
-	if p.silent() {
+	if p.silentHuman() || !p.stdinTTY {
 		return false
 	}
-	fmt.Fprintf(os.Stderr, "%s [y/N] ", prompt)
-	line, _ := bufio.NewReader(os.Stdin).ReadString('\n')
+	p.write(p.stderr, "%s [y/N] ", prompt)
+	if p.err != nil {
+		return false
+	}
+	line, err := bufio.NewReader(p.stdin).ReadString('\n')
+	if err != nil && !errors.Is(err, io.EOF) {
+		p.err = err
+		return false
+	}
 	line = strings.ToLower(strings.TrimSpace(line))
 	return line == "y" || line == "yes"
 }
 
-// Table renders rows (rows[0] is the header) to stdout.
-func Table(rows [][]string) {
-	_ = pterm.DefaultTable.WithHasHeader().WithData(pterm.TableData(rows)).Render()
+// Table renders rows (rows[0] is the header) to the configured stdout.
+func (p *Printer) Table(rows [][]string) {
+	if p.err != nil || p.JSON {
+		return
+	}
+	p.err = pterm.DefaultTable.WithWriter(p.stdout).WithHasHeader().WithData(pterm.TableData(rows)).Render()
 }
 
-// KV renders a two-column property/value detail view to stdout.
-func KV(pairs [][2]string) {
+// KV renders a two-column property/value detail view to configured stdout.
+func (p *Printer) KV(pairs [][2]string) {
 	rows := make([][]string, 0, len(pairs))
 	for _, kv := range pairs {
 		rows = append(rows, []string{kv[0], kv[1]})
 	}
-	_ = pterm.DefaultTable.WithData(pterm.TableData(rows)).Render()
+	if p.err != nil || p.JSON {
+		return
+	}
+	p.err = pterm.DefaultTable.WithWriter(p.stdout).WithData(pterm.TableData(rows)).Render()
+}
+
+// Err returns the first input or output error observed by the printer.
+func (p *Printer) Err() error { return p.err }
+
+func (p *Printer) write(w io.Writer, format string, a ...any) {
+	if p.err != nil {
+		return
+	}
+	_, p.err = fmt.Fprintf(w, format, a...)
 }

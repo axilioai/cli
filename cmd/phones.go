@@ -2,9 +2,7 @@ package cmd
 
 import (
 	"context"
-	"fmt"
 
-	"github.com/axilioai/cli/internal/output"
 	"github.com/axilioai/cli/internal/util"
 	platformgo "github.com/axilioai/platform-go"
 	"github.com/spf13/cobra"
@@ -49,9 +47,10 @@ func phonesListCmd() *cobra.Command {
 				return err
 			}
 			resp.SetPhones(resp.Phones)
-			printer().Emit(resp, func() {
+			p := printer()
+			return p.Emit(resp, func() {
 				if len(resp.Phones) == 0 {
-					fmt.Println("No phones available.")
+					p.Result("No phones available.")
 					return
 				}
 				rows := [][]string{{"PHONE ID", "TYPE", "MODEL", "STATUS"}}
@@ -60,9 +59,8 @@ func phonesListCmd() *cobra.Command {
 						ph.PhoneID, util.OrDash(enumv(ph.PhoneType)), util.OrDash(strv(ph.ModelName)), string(ph.Status),
 					})
 				}
-				output.Table(rows)
+				p.Table(rows)
 			})
-			return nil
 		},
 	}
 }
@@ -84,9 +82,10 @@ func phonesMineCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			printer().Emit(resp, func() {
+			p := printer()
+			return p.Emit(resp, func() {
 				if len(resp.Phones) == 0 {
-					fmt.Println("No dedicated phones.")
+					p.Result("No dedicated phones.")
 					return
 				}
 				rows := [][]string{{"PHONE ID", "NICKNAME", "TYPE", "MODEL", "STATUS", "SESSION"}}
@@ -100,9 +99,8 @@ func phonesMineCmd() *cobra.Command {
 						util.OrDash(strv(ph.CurrentSessionID)),
 					})
 				}
-				output.Table(rows)
+				p.Table(rows)
 			})
-			return nil
 		},
 	}
 }

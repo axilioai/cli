@@ -114,14 +114,19 @@ Phone command session selection precedence is --session, AXILIO_SESSION, the
 only locally saved session, the most recently started session, then an ambiguity
 error.`
 
-	rootOutputBehavior = `Table output for human readability is the default. Every successful runnable
-application command emits valid JSON with -o json; action commands return a
-small acknowledgment. Built-in help, completion, and version output remains
-text. The sessions start --export command emits shell text for eval.
-Notes, prompts, and progress use stderr and are suppressed in JSON or quiet
-mode. Quiet and JSON modes do not confirm destructive actions; pass --yes where
-offered. API-key, base-URL, and organization flags affect API-backed commands;
-they do not select a local phone session.`
+	rootOutputBehavior = `Table output for human readability is the default. Primary results and action
+acknowledgments use stdout. Every successful runnable application command emits
+exactly one JSON document with -o json. Built-in help, completion, and version
+remain text. Sessions start --export emits shell text for eval and cannot be
+combined with -o json.
+
+Notes, progress, and prompts use stderr and are suppressed in JSON or quiet
+mode. Warnings and errors also use stderr, but remain visible in every mode.
+Quiet preserves primary result data while suppressing action acknowledgments
+and other optional human output. Destructive commands prompt only when stdin is
+a terminal; JSON, quiet, and redirected execution require --yes where offered.
+API-key, base-URL, and organization flags affect API-backed commands; they do
+not select a local phone session.`
 
 	rootLong = rootOverview +
 		"\n\nPrecedence rules:\n\n" + rootResolutionPrecedence +
@@ -154,9 +159,9 @@ func Root() *cobra.Command {
 		},
 	}
 	pf := root.PersistentFlags()
-	pf.StringVarP(&flagOutput, "output", "o", "table", "Result format for runnable application commands: table or json; help, completion, and version stay text, and sessions start --export stays shell")
+	pf.StringVarP(&flagOutput, "output", "o", "table", "Result format: table or one JSON document; help, completion, and version stay text; sessions start --export rejects JSON")
 	pf.BoolVar(&flagNoColor, "no-color", false, "Disable ANSI color in human-oriented output")
-	pf.BoolVarP(&flagQuiet, "quiet", "q", false, "Suppress stderr notes and prompts; destructive commands still require --yes")
+	pf.BoolVarP(&flagQuiet, "quiet", "q", false, "Suppress human acknowledgments, notes, progress, and prompts; preserve result data, warnings, and errors")
 	pf.StringVar(&flagAPIKey, "api-key", "", "API key for API-backed commands; overrides AXILIO_API_KEY and the saved key")
 	pf.StringVar(&flagBaseURL, "base-url", "", "API host for API-backed commands; overrides AXILIO_BASE_URL and saved base-url")
 	pf.StringVar(&flagOrg, "org", "", "OAuth organization slug or id; overrides AXILIO_ORG and the saved active org")

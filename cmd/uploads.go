@@ -65,12 +65,15 @@ func uploadsAddCmd() *cobra.Command {
 			}
 			p := printer()
 			p.Step("Uploading %s", filepath.Base(args[0]))
+			if err := p.Err(); err != nil {
+				return err
+			}
 			f, err := files.Upload(cmd.Context(), cl, args[0], opts...)
 			if err != nil {
 				return err
 			}
-			p.Emit(f, func() {
-				output.KV([][2]string{
+			return p.Emit(f, func() {
+				p.KV([][2]string{
 					{"ID", f.ID},
 					{"Filename", f.Filename},
 					{"Size", humanBytes(f.SizeBytes)},
@@ -78,7 +81,6 @@ func uploadsAddCmd() *cobra.Command {
 					{"Status", string(f.Status)},
 				})
 			})
-			return nil
 		},
 	}
 	cmd.Flags().StringVar(&filename, "filename", "", "Stored filename; omitted uses the local file's basename")
@@ -132,9 +134,9 @@ func uploadsListCmd() *cobra.Command {
 				return err
 			}
 			p := printer()
-			p.Emit(resp, func() {
+			return p.Emit(resp, func() {
 				if len(resp.Files) == 0 {
-					fmt.Println("No files in the library.")
+					p.Result("No files in the library.")
 				} else {
 					rows := [][]string{{"ID", "FILENAME", "SIZE", "TYPE", "STATUS", "CREATED"}}
 					for _, f := range resp.Files {
@@ -142,7 +144,7 @@ func uploadsListCmd() *cobra.Command {
 							f.ID, f.Filename, humanBytes(f.SizeBytes), f.MimeType, string(f.Status), ts(f.CreatedAt),
 						})
 					}
-					output.Table(rows)
+					p.Table(rows)
 				}
 				// Usage is on the listing so a caller can show "X of Y"
 				// without a second call; print it whether or not this page
@@ -155,7 +157,6 @@ func uploadsListCmd() *cobra.Command {
 					p.Note("showing %d of %d; use --limit / --offset to page", len(resp.Files), resp.Total)
 				}
 			})
-			return nil
 		},
 	}
 	cmd.Flags().Int64Var(&limit, "limit", 50, "Maximum files in this page")
@@ -205,12 +206,14 @@ func uploadsPushCmd() *cobra.Command {
 			}
 			p := printer()
 			p.Step("Pushing %s to phone %s", args[0], phoneID)
+			if err := p.Err(); err != nil {
+				return err
+			}
 			d, err := files.Push(cmd.Context(), cl, phoneID, args[0], opts...)
 			if err != nil {
 				return err
 			}
-			p.Emit(d, func() { printDelivery(p, d, wait) })
-			return nil
+			return p.Emit(d, func() { printDelivery(p, d, wait) })
 		},
 	}
 	cmd.Flags().StringVar(&phoneID, "phone-id", "", "Target phone ID from `phones mine` or remote sessions (required)")
@@ -230,8 +233,8 @@ func uploadsDeleteCmd() *cobra.Command {
 		Long: "Delete an upload from the active organization's library and free its " +
 			"storage quota. Use `uploads list` to discover the upload ID. Deletion also " +
 			"schedules removal from every phone holding or receiving a copy. Without --yes, " +
-			"table mode reads confirmation from stdin, including redirected input. JSON " +
-			"and quiet modes do not prompt and require --yes. The alias `uploads rm` " +
+			"table mode prompts only when stdin is a terminal. Redirected, JSON, and " +
+			"quiet execution do not prompt and require --yes. The alias `uploads rm` " +
 			"performs the same operation.",
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -246,6 +249,9 @@ func uploadsDeleteCmd() *cobra.Command {
 			prompt := fmt.Sprintf(
 				"Delete upload %s? Also recall it from phones holding or receiving a copy?", id)
 			if !yes && !p.Confirm(prompt) {
+				if err := p.Err(); err != nil {
+					return err
+				}
 				return exit.Usagef("aborted (pass --yes to delete non-interactively)")
 			}
 			if err := files.Delete(cmd.Context(), cl, id); err != nil {
@@ -254,13 +260,12 @@ func uploadsDeleteCmd() *cobra.Command {
 			// Emit rather than Note, so `--output json` produces a result a
 			// script can read. Note writes nothing in JSON mode, which made
 			// deletion the one verb with no machine-readable outcome.
-			p.Emit(deletedUpload{ID: id, Deleted: true}, func() {
-				p.Note("Deleted %s", id)
+			return p.Emit(deletedUpload{ID: id, Deleted: true}, func() {
+				p.Ack("Deleted %s", id)
 			})
-			return nil
 		},
 	}
-	cmd.Flags().BoolVarP(&yes, "yes", "y", false, "Delete without prompting; required in JSON or quiet mode")
+	cmd.Flags().BoolVarP(&yes, "yes", "y", false, "Delete without prompting; required in JSON, quiet, or redirected execution")
 	return cmd
 }
 
@@ -275,13 +280,13 @@ type deletedUpload struct {
 // printDelivery renders a delivery the same way for `uploads push` and
 // `phone send`, so the two verbs that create one agree on how it reads.
 func printDelivery(p *output.Printer, d *platformgo.FileDeliverySummary, waited bool) {
-	output.KV([][2]string{
+	p.KV([][2]string{
 		{"Delivery", d.ID},
 		{"File", d.Filename},
 		{"Status", string(d.Status)},
 	})
 	if d.Error != nil && *d.Error != "" {
-		p.Note("phone reported: %s", *d.Error)
+		p.Warn("phone reported: %s", *d.Error)
 	} else if !waited {
 		p.Note("pushed without requesting delivery receipt. In the future, add --wait if you want the cli to wait for delivery confirmation and report result.")
 	}

@@ -24,10 +24,10 @@ multi-language SDK support lands. It does three things:
 - **Phone control**: observe the screen and drive it (find, tap, type, swipe,
   key) over the phone's control channel, using the same vision primitives as the
   SDK.
-- **A scripting surface**: successful runnable application commands emit valid
-  JSON under `-o json` (except for the documented `sessions start --export`
-  shell contract), support quiet non-interactive operation, and return stable
-  exit codes.
+- **A scripting surface**: successful runnable application commands emit one
+  JSON document under `-o json`; `sessions start --export` is a separate exact
+  shell contract and rejects JSON. Commands support quiet non-interactive
+  operation and return stable exit codes.
 
 ## Install
 
@@ -220,8 +220,8 @@ Precedence rules:
 
 | Flag | Meaning |
 | --- | --- |
-| `-o, --output table\|json` | Result format for runnable application commands (default `table`). Built-in help, completion, and version output remains text. |
-| `-q, --quiet` | Suppress stderr notes and prompts; destructive commands still require `--yes`. |
+| `-o, --output table\|json` | Result format for runnable application commands (default `table`). JSON success is exactly one document. Built-in help, completion, and version remain text; `sessions start --export` rejects JSON. |
+| `-q, --quiet` | Preserve primary result data, warnings, and errors; suppress human acknowledgments, notes, progress, and prompts. Destructive commands still require `--yes`. |
 | `--no-color` | Disable ANSI color in human-oriented output. |
 | `--api-key` | API key for API-backed commands; overrides `AXILIO_API_KEY` and the saved key. |
 | `--base-url` | API host for API-backed commands; overrides `AXILIO_BASE_URL` and saved `base-url`. |
@@ -234,18 +234,24 @@ Run `axilio <command> --help` for the flags on any command. The root-only
 
 The CLI's output is a contract, not just cosmetics.
 
-- **`-o json`** writes a structured result to stdout for every successful
-  runnable application command — data verbs emit the API response, action
-  verbs emit a small acknowledgment (e.g.
+- **Streams:** primary data and successful action acknowledgments use stdout.
+  Notes, progress, prompts, warnings, and errors use stderr. Warnings and errors
+  remain visible in every output mode.
+- **`-o json`** writes exactly one structured result to stdout for every
+  successful runnable application command — data verbs emit the API response,
+  action verbs emit a small acknowledgment (e.g.
   `{"action":"tap","x":540,"y":1200}`), and deletions emit
   `{"id":...,"deleted":true}` — so those successes pipe cleanly into `jq`.
-  Human chrome (notes, prompts, spinners) uses stderr and is suppressed in JSON
-  mode. Built-in help and completion commands, bare parent-command help,
-  `--help`, and `--version` remain text. `sessions start --export` emits an
-  eval-able `export` line by contract.
-- **`-q, --quiet`** suppresses the stderr chrome entirely. Destructive commands
-  (`sessions stop`, `runs cancel`, `api-keys delete`, `uploads delete`) never
-  prompt in `--quiet` or JSON mode; pass `--yes` to proceed non-interactively.
+  Optional human acknowledgments, notes, progress, and prompts are suppressed.
+  Warnings and errors remain on stderr. Built-in help and completion commands,
+  bare parent-command help, `--help`, and `--version` remain text. `sessions
+  start --export` emits only an eval-able `export` line and cannot be combined
+  with JSON output.
+- **`-q, --quiet`** preserves primary data on stdout and warnings/errors on
+  stderr while suppressing human acknowledgments, notes, progress, and prompts.
+  Destructive commands (`sessions stop`, `runs cancel`, `api-keys delete`,
+  `uploads delete`) prompt only when stdin is a terminal. Quiet, JSON, and
+  redirected execution require `--yes` to proceed.
 - **Stable exit codes** let you branch on the outcome without parsing stderr:
 
   | Code | Meaning | Examples |
