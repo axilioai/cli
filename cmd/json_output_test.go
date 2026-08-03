@@ -2,10 +2,10 @@ package cmd
 
 import (
 	"encoding/json"
-	"strings"
 	"testing"
 
 	"github.com/axilioai/cli/internal/config"
+	"github.com/axilioai/cli/internal/exit"
 	"github.com/zalando/go-keyring"
 )
 
@@ -119,15 +119,20 @@ func TestSessionsStopJSON(t *testing.T) {
 	}
 }
 
-func TestSessionsCurrentNoneJSON(t *testing.T) {
+func TestSessionsCurrentMissingIsNotFound(t *testing.T) {
 	srv := fakeAPI(t)
-	out, err := run(t, srv, "-o", "json", "sessions", "current")
-	if err != nil {
-		t.Fatalf("sessions current: %v", err)
-	}
-	// No current session is an answer, not an error: a literal JSON null.
-	if strings.TrimSpace(out) != "null" {
-		t.Fatalf("want null on stdout, got %q", out)
+	for _, args := range [][]string{
+		{"sessions", "current"},
+		{"-o", "json", "sessions", "current"},
+		{"--quiet", "sessions", "current"},
+	} {
+		out, err := run(t, srv, args...)
+		if err == nil || exit.Classify(err) != exit.NotFound {
+			t.Fatalf("%v: got %v, want not-found error", args, err)
+		}
+		if out != "" {
+			t.Fatalf("%v: failure wrote stdout %q", args, out)
+		}
 	}
 }
 

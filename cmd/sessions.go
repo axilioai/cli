@@ -106,15 +106,11 @@ func sessionsCurrentCmd() *cobra.Command {
 			"session selection precedence is --session, AXILIO_SESSION, the only locally " +
 			"saved session, the most recently started session, then an ambiguity error. " +
 			"This command has no --session flag, so it starts at AXILIO_SESSION. If no " +
-			"session is selected, the command prints a note and exits 0.",
+			"session can be selected, the command exits with not-found status 4.",
 		RunE: func(_ *cobra.Command, _ []string) error {
 			s, err := session.Resolve("")
 			if err != nil {
-				// "No current session" is an answer, not a failure: exit 0, and
-				// in JSON mode say so with a literal null rather than silence.
-				p := printer()
-				p.Emit(nil, func() { p.Note("%s", err) })
-				return nil
+				return exit.With(exit.NotFound, err)
 			}
 			printer().Emit(s, func() {
 				output.KV([][2]string{
