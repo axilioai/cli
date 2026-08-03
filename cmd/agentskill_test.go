@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/axilioai/platform-go/drivers/mobile"
+	"github.com/zalando/go-keyring"
 )
 
 // The skill is a prompt: an agent reads it and writes SDK code a customer runs
@@ -37,6 +38,7 @@ import (
 var agentSkillBody string
 
 func TestMain(m *testing.M) {
+	keyring.MockInit()
 	body, err := fetchSkillBody(context.Background())
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "fetching the agent skill for TestSkill*: %v\n", err)
