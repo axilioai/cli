@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 	"testing"
 
@@ -453,6 +454,15 @@ func TestRenderedHelpUsesFlagOwnershipSections(t *testing.T) {
 			}
 		})
 	}
+}
+
+func findCommand(t *testing.T, root *cobra.Command, path string) *cobra.Command {
+	t.Helper()
+	command, _, err := root.Find(strings.Fields(path))
+	if err != nil || command == nil {
+		t.Fatalf("find command %q: %v", path, err)
+	}
+	return command
 }
 
 func TestHelpCaptureWriterPreservesFileDescriptor(t *testing.T) {

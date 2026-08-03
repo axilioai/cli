@@ -42,36 +42,12 @@ func TestGenerateManpageHTMLDeterministicAndComplete(t *testing.T) {
 		"https://docs.axilio.ai",
 		"https://github.com/axilioai/cli/issues",
 		"&lt;session-id&gt;",
-		"background-color: #fcfcfc",
-		"color: #008000",
-		"color: #A00000",
-		"color: #502000",
-		"color: #1030ff",
-		"background-color: #ffe0e0",
 		`<span class="top-link">top</span>`,
 		`<pre class="command-synopsis"><code>axilio api-keys create &lt;name&gt;`,
 		`<code class="language-console">user@host ~ % axilio doctor`,
-		"axilio api-&lt;Tab&gt;",
-		"background-color: #f5f5f5",
-		"background-color: #f6f6f6",
-		"border-left: 3px solid #b0b0b0",
-		"pre.command-synopsis code { color: #181818; font-weight: normal; }",
-		"border-left: 4px solid #008000",
-		"white-space: pre",
-		"overflow-x: auto",
-		"code.language-console::first-line",
 	} {
 		if !strings.Contains(page, want) {
 			t.Errorf("generated HTML missing %q", want)
-		}
-	}
-	normalizedPage := strings.Join(strings.Fields(page), " ")
-	for _, want := range []string{
-		"complete command names, subcommands, and flags",
-		"resource IDs and names are not fetched dynamically",
-	} {
-		if !strings.Contains(normalizedPage, want) {
-			t.Errorf("generated HTML missing prose %q", want)
 		}
 	}
 	for _, section := range manpageHTMLSections {

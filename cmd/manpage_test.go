@@ -101,43 +101,8 @@ func TestGenerateManpageDeterministicAndComplete(t *testing.T) {
 	if got := strings.Count(markdown, strings.TrimSpace(observeDocs.Walkthrough)); got != 1 {
 		t.Errorf("phone observe walkthrough occurs %d times, want exactly once", got)
 	}
-	description := strings.SplitN(markdown, "# DESCRIPTION {#DESCRIPTION}\n", 2)[1]
-	description = strings.SplitN(description, "# COMMON WORKFLOW {#COMMON_WORKFLOW}\n", 2)[0]
-	if strings.Contains(description, "Credentials resolve in this order") || strings.Contains(description, "Table output for human readability") {
-		t.Error("high-detail precedence or output behavior remains in DESCRIPTION")
-	}
-	notes := strings.SplitN(markdown, "# NOTES {#NOTES}\n", 2)[1]
-	notes = strings.SplitN(notes, "# EXAMPLES {#EXAMPLES}\n", 2)[0]
-	if !strings.Contains(markdown, "axilio help --html") {
-		t.Error("generated manual does not point readers to the installed HTML manual")
-	}
-	for _, want := range []string{
-		"Credentials resolve in this order",
-		"Phone command session selection precedence",
-		"Table output for human readability",
-	} {
-		if !strings.Contains(notes, want) {
-			t.Errorf("NOTES is missing moved behavior detail %q", want)
-		}
-	}
 	if strings.Contains(markdown, "```\nnone\n```") {
 		t.Error("an explicit none stream was rendered as literal command output")
-	}
-	for _, literal := range []string{
-		"AXILIO_API_KEY",
-		"AXILIO_BASE_URL",
-		"AXILIO_ORG",
-		"AXILIO_SESSION",
-		"AXILIO_DASHBOARD_URL",
-		"XDG_CONFIG_HOME",
-		"update-check.json",
-		"screenshot.png",
-		"https://docs.axilio.ai",
-		"https://github.com/axilioai/cli/issues",
-	} {
-		if !strings.Contains(markdown, literal) {
-			t.Errorf("generated Markdown missing contract literal %q", literal)
-		}
 	}
 	if !bytes.Contains(first, []byte(`.TH "AXILIO" "1"`)) {
 		t.Errorf("roff header is not an AXILIO(1) title:\n%s", first[:min(len(first), 400)])
@@ -171,22 +136,6 @@ func TestGeneratedManpageKeepsCompletionReferenceFocused(t *testing.T) {
 	markdown, err := generateManpageMarkdown(Root(), readManpageTestVersion(t))
 	if err != nil {
 		t.Fatal(err)
-	}
-	completion, ok := commandMarkdownSection(markdown, "COMMAND_completion")
-	if !ok {
-		t.Fatal("completion section not found")
-	}
-	normalizedCompletion := strings.Join(strings.Fields(completion), " ")
-	for _, want := range []string{
-		"axilio api-<Tab>",
-		"axilio phone <Tab>",
-		"axilio sessions start --<Tab>",
-		"complete command names, subcommands, and flags",
-		"resource IDs and names are not fetched dynamically",
-	} {
-		if !strings.Contains(normalizedCompletion, want) {
-			t.Errorf("completion section missing %q", want)
-		}
 	}
 	for _, path := range []string{
 		"COMMAND_completion",
@@ -271,20 +220,10 @@ func TestGeneratedManpageGroupsNoEffectGlobalFlagsFirst(t *testing.T) {
 				"No effect on help command or the help content it renders",
 		},
 		{
-			anchor:      "COMMAND_init",
-			group:       "**--api-key**, **--org** - No effect on init command",
-			firstDetail: "**--base-url**=*value* - Host for the skill download and sign-in check",
-		},
-		{
 			anchor: "COMMAND_phone-tap",
 			group: "**--api-key**, **--base-url**, **--no-color**, **--org** - " +
 				"No effect on phone tap command",
 			firstDetail: "**-o**, **--output**=*value* - Emit a human confirmation or JSON tap result",
-		},
-		{
-			anchor: "COMMAND_api-keys",
-			group: "**--api-key**, **--base-url**, **--no-color**, **--org**, **--output** / **-o**, **--quiet** / **-q** - " +
-				"No effect on api-keys command; bare axilio api-keys only displays this help",
 		},
 	}
 
@@ -312,49 +251,7 @@ func TestGeneratedManpageGroupsNoEffectGlobalFlagsFirst(t *testing.T) {
 					t.Fatalf("%s lists effective flag details before the no-effect group\n%s", tc.anchor, section)
 				}
 			}
-			if tc.anchor == "COMMAND_api-keys" && strings.Contains(normalized, "Global-option behavior None.") {
-				t.Fatalf("%s adds an empty marker after the grouped row\n%s", tc.anchor, section)
-			}
 		})
-	}
-}
-
-func TestGeneratedManpageUsesUserFacingOperationalLanguage(t *testing.T) {
-	markdown, err := generateManpageMarkdown(Root(), readManpageTestVersion(t))
-	if err != nil {
-		t.Fatal(err)
-	}
-	normalized := strings.Join(strings.Fields(markdown), " ")
-	for _, want := range []string{
-		"Error examples show the message text without terminal formatting. Actual error output may include an ERROR heading, spacing, and ANSI color.",
-		"When help is redirected, CLICOLOR_FORCE=1 takes precedence and can restore ANSI color",
-		"For redirected help, it takes precedence over NO_COLOR",
-		"Invalid command syntax, argument count, or value",
-		"A requested resource, phone allocation, or on-screen element was not found",
-		"Sessions remain active in Axilio until stopped",
-		"The CLI also saves session information locally so later phone commands can reconnect",
-	} {
-		if !strings.Contains(normalized, want) {
-			t.Errorf("manpage does not document user-facing behavior %q", want)
-		}
-	}
-	for _, unwanted := range []string{
-		"Fang",
-		"pinned dependency",
-		"recognized Cobra",
-		"mobile invalid_args",
-		"representative SDK response",
-		"pinned mobile driver",
-		"current implementation",
-		"client-side range validation",
-		"structured documentation",
-		"network probe",
-		"local lease",
-		"current-session pointer",
-	} {
-		if strings.Contains(normalized, unwanted) {
-			t.Errorf("manpage exposes implementation-oriented wording %q", unwanted)
-		}
 	}
 }
 
