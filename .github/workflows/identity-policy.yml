@@ -1,0 +1,74 @@
+name: Identity policy
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '30 6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  identity-allowlist:
+    name: identity-allowlist
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fetch every public head and tag
+        run: |
+          git fetch --force origin \
+            '+refs/heads/*:refs/remotes/origin/*' \
+            '+refs/tags/*:refs/tags/*'
+
+      - name: Exercise policy fixtures
+        run: .github/scripts/test-git-identities.sh
+
+      - name: Check event commit range
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          BEFORE_SHA: ${{ github.event.before }}
+        run: |
+          case "$EVENT_NAME" in
+            pull_request)
+              .github/scripts/check-git-identities.sh \
+                --policy .github/git-identity-allowlist.txt \
+                --range "${BASE_SHA}..${HEAD_SHA}"
+              ;;
+            push)
+              if [[ "$BEFORE_SHA" == 0000000000000000000000000000000000000000 ]]; then
+                .github/scripts/check-git-identities.sh \
+                  --policy .github/git-identity-allowlist.txt \
+                  --rev "$HEAD_SHA"
+              else
+                .github/scripts/check-git-identities.sh \
+                  --policy .github/git-identity-allowlist.txt \
+                  --range "${BEFORE_SHA}..${HEAD_SHA}"
+              fi
+              ;;
+            schedule|workflow_dispatch)
+              .github/scripts/check-git-identities.sh \
+                --policy .github/git-identity-allowlist.txt \
+                --inventory .github/git-identity-inventory.tsv \
+                --all
+              ;;
+            *)
+              echo "unsupported identity policy event" >&2
+              exit 1
+              ;;
+          esac
+
+      - name: Verify full public identity inventory
+        if: github.event_name == 'pull_request' || github.event_name == 'push'
+        run: |
+          .github/scripts/check-git-identities.sh \
+            --policy .github/git-identity-allowlist.txt \
+            --inventory .github/git-identity-inventory.tsv \
+            --all

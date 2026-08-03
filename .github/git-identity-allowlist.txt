@@ -1,0 +1,12 @@
+# Active organization and GitHub-generated identity families.
+domain axilio.ai
+domain-tree github.com
+
+# Historical external attribution retained only on these rewritten objects.
+grandfather 2609f2553363e551857d069443765d4dfbb1da9d trailer noreply@anthropic.com
+grandfather 3f53d8ab107351c1721d5e828c05859073882f89 trailer noreply@anthropic.com
+grandfather 4e2fc9e2dc3d0a90483c0cd52c9cdb9d6bcf80f5 trailer noreply@anthropic.com
+grandfather a803d577aa21d613a5e8bdb2c471f88b95264726 trailer noreply@anthropic.com
+grandfather dcaf5062fa39825371b2f0772daf4979f01ad772 trailer noreply@anthropic.com
+grandfather e590fb2b1e14d12872dc9088edd1cd0284ed2acf trailer noreply@anthropic.com
+grandfather e91b92cce4a9d7fed2971f1951bb86669fb7baec trailer noreply@anthropic.com

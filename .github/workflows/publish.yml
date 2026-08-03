@@ -57,6 +57,15 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Verify release identity policy
+        run: |
+          git config user.name "axilio-bot"
+          git config user.email "bot@axilio.ai"
+          .github/scripts/check-git-identities.sh \
+            --policy .github/git-identity-allowlist.txt \
+            --rev HEAD \
+            --active-email "$(git config user.email)"
+
       - name: Read version from VERSION
         id: ver
         run: |
@@ -79,8 +88,6 @@ jobs:
             echo "tag ${TAG} already exists on origin; leaving it alone"
             exit 0
           fi
-          git config user.name "axilio-bot"
-          git config user.email "bot@axilio.ai"
           git tag -a "${TAG}" -m "axilio CLI ${VERSION}"
           git push origin "${TAG}"
           echo "pushed ${TAG} at $(git rev-parse HEAD)"

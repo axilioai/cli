@@ -1,0 +1,9 @@
+/.github/CODEOWNERS @axilioai/axilio
+/.github/git-identity-allowlist.txt @axilioai/axilio
+/.github/git-identity-inventory.tsv @axilioai/axilio
+/.github/scripts/check-git-identities.sh @axilioai/axilio
+/.github/scripts/test-git-identities.sh @axilioai/axilio
+/.github/workflows/identity-policy.yml @axilioai/axilio
+/.github/workflows/publish.yml @axilioai/axilio
+/.githooks/pre-push @axilioai/axilio
+/scripts/install-git-hooks.sh @axilioai/axilio
