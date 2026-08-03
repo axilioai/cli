@@ -46,175 +46,126 @@ func captureUpgradeJSON(t *testing.T, check bool, deps upgradeDependencies) (upg
 	return result, nil
 }
 
-func useReleaseVersion(t *testing.T) {
-	t.Helper()
-	original := Version
-	Version = "v0.6.0"
-	t.Cleanup(func() { Version = original })
-}
+func TestUpgradeDecisionMatrix(t *testing.T) {
+	release := &update.Release{Tag: "v0.7.0"}
+	fetchFailure := errors.New("release lookup failed")
+	tests := []struct {
+		name        string
+		version     string
+		check       bool
+		homebrew    bool
+		release     *update.Release
+		fetchErr    error
+		want        upgradeResult
+		wantFetches int
+		wantApplies int
+	}{
+		{
+			name:    "development build stays toolchain-managed",
+			version: "dev",
+			check:   true,
+			want: upgradeResult{
+				Status: "dev-build", Current: "dev", InstallMethod: "go-toolchain",
+				NextCommand: "go install github.com/axilioai/cli@latest",
+			},
+		},
+		{
+			name:     "Homebrew apply returns guidance without fetching",
+			version:  "v0.6.0",
+			homebrew: true,
+			release:  release,
+			want: upgradeResult{
+				Status: "homebrew-managed", Current: "v0.6.0", InstallMethod: "homebrew",
+				NextCommand: "brew upgrade axilio",
+			},
+		},
+		{
+			name:        "Homebrew check fetches without applying",
+			version:     "v0.6.0",
+			check:       true,
+			homebrew:    true,
+			release:     release,
+			wantFetches: 1,
+			want: upgradeResult{
+				Status: "update-available", Current: "v0.6.0", Latest: "v0.7.0",
+				UpdateAvailable: true, InstallMethod: "homebrew", NextCommand: "brew upgrade axilio",
+			},
+		},
+		{
+			name:        "standalone check never applies",
+			version:     "v0.6.0",
+			check:       true,
+			release:     release,
+			wantFetches: 1,
+			want: upgradeResult{
+				Status: "update-available", Current: "v0.6.0", Latest: "v0.7.0",
+				UpdateAvailable: true, InstallMethod: "standalone", NextCommand: "axilio upgrade",
+			},
+		},
+		{
+			name:        "standalone apply installs available release",
+			version:     "v0.6.0",
+			release:     release,
+			wantFetches: 1,
+			wantApplies: 1,
+			want: upgradeResult{
+				Status: "upgraded", Current: "v0.6.0", Latest: "v0.7.0", InstallMethod: "standalone",
+			},
+		},
+		{
+			name:        "empty release feed is successful",
+			version:     "v0.6.0",
+			check:       true,
+			homebrew:    true,
+			wantFetches: 1,
+			want: upgradeResult{
+				Status: "no-releases", Current: "v0.6.0", InstallMethod: "homebrew",
+			},
+		},
+		{
+			name:        "fetch failure is returned without applying",
+			version:     "v0.6.0",
+			check:       true,
+			homebrew:    true,
+			fetchErr:    fetchFailure,
+			wantFetches: 1,
+		},
+	}
 
-func TestUpgradeDevBuildNoNetwork(t *testing.T) {
-	fetches := 0
-	applies := 0
-	result, err := captureUpgradeJSON(t, true, upgradeDependencies{
-		isHomebrew: func() bool { return true },
-		fetchLatest: func(context.Context) (*update.Release, error) {
-			fetches++
-			return nil, nil
-		},
-		apply: func(context.Context, *update.Release) error {
-			applies++
-			return nil
-		},
-	})
-	if err != nil {
-		t.Fatalf("upgrade --check on a dev build: %v", err)
-	}
-	if result.Status != "dev-build" || result.InstallMethod != "go-toolchain" {
-		t.Fatalf("unexpected result: %+v", result)
-	}
-	if fetches != 0 || applies != 0 {
-		t.Fatalf("dev build fetched %d times and applied %d times", fetches, applies)
-	}
-}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			originalVersion := Version
+			Version = tc.version
+			t.Cleanup(func() { Version = originalVersion })
 
-func TestUpgradeHomebrewApplyReturnsGuidanceWithoutFetch(t *testing.T) {
-	useReleaseVersion(t)
-	fetches := 0
-	applies := 0
-	result, err := captureUpgradeJSON(t, false, upgradeDependencies{
-		isHomebrew: func() bool { return true },
-		fetchLatest: func(context.Context) (*update.Release, error) {
-			fetches++
-			return &update.Release{Tag: "v0.7.0"}, nil
-		},
-		apply: func(context.Context, *update.Release) error {
-			applies++
-			return nil
-		},
-	})
-	if err != nil {
-		t.Fatalf("upgrade on Homebrew install: %v", err)
-	}
-	if result.Status != "homebrew-managed" || result.InstallMethod != "homebrew" || result.NextCommand != "brew upgrade axilio" {
-		t.Fatalf("unexpected result: %+v", result)
-	}
-	if fetches != 0 || applies != 0 {
-		t.Fatalf("Homebrew apply path fetched %d times and applied %d times", fetches, applies)
-	}
-}
-
-func TestUpgradeCheckHomebrewFetchesWithoutApplying(t *testing.T) {
-	useReleaseVersion(t)
-	fetches := 0
-	applies := 0
-	result, err := captureUpgradeJSON(t, true, upgradeDependencies{
-		isHomebrew: func() bool { return true },
-		fetchLatest: func(context.Context) (*update.Release, error) {
-			fetches++
-			return &update.Release{Tag: "v0.7.0"}, nil
-		},
-		apply: func(context.Context, *update.Release) error {
-			applies++
-			return nil
-		},
-	})
-	if err != nil {
-		t.Fatalf("upgrade --check on Homebrew install: %v", err)
-	}
-	if result.Status != "update-available" || !result.UpdateAvailable || result.InstallMethod != "homebrew" || result.NextCommand != "brew upgrade axilio" {
-		t.Fatalf("unexpected result: %+v", result)
-	}
-	if fetches != 1 || applies != 0 {
-		t.Fatalf("Homebrew check fetched %d times and applied %d times", fetches, applies)
-	}
-}
-
-func TestUpgradeCheckStandaloneNeverApplies(t *testing.T) {
-	useReleaseVersion(t)
-	applies := 0
-	result, err := captureUpgradeJSON(t, true, upgradeDependencies{
-		isHomebrew: func() bool { return false },
-		fetchLatest: func(context.Context) (*update.Release, error) {
-			return &update.Release{Tag: "v0.7.0"}, nil
-		},
-		apply: func(context.Context, *update.Release) error {
-			applies++
-			return nil
-		},
-	})
-	if err != nil {
-		t.Fatalf("upgrade --check: %v", err)
-	}
-	if result.InstallMethod != "standalone" || result.NextCommand != "axilio upgrade" || !result.UpdateAvailable {
-		t.Fatalf("unexpected result: %+v", result)
-	}
-	if applies != 0 {
-		t.Fatalf("check path applied %d times", applies)
-	}
-}
-
-func TestUpgradeStandaloneAppliesAvailableRelease(t *testing.T) {
-	useReleaseVersion(t)
-	applies := 0
-	result, err := captureUpgradeJSON(t, false, upgradeDependencies{
-		isHomebrew: func() bool { return false },
-		fetchLatest: func(context.Context) (*update.Release, error) {
-			return &update.Release{Tag: "v0.7.0"}, nil
-		},
-		apply: func(_ context.Context, rel *update.Release) error {
-			applies++
-			if rel.Tag != "v0.7.0" {
-				t.Fatalf("apply release = %q", rel.Tag)
+			fetches, applies := 0, 0
+			result, err := captureUpgradeJSON(t, tc.check, upgradeDependencies{
+				isHomebrew: func() bool { return tc.homebrew },
+				fetchLatest: func(context.Context) (*update.Release, error) {
+					fetches++
+					return tc.release, tc.fetchErr
+				},
+				apply: func(_ context.Context, got *update.Release) error {
+					applies++
+					if tc.release == nil || got == nil || got.Tag != tc.release.Tag {
+						t.Errorf("applied release = %#v, want %#v", got, tc.release)
+					}
+					return nil
+				},
+			})
+			switch {
+			case tc.fetchErr != nil:
+				if !errors.Is(err, tc.fetchErr) {
+					t.Fatalf("error = %v, want %v", err, tc.fetchErr)
+				}
+			case err != nil:
+				t.Fatal(err)
+			case result != tc.want:
+				t.Fatalf("result = %+v, want %+v", result, tc.want)
 			}
-			return nil
-		},
-	})
-	if err != nil {
-		t.Fatalf("upgrade: %v", err)
-	}
-	if result.Status != "upgraded" || result.Latest != "v0.7.0" || result.InstallMethod != "standalone" {
-		t.Fatalf("unexpected result: %+v", result)
-	}
-	if applies != 1 {
-		t.Fatalf("apply calls = %d, want 1", applies)
-	}
-}
-
-func TestUpgradeCheckNoReleases(t *testing.T) {
-	useReleaseVersion(t)
-	result, err := captureUpgradeJSON(t, true, upgradeDependencies{
-		isHomebrew:  func() bool { return true },
-		fetchLatest: func(context.Context) (*update.Release, error) { return nil, nil },
-		apply: func(context.Context, *update.Release) error {
-			t.Fatal("check must not apply")
-			return nil
-		},
-	})
-	if err != nil {
-		t.Fatalf("upgrade --check: %v", err)
-	}
-	if result.Status != "no-releases" || result.Latest != "" || result.UpdateAvailable || result.InstallMethod != "homebrew" {
-		t.Fatalf("unexpected result: %+v", result)
-	}
-}
-
-func TestUpgradeCheckSurfacesFetchFailure(t *testing.T) {
-	useReleaseVersion(t)
-	want := errors.New("release lookup failed")
-	applies := 0
-	_, err := captureUpgradeJSON(t, true, upgradeDependencies{
-		isHomebrew:  func() bool { return true },
-		fetchLatest: func(context.Context) (*update.Release, error) { return nil, want },
-		apply: func(context.Context, *update.Release) error {
-			applies++
-			return nil
-		},
-	})
-	if !errors.Is(err, want) {
-		t.Fatalf("got %v, want %v", err, want)
-	}
-	if applies != 0 {
-		t.Fatalf("failed check applied %d times", applies)
+			if fetches != tc.wantFetches || applies != tc.wantApplies {
+				t.Fatalf("fetches/applies = %d/%d, want %d/%d", fetches, applies, tc.wantFetches, tc.wantApplies)
+			}
+		})
 	}
 }
