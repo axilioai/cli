@@ -134,20 +134,26 @@ func sessionsStartCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "start",
 		Short: "Acquire a phone and open a session that remains active until stopped.",
-		Long: "Acquire an Android phone by default. The session remains active in Axilio " +
+		Long: "Acquire an Android phone. The CLI currently supports Android allocation " +
+			"only; --phone-type remains available for scripts that pass android explicitly, " +
+			"and any other value is a usage error. The session remains active in Axilio " +
 			"until stopped; the CLI saves its connection information locally and marks " +
-			"it as the most recently started session. Select iphone with --phone-type, pin " +
-			"a dedicated phone discovered through `phones mine` with --phone-id, or " +
+			"it as the most recently started session. Pin a dedicated phone discovered " +
+			"through `phones mine` with --phone-id, or " +
 			"attach the session to a workflow with --workflow. --export prints only " +
 			"`export AXILIO_SESSION=<id>` for shell eval; that shell syntax also wins " +
 			"when -o json is supplied.",
 		RunE: func(_ *cobra.Command, _ []string) error {
+			normalizedPhoneType := strings.ToLower(strings.TrimSpace(phoneType))
+			if normalizedPhoneType != string(platformgo.PhoneAllocateRequestPhoneTypeAndroid) {
+				return exit.Usagef("unsupported --phone-type %q; supported value: android", phoneType)
+			}
 			cl, err := newClient()
 			if err != nil {
 				return err
 			}
 			req := &platformgo.PhoneAllocateRequest{
-				PhoneType: platformgo.PhoneAllocateRequestPhoneType(strings.ToLower(strings.TrimSpace(phoneType))),
+				PhoneType: platformgo.PhoneAllocateRequestPhoneTypeAndroid,
 			}
 			if phoneID != "" {
 				req.PhoneID = &phoneID
@@ -166,7 +172,7 @@ func sessionsStartCmd() *cobra.Command {
 				_ = session.Save(session.Session{
 					SessionID:  a.SessionID,
 					PhoneID:    a.PhoneID,
-					PhoneType:  strings.ToLower(strings.TrimSpace(phoneType)),
+					PhoneType:  normalizedPhoneType,
 					ControlURL: *a.ControlURL,
 				})
 			}
@@ -194,7 +200,7 @@ func sessionsStartCmd() *cobra.Command {
 			return nil
 		},
 	}
-	cmd.Flags().StringVar(&phoneType, "phone-type", "android", "Phone platform to allocate: android or iphone")
+	cmd.Flags().StringVar(&phoneType, "phone-type", "android", "Phone platform to allocate (currently only android)")
 	cmd.Flags().StringVar(&phoneID, "phone-id", "", "Pin a dedicated phone ID from `phones mine` instead of pool allocation")
 	cmd.Flags().StringVar(&workflowID, "workflow", "", "Workflow ID to attach; omit for an interactive session")
 	cmd.Flags().BoolVar(&export, "export", false, "Print only `export AXILIO_SESSION=<id>` for shell eval")

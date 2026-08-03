@@ -10,6 +10,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
+type phonesListResult struct {
+	AndroidCount int64                      `json:"android_count"`
+	Phones       []*platformgo.PhoneSummary `json:"phones"`
+}
+
 func phonesCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "phones",
@@ -42,11 +47,14 @@ func phonesListCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			resp, err := cl.Phones.Available(context.Background(), &platformgo.PhonesAvailableRequest{})
+			resp, err := cl.Phones.Available(context.Background(), &platformgo.PhonesAvailableRequest{
+				PhoneType: platformgo.PhonesAvailableRequestPhoneTypeAndroid.Ptr(),
+			})
 			if err != nil {
 				return err
 			}
-			printer().Emit(resp, func() {
+			result := phonesListResult{AndroidCount: resp.AndroidCount, Phones: resp.Phones}
+			printer().Emit(result, func() {
 				if len(resp.Phones) == 0 {
 					fmt.Println("No phones available.")
 					return

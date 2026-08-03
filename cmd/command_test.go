@@ -31,6 +31,9 @@ func fakeAPI(t *testing.T) *httptest.Server {
 		case strings.Contains(p, "/phones/deallocate"):
 			body = `{"success":true}`
 		case strings.Contains(p, "/phones/available"):
+			if got := r.URL.Query().Get("phone_type"); got != "android" {
+				t.Errorf("phones list requested phone_type %q, want android", got)
+			}
 			body = `{"android_count":1,"iphone_count":0,"phones":[
 				{"phone_id":"p1","phone_type":"android","model_name":"Pixel 8","status":"active"}]}`
 		case strings.Contains(p, "/api-keys"):
@@ -112,14 +115,62 @@ func TestStatusJSON(t *testing.T) {
 	}
 }
 
-func TestPhonesListJSON(t *testing.T) {
+func TestPhonesListJSONOwnsAndroidOnlyShape(t *testing.T) {
 	srv := fakeAPI(t)
 	out, err := run(t, srv, "-o", "json", "phones", "list")
 	if err != nil {
 		t.Fatalf("phones list: %v", err)
 	}
-	if !strings.Contains(out, `"phone_id": "p1"`) {
-		t.Fatalf("expected the fake phone in output:\n%s", out)
+	var got map[string]json.RawMessage
+	if err := json.Unmarshal([]byte(out), &got); err != nil {
+		t.Fatalf("decode phones list JSON: %v", err)
+	}
+	if _, ok := got["iphone_count"]; ok {
+		t.Error("phones list exposed the upstream-only iphone_count field")
+	}
+	if got["android_count"] == nil || got["phones"] == nil {
+		t.Fatalf("phones list omitted its Android inventory fields: %s", out)
+	}
+}
+
+func TestSessionsStartRejectsUnsupportedPhoneTypeBeforeAuth(t *testing.T) {
+	keyring.MockInit()
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	t.Setenv("AXILIO_API_KEY", "")
+	t.Setenv("AXILIO_BASE_URL", "")
+
+	root := Root()
+	root.SetArgs([]string{"sessions", "start", "--phone-type", "iphone"})
+	err := root.Execute()
+	if got := exit.Classify(err); got != exit.Usage {
+		t.Fatalf("exit code = %d, want %d (usage): %v", got, exit.Usage, err)
+	}
+}
+
+func TestSessionsStartNormalizesAndroidPhoneType(t *testing.T) {
+	var gotPhoneType string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !strings.Contains(r.URL.Path, "/phones/allocate") {
+			http.NotFound(w, r)
+			return
+		}
+		var body struct {
+			PhoneType string `json:"phone_type"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			t.Errorf("decode allocation request: %v", err)
+		}
+		gotPhoneType = body.PhoneType
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = io.WriteString(w, `{"phone_id":"p1","session_id":"s1","workflow_started_at":"2026-08-03T00:00:00Z"}`)
+	}))
+	t.Cleanup(srv.Close)
+
+	if _, err := run(t, srv, "sessions", "start", "--phone-type", " ANDROID "); err != nil {
+		t.Fatalf("sessions start: %v", err)
+	}
+	if gotPhoneType != "android" {
+		t.Fatalf("allocation phone_type = %q, want android", gotPhoneType)
 	}
 }
 
