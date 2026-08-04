@@ -1,7 +1,7 @@
 package cmd
 
 //go:generate go run ./manpage --version-file ../VERSION ../man/axilio.1
-//go:generate sh ../scripts/generate_manpage_html.sh ../man/axilio.1
+//go:generate go run ./manpage --html --version-file ../VERSION ../man/axilio.1.html
 
 import (
 	"bytes"
@@ -48,9 +48,9 @@ func roffFromMarkdown(markdown string) []byte {
 	return append(roff, '\n')
 }
 
-// mandoc's HTML renderer drops empty source lines inside .EX/.EE blocks. Use
-// the standard vertical-space request so both terminal and HTML renderers keep
-// the intentional separation between stdout, stderr, exit status, and notes.
+// Roff formatters drop empty source lines inside .EX/.EE blocks. Use the
+// standard vertical-space request so the rendered manual keeps the intentional
+// separation between stdout, stderr, exit status, and notes.
 func preserveLiteralBlankLines(roff []byte) []byte {
 	lines := bytes.Split(roff, []byte("\n"))
 	inLiteral := false
@@ -174,7 +174,7 @@ func writeCommandTree(b *strings.Builder, root, command *cobra.Command, level in
 }
 
 func writeCommandReference(b *strings.Builder, root, command *cobra.Command) {
-	writeLiteral(b, command.UseLine())
+	writeSynopsisLiteral(b, command.UseLine())
 	docs, hasDocs := commandDocs(command)
 	description := firstNonempty(command.Long, command.Short)
 	if hasDocs {
@@ -619,6 +619,13 @@ func writeLiteral(b *strings.Builder, text string) {
 
 func writeTerminalLiteral(b *strings.Builder, text string) {
 	writeFencedLiteral(b, text, "console")
+}
+
+// writeSynopsisLiteral marks a command's use line so the HTML manual can style
+// it apart from ordinary literal blocks. roff has no notion of an info string,
+// so this is invisible to man/axilio.1.
+func writeSynopsisLiteral(b *strings.Builder, text string) {
+	writeFencedLiteral(b, text, "synopsis")
 }
 
 func writeFencedLiteral(b *strings.Builder, text, language string) {

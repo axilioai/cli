@@ -1,4 +1,6 @@
-// Command manpage writes or verifies the checked-in axilio(1) roff and HTML pages.
+// Command manpage writes or verifies the generated axilio(1) manual pages.
+// Both formats render from the same command tree: the roff page is checked in,
+// and the HTML page is a build artifact produced at package time.
 package main
 
 import (
@@ -15,24 +17,23 @@ import (
 func main() {
 	var (
 		check       bool
-		htmlOnly    bool
+		asHTML      bool
 		versionFile string
 	)
-	flag.BoolVar(&check, "check", false, "verify the checked-in page without writing it")
-	flag.BoolVar(&htmlOnly, "html-only", false, "convert an existing roff page to HTML")
+	flag.BoolVar(&check, "check", false, "verify the existing page without writing it")
+	flag.BoolVar(&asHTML, "html", false, "render the browser manual instead of the roff page")
 	flag.StringVar(&versionFile, "version-file", "VERSION", "path to the source version file")
 	flag.Parse()
 
 	if flag.NArg() > 1 {
-		fatalf("usage: go run ./cmd/manpage [--check] [--html-only] [--version-file VERSION] [man/axilio.1]")
+		fatalf("usage: go run ./cmd/manpage [--check] [--html] [--version-file VERSION] [output]")
 	}
 	output := "man/axilio.1"
+	if asHTML {
+		output += ".html"
+	}
 	if flag.NArg() == 1 {
 		output = flag.Arg(0)
-	}
-	if htmlOnly {
-		generateHTML(output, check)
-		return
 	}
 
 	versionBytes, err := os.ReadFile(versionFile)
@@ -40,34 +41,22 @@ func main() {
 		fatalf("read version file %s: %v", versionFile, err)
 	}
 	version := strings.TrimSpace(string(versionBytes))
-	generated, err := cmd.GenerateManpage(cmd.Root(), version)
+
+	generate := cmd.GenerateManpage
+	if asHTML {
+		generate = cmd.GenerateManpageHTML
+	}
+	generated, err := generate(cmd.Root(), version)
 	if err != nil {
 		fatalf("generate %s: %v", output, err)
 	}
+
 	if check {
 		checkGenerated(output, generated)
 		return
 	}
-
 	if err := os.MkdirAll(filepath.Dir(output), 0o755); err != nil {
 		fatalf("create manpage directory: %v", err)
-	}
-	writeGenerated(output, generated)
-}
-
-func generateHTML(manpage string, check bool) {
-	roff, err := os.ReadFile(manpage)
-	if err != nil {
-		fatalf("read %s: %v", manpage, err)
-	}
-	generated, err := cmd.GenerateManpageHTML(roff)
-	if err != nil {
-		fatalf("generate %s.html: %v", manpage, err)
-	}
-	output := manpage + ".html"
-	if check {
-		checkGenerated(output, generated)
-		return
 	}
 	writeGenerated(output, generated)
 }

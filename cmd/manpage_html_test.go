@@ -2,23 +2,17 @@ package cmd
 
 import (
 	"bytes"
-	"os/exec"
 	"strings"
 	"testing"
 )
 
 func TestGenerateManpageHTMLDeterministicAndComplete(t *testing.T) {
-	requireMandoc(t)
 	version := readManpageTestVersion(t)
-	roff, err := GenerateManpage(Root(), version)
+	first, err := GenerateManpageHTML(Root(), version)
 	if err != nil {
 		t.Fatal(err)
 	}
-	first, err := GenerateManpageHTML(roff)
-	if err != nil {
-		t.Fatal(err)
-	}
-	second, err := GenerateManpageHTML(roff)
+	second, err := GenerateManpageHTML(Root(), version)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -36,7 +30,7 @@ func TestGenerateManpageHTMLDeterministicAndComplete(t *testing.T) {
 		`<span class="headline">`,
 		"<i>AXILIO</i>(1)",
 		"Axilio CLI Manual",
-		"Generated from man/axilio.1 for axilio " + version,
+		"for axilio " + version,
 		"https://docs.axilio.ai",
 		"https://github.com/axilioai/cli/issues",
 		"&lt;session-id&gt;",
@@ -87,23 +81,38 @@ func TestGenerateManpageHTMLDeterministicAndComplete(t *testing.T) {
 	}
 }
 
-func TestGenerateManpageHTMLRejectsInvalidInputs(t *testing.T) {
-	for name, manpage := range map[string][]byte{
-		"nil":            nil,
-		"empty":          []byte("  \n"),
-		"missing header": []byte(".SH NAME\naxilio\n"),
+// Inline code renders as <code>, which only styles as emphasis outside a
+// literal block. Terminal transcripts and command synopses must keep their
+// own block styling.
+func TestGenerateManpageHTMLStylesInlineCodeApartFromLiteralBlocks(t *testing.T) {
+	page, err := GenerateManpageHTML(Root(), readManpageTestVersion(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(page), ":not(pre) > code {") {
+		t.Error("inline code has no style distinct from literal blocks")
+	}
+	for _, want := range []string{
+		// Backticked prose, styled as emphasis.
+		"<code>axilio sessions start --export</code>",
+		// Literal blocks, styled as blocks.
+		`<pre class="terminal"><code class="language-console">`,
+		`<pre class="command-synopsis"><code>`,
 	} {
-		t.Run(name, func(t *testing.T) {
-			if _, err := GenerateManpageHTML(manpage); err == nil {
-				t.Fatal("GenerateManpageHTML returned no error")
-			}
-		})
+		if !strings.Contains(string(page), want) {
+			t.Errorf("generated HTML missing %q", want)
+		}
 	}
 }
 
-func requireMandoc(t *testing.T) {
-	t.Helper()
-	if _, err := exec.LookPath("mandoc"); err != nil {
-		t.Skip("mandoc not installed")
+func TestGenerateManpageHTMLRejectsInvalidInputs(t *testing.T) {
+	if _, err := GenerateManpageHTML(nil, "0.7.0"); err == nil {
+		t.Error("nil root did not fail")
+	}
+	if _, err := GenerateManpageHTML(Root(), "\n"); err == nil {
+		t.Error("empty version did not fail")
+	}
+	if _, err := GenerateManpageHTML(Root(), "bad\nversion"); err == nil {
+		t.Error("version containing a newline did not fail")
 	}
 }

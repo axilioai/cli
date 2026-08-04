@@ -13,9 +13,9 @@ before:
     # Fail the release if command metadata changed without regenerating the
     # checked-in page, or if mandoc finds even a non-fatal diagnostic.
     - sh scripts/check_manpage.sh
-    # The HTML manual is derived from man/axilio.1 here at package time; it is
-    # not checked in.
-    - sh scripts/generate_manpage_html.sh
+    # The HTML manual renders from the same command tree here at package time;
+    # it is not checked in.
+    - go run ./cmd/manpage --html man/axilio.1.html
 
 builds:
   - id: axilio
