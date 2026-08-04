@@ -121,7 +121,7 @@ func (r *manpageHTMLRenderer) RenderNode(w io.Writer, node *blackfriday.Node, en
 		// Only the manual's top-level sections are in the page navigation, so
 		// only they get a link back to it.
 		if node.Level == 1 {
-			io.WriteString(w, ` &nbsp; &nbsp; &nbsp; &nbsp; `+
+			fmt.Fprint(w, ` &nbsp; &nbsp; &nbsp; &nbsp; `+
 				`<a href="#top_of_page"><span class="top-link">top</span></a>`)
 		}
 		fmt.Fprintf(w, "</h%d>\n", level)
