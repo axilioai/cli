@@ -51,7 +51,7 @@ curl -fsSL https://axilio.ai/install.sh |
   INSTALL_DIR="$HOME/.local/bin" MAN_DIR="$HOME/.local/share/man/man1" sh
 ```
 
-The script installs the latest release for your OS/arch. Set `VERSION=v0.6.1`
+The script installs the latest release for your OS/arch. Set `VERSION=v0.7.0`
 to pin a release. It installs both manuals to `MAN_DIR` when set; otherwise it
 derives `<prefix>/share/man/man1` only when `INSTALL_DIR` ends in `/bin` or
 `/sbin`. An arbitrary executable layout or an unavailable manual destination

@@ -34,7 +34,7 @@ func fakeAPI(t *testing.T) *httptest.Server {
 			if got := r.URL.Query().Get("phone_type"); got != "android" {
 				t.Errorf("phones list requested phone_type %q, want android", got)
 			}
-			body = `{"android_count":1,"iphone_count":0,"phones":[
+			body = `{"android_count":1,"phones":[
 				{"phone_id":"p1","phone_type":"android","model_name":"Pixel 8","status":"active"}]}`
 		case strings.Contains(p, "/api-keys"):
 			body = `{"api_keys":[
@@ -115,7 +115,7 @@ func TestStatusJSON(t *testing.T) {
 	}
 }
 
-func TestPhonesListJSONOwnsAndroidOnlyShape(t *testing.T) {
+func TestPhonesListJSONUsesAndroidOnlyContract(t *testing.T) {
 	srv := fakeAPI(t)
 	out, err := run(t, srv, "-o", "json", "phones", "list")
 	if err != nil {
@@ -126,10 +126,34 @@ func TestPhonesListJSONOwnsAndroidOnlyShape(t *testing.T) {
 		t.Fatalf("decode phones list JSON: %v", err)
 	}
 	if _, ok := got["iphone_count"]; ok {
-		t.Error("phones list exposed the upstream-only iphone_count field")
+		t.Error("phones list exposed the removed iphone_count field")
 	}
 	if got["android_count"] == nil || got["phones"] == nil {
 		t.Fatalf("phones list omitted its Android inventory fields: %s", out)
+	}
+}
+
+func TestPhonesListJSONPreservesEmptyPhonesArray(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !strings.Contains(r.URL.Path, "/phones/available") {
+			http.NotFound(w, r)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = io.WriteString(w, `{"android_count":0,"phones":[]}`)
+	}))
+	t.Cleanup(srv.Close)
+
+	out, err := run(t, srv, "-o", "json", "phones", "list")
+	if err != nil {
+		t.Fatalf("phones list: %v", err)
+	}
+	var got map[string]json.RawMessage
+	if err := json.Unmarshal([]byte(out), &got); err != nil {
+		t.Fatalf("decode phones list JSON: %v", err)
+	}
+	if !bytes.Equal(bytes.TrimSpace(got["phones"]), []byte("[]")) {
+		t.Fatalf("phones list did not preserve its required empty array: %s", out)
 	}
 }
 
