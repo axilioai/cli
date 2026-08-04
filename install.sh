@@ -23,6 +23,50 @@ err() {
 	exit 1
 }
 
+# --- write helpers --------------------------------------------------------
+# ensure_dir and put_file return non-zero rather than exiting, so each caller
+# decides whether a failure is fatal (the binary) or best effort (manuals).
+# sudo is attempted only after the unprivileged path fails.
+have_sudo() { command -v sudo >/dev/null 2>&1; }
+
+# Reason suffix for a failure message, accurate whether or not sudo exists.
+sudo_note() {
+	if have_sudo; then
+		printf 'even with elevated permissions'
+	else
+		printf 'and sudo is unavailable'
+	fi
+}
+
+trim_slashes() {
+	ts_value=$1
+	while [ "$ts_value" != "/" ] && [ "${ts_value%/}" != "$ts_value" ]; do
+		ts_value=${ts_value%/}
+	done
+	printf '%s' "$ts_value"
+}
+
+ensure_dir() {
+	[ -d "$1" ] && return 0
+	mkdir -p "$1" 2>/dev/null && return 0
+	have_sudo || return 1
+	sudo mkdir -p "$1" 2>/dev/null
+}
+
+# put_file MODE SRC DEST_DIR NAME
+put_file() {
+	pf_mode=$1
+	pf_src=$2
+	pf_dir=$3
+	pf_name=$4
+	if [ -w "$pf_dir" ] && install -m "$pf_mode" "$pf_src" "$pf_dir/$pf_name" 2>/dev/null; then
+		return 0
+	fi
+	have_sudo || return 1
+	info "Writing to $pf_dir needs elevated permissions…"
+	sudo install -m "$pf_mode" "$pf_src" "$pf_dir/$pf_name" 2>/dev/null
+}
+
 # --- platform -------------------------------------------------------------
 os=$(uname -s | tr '[:upper:]' '[:lower:]')
 arch=$(uname -m)
@@ -57,19 +101,19 @@ trap 'rm -rf "$tmp"' EXIT
 info "Downloading $BIN $version ($os/$arch)…"
 curl -fsSL "$base/$archive" -o "$tmp/$archive" || err "download failed: $base/$archive"
 
-# --- verify checksum (fail closed when a sum is published) ---------------
-if curl -fsSL "$base/checksums.txt" -o "$tmp/checksums.txt" 2>/dev/null; then
-	want=$(grep " $archive\$" "$tmp/checksums.txt" 2>/dev/null | awk '{print $1}' | head -n1)
-	[ -n "$want" ] || err "no checksum listed for $archive"
-	if command -v sha256sum >/dev/null 2>&1; then
-		got=$(sha256sum "$tmp/$archive" | awk '{print $1}')
-	elif command -v shasum >/dev/null 2>&1; then
-		got=$(shasum -a 256 "$tmp/$archive" | awk '{print $1}')
-	else
-		err "sha256sum or shasum is required to verify $archive"
-	fi
-	[ "$got" = "$want" ] || err "checksum mismatch for $archive"
+# --- verify checksum (always; every release publishes checksums.txt) ------
+curl -fsSL "$base/checksums.txt" -o "$tmp/checksums.txt" 2>/dev/null ||
+	err "could not download $base/checksums.txt; refusing to install unverified bytes"
+want=$(grep " $archive\$" "$tmp/checksums.txt" 2>/dev/null | awk '{print $1}' | head -n1)
+[ -n "$want" ] || err "no checksum listed for $archive"
+if command -v sha256sum >/dev/null 2>&1; then
+	got=$(sha256sum "$tmp/$archive" | awk '{print $1}')
+elif command -v shasum >/dev/null 2>&1; then
+	got=$(shasum -a 256 "$tmp/$archive" | awk '{print $1}')
+else
+	err "sha256sum or shasum is required to verify $archive"
 fi
+[ "$got" = "$want" ] || err "checksum mismatch for $archive"
 
 tar -xzf "$tmp/$archive" -C "$tmp" || err "failed to extract $archive"
 [ -f "$tmp/$BIN" ] || err "$BIN not found in the archive"
@@ -84,110 +128,50 @@ if [ -z "$dir" ]; then
 		dir="$HOME/.local/bin"
 	fi
 fi
-while [ "$dir" != "/" ] && [ "${dir%/}" != "$dir" ]; do
-	dir=${dir%/}
-done
+dir=$(trim_slashes "$dir")
 
 # --- install (elevate only when needed) -----------------------------------
-if [ ! -d "$dir" ]; then
-	if mkdir -p "$dir" 2>/dev/null; then
-		:
-	elif command -v sudo >/dev/null 2>&1; then
-		sudo mkdir -p "$dir" || err "cannot create $dir with elevated permissions"
-	else
-		err "cannot create $dir and sudo is unavailable; set INSTALL_DIR to a writable path"
-	fi
-fi
-
-if [ -w "$dir" ]; then
-	install -m 0755 "$tmp/$BIN" "$dir/$BIN"
-elif command -v sudo >/dev/null 2>&1; then
-	info "Writing to $dir needs elevated permissions…"
-	sudo install -m 0755 "$tmp/$BIN" "$dir/$BIN"
-else
-	err "cannot write to $dir and sudo is unavailable; set INSTALL_DIR to a writable path"
-fi
+ensure_dir "$dir" ||
+	err "cannot create $dir $(sudo_note); set INSTALL_DIR to a writable path"
+put_file 0755 "$tmp/$BIN" "$dir" "$BIN" ||
+	err "cannot write to $dir $(sudo_note); set INSTALL_DIR to a writable path"
 
 info "Installed $BIN $version to $dir/$BIN"
 
-# --- install manuals (best effort) ----------------------------------------
+# --- install manuals (best effort; never undoes the installed binary) -----
 man_source="$tmp/man/$BIN.1"
 html_man_source="$tmp/man/$BIN.1.html"
+man_dir=""
 if [ ! -f "$man_source" ]; then
 	warn "$archive does not contain man/$BIN.1; the binary is installed without offline manuals"
-else
-	man_dir=""
-	if [ "${MAN_DIR+x}" = x ]; then
-		if [ -n "$MAN_DIR" ]; then
-			man_dir="$MAN_DIR"
-			while [ "$man_dir" != "/" ] && [ "${man_dir%/}" != "$man_dir" ]; do
-				man_dir=${man_dir%/}
-			done
-		else
-			warn "MAN_DIR is empty; the binary is installed without offline manuals"
-		fi
+elif [ "${MAN_DIR+x}" = x ]; then
+	if [ -n "$MAN_DIR" ]; then
+		man_dir=$(trim_slashes "$MAN_DIR")
 	else
-		case "$dir" in
-		/*/bin) man_dir="${dir%/bin}/share/man/man1" ;;
-		/*/sbin) man_dir="${dir%/sbin}/share/man/man1" ;;
-		*)
-			warn "cannot infer a manual directory from INSTALL_DIR '$dir'; set MAN_DIR explicitly"
-			;;
-		esac
+		warn "MAN_DIR is empty; the binary is installed without offline manuals"
 	fi
+else
+	# Only a conventional executable prefix implies a manual destination.
+	case "$dir" in
+	/*/bin) man_dir="${dir%/bin}/share/man/man1" ;;
+	/*/sbin) man_dir="${dir%/sbin}/share/man/man1" ;;
+	*) warn "cannot infer a manual directory from INSTALL_DIR '$dir'; set MAN_DIR explicitly" ;;
+	esac
+fi
 
-	if [ -n "$man_dir" ]; then
-		man_ready=true
-		if [ ! -d "$man_dir" ]; then
-			if mkdir -p "$man_dir" 2>/dev/null; then
-				:
-			elif command -v sudo >/dev/null 2>&1; then
-				if ! sudo mkdir -p "$man_dir"; then
-					warn "cannot create manual directory $man_dir; the binary remains installed"
-					man_ready=false
-				fi
-			else
-				warn "cannot create manual directory $man_dir and sudo is unavailable; the binary remains installed"
-				man_ready=false
-			fi
-		fi
-
-		if [ "$man_ready" = true ]; then
-			if [ -w "$man_dir" ]; then
-				if ! install -m 0644 "$man_source" "$man_dir/$BIN.1"; then
-					warn "cannot install $man_dir/$BIN.1; the binary remains installed"
-					man_ready=false
-				fi
-			elif command -v sudo >/dev/null 2>&1; then
-				if ! sudo install -m 0644 "$man_source" "$man_dir/$BIN.1"; then
-					warn "cannot install $man_dir/$BIN.1 with elevated permissions; the binary remains installed"
-					man_ready=false
-				fi
-			else
-				warn "cannot write to manual directory $man_dir and sudo is unavailable; the binary remains installed"
-				man_ready=false
-			fi
-		fi
-
-		if [ "$man_ready" = true ]; then
-			info "Installed manual page to $man_dir/$BIN.1"
-			if [ ! -f "$html_man_source" ]; then
-				warn "$archive does not contain man/$BIN.1.html; the terminal manual remains installed"
-			elif [ -w "$man_dir" ]; then
-				if install -m 0644 "$html_man_source" "$man_dir/$BIN.1.html"; then
-					info "Installed HTML manual to $man_dir/$BIN.1.html"
-				else
-					warn "cannot install $man_dir/$BIN.1.html; the terminal manual remains installed"
-				fi
-			elif command -v sudo >/dev/null 2>&1; then
-				if sudo install -m 0644 "$html_man_source" "$man_dir/$BIN.1.html"; then
-					info "Installed HTML manual to $man_dir/$BIN.1.html"
-				else
-					warn "cannot install $man_dir/$BIN.1.html with elevated permissions; the terminal manual remains installed"
-				fi
-			else
-				warn "cannot write $man_dir/$BIN.1.html and sudo is unavailable; the terminal manual remains installed"
-			fi
+if [ -n "$man_dir" ]; then
+	if ! ensure_dir "$man_dir"; then
+		warn "cannot create manual directory $man_dir $(sudo_note); the binary remains installed"
+	elif ! put_file 0644 "$man_source" "$man_dir" "$BIN.1"; then
+		warn "cannot install $man_dir/$BIN.1 $(sudo_note); the binary remains installed"
+	else
+		info "Installed manual page to $man_dir/$BIN.1"
+		if [ ! -f "$html_man_source" ]; then
+			warn "$archive does not contain man/$BIN.1.html; the terminal manual remains installed"
+		elif put_file 0644 "$html_man_source" "$man_dir" "$BIN.1.html"; then
+			info "Installed HTML manual to $man_dir/$BIN.1.html"
+		else
+			warn "cannot install $man_dir/$BIN.1.html $(sudo_note); the terminal manual remains installed"
 		fi
 	fi
 fi

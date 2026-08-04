@@ -215,6 +215,15 @@ fi
 assert_no_file "$missing_prefix/bin/axilio"
 assert_log "no checksum listed" "$tmp/missing-checksum.log"
 
+# An unreachable checksums.txt is also not permission to run unverified bytes:
+# every release publishes one, so a failed fetch means something is wrong.
+unfetchable_prefix="$tmp/unfetchable-checksum"
+if run_install unfetchable-checksum "$unfetchable_prefix/bin" - v0.0.0 "$fixtures/absent-checksums.txt"; then
+	fail "installer accepted an archive whose checksums.txt could not be downloaded"
+fi
+assert_no_file "$unfetchable_prefix/bin/axilio"
+assert_log "refusing to install unverified bytes" "$tmp/unfetchable-checksum.log"
+
 # Likewise, a host without a supported SHA-256 utility must stop rather than
 # silently treating the downloaded archive as verified.
 no_hash_prefix="$tmp/no-hash"
