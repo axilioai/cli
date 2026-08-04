@@ -16,13 +16,16 @@ name: Publish CLI
 #   2. `tag` reads + validates VERSION and pushes the annotated vX.Y.Z tag at
 #      the merge commit. Idempotent: an existing tag is left alone, so a
 #      docs-only PR can touch VERSION without re-tagging.
-#   3. `release` checks both the GitHub assets and generated Homebrew cask,
-#      then runs goreleaser AT THE TAG when either side is incomplete. Recovery
-#      rebuilds assets and cask together so the cask hashes match the artifacts.
+#   3. `release` runs goreleaser AT THE TAG when the GitHub Release for the
+#      tag is missing, or when a stable release exists but the Homebrew cask
+#      never reached this version — the one recoverable partial failure.
+#      Recovery rebuilds assets and cask together so the cask hashes match.
 #
-# The release gate is idempotent when both destinations are current. If either
-# side is incomplete, a re-run replaces the GoReleaser-owned assets and updates
-# the cask as one consistent set. workflow_dispatch is the manual recovery entry.
+# Each step converges independently, which makes failure recovery a plain
+# re-run: tag exists + release missing (a goreleaser flake) -> re-run publishes
+# without re-tagging. workflow_dispatch is the manual entry for exactly that.
+# Deeper artifact integrity is not audited here; it is enforced at build time
+# by the before hooks and scripts/test_release_artifacts.sh in ci.yml.
 #
 # Everything happens inside this one workflow run — no tag-push event chaining.
 # That is deliberate: tags pushed with the default GITHUB_TOKEN never trigger
@@ -101,79 +104,44 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Check release and cask state
+      # Publish when the release is missing, or when a stable release exists
+      # but the tap never reached this version (release created, cask push
+      # failed). Asset-level integrity is deliberately not audited here:
+      # ci.yml verifies archives and the generated cask against fresh
+      # goreleaser output, which is where format drift belongs.
+      - name: Check whether this version still needs publishing
         id: gate
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          VERSION: ${{ needs.tag.outputs.version }}
-        run: |
-          TAG="v${VERSION}"
-          RELEASE_ASSETS="${RUNNER_TEMP}/axilio-release-assets"
-          RELEASE_CHECKSUMS="${RUNNER_TEMP}/axilio-release-checksums"
-          CASK="${RUNNER_TEMP}/axilio.rb"
-
-          release_current=false
-          if gh release view "${TAG}" --json assets --jq '.assets[].name' > "${RELEASE_ASSETS}" 2>/dev/null; then
-            release_current=true
-            for asset in \
-              "axilio_${VERSION}_darwin_amd64.tar.gz" \
-              "axilio_${VERSION}_darwin_arm64.tar.gz" \
-              "axilio_${VERSION}_linux_amd64.tar.gz" \
-              "axilio_${VERSION}_linux_arm64.tar.gz" \
-              "axilio_${VERSION}_windows_amd64.zip" \
-              "axilio_${VERSION}_windows_arm64.zip" \
-              "checksums.txt"; do
-              if ! grep -Fqx "${asset}" "${RELEASE_ASSETS}"; then
-                release_current=false
-              fi
-            done
-          fi
-
-          cask_current=false
-          version_without_build="${VERSION%%+*}"
-          if [[ "${version_without_build}" == *-* ]]; then
-            # skip_upload: auto deliberately omits prereleases from the tap.
-            cask_current=true
-          elif gh api repos/axilioai/homebrew-tap/contents/Casks/axilio.rb --jq .content 2>/dev/null | base64 --decode > "${CASK}"; then
-            if grep -Fqx "  version \"${VERSION}\"" "${CASK}" && \
-              grep -Fqx '  manpage "man/axilio.1"' "${CASK}" && \
-              gh release download "${TAG}" --pattern checksums.txt --output "${RELEASE_CHECKSUMS}"; then
-              cask_current=true
-              for target in darwin_amd64 darwin_arm64 linux_amd64 linux_arm64; do
-                asset="axilio_${VERSION}_${target}.tar.gz"
-                release_sha=$(awk -v asset="${asset}" '$2 == asset { print $1; exit }' "${RELEASE_CHECKSUMS}")
-                cask_sha=$(awk -v target="${target}.tar.gz" '
-                  $1 == "sha256" { hash=$2; gsub(/"/, "", hash) }
-                  index($0, target) { print hash; exit }
-                ' "${CASK}")
-                if [[ -z "${release_sha}" || "${cask_sha}" != "${release_sha}" ]]; then
-                  cask_current=false
-                fi
-              done
-            fi
-          fi
-
-          if [[ "${release_current}" == true && "${cask_current}" == true ]]; then
-            echo "release ${TAG} and its expected Homebrew state are current; nothing to publish"
-            echo "publish=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "release_current=${release_current}; cask_current=${cask_current}; converging"
-            echo "publish=true" >> "$GITHUB_OUTPUT"
-          fi
-
-      # Fail before release creation when this run needs a stable cask but has
-      # no tap credential. The state check above makes later failures rerunnable.
-      - name: Require Homebrew tap token for stable release
-        if: steps.gate.outputs.publish == 'true'
-        env:
           HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
           VERSION: ${{ needs.tag.outputs.version }}
         run: |
-          version_without_build="${VERSION%%+*}"
-          case "${version_without_build}" in
-            *-*) exit 0 ;;
+          TAG="v${VERSION}"
+          # skip_upload: auto omits prereleases from the tap, so for those the
+          # release alone decides.
+          prerelease=false
+          case "${VERSION%%+*}" in
+            *-*) prerelease=true ;;
           esac
-          if [ -z "${HOMEBREW_TAP_TOKEN}" ]; then
+
+          publish=true
+          if ! gh release view "${TAG}" --json tagName >/dev/null 2>&1; then
+            echo "release ${TAG} is missing; publishing"
+          elif [[ "${prerelease}" == true ]]; then
+            echo "prerelease ${TAG} already exists; nothing to publish"
+            publish=false
+          elif gh api repos/axilioai/homebrew-tap/contents/Casks/axilio.rb --jq .content 2>/dev/null \
+            | base64 --decode | grep -Fq "version \"${VERSION}\""; then
+            echo "release ${TAG} and its Homebrew cask are current; nothing to publish"
+            publish=false
+          else
+            echo "release ${TAG} exists but the cask is not at ${VERSION}; republishing both"
+          fi
+          echo "publish=${publish}" >> "$GITHUB_OUTPUT"
+
+          # Fail before release creation when a stable publish has no tap
+          # credential; the state check above keeps the re-run idempotent.
+          if [[ "${publish}" == true && "${prerelease}" == false && -z "${HOMEBREW_TAP_TOKEN}" ]]; then
             echo "::error::HOMEBREW_TAP_TOKEN is required for stable CLI releases"
             exit 1
           fi

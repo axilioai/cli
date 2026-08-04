@@ -75,8 +75,13 @@ jobs:
         run: go build -o /dev/null ./cmd/axilio
 
   # Exercise the actual GoReleaser v2 pipeline and inspect every package. This
-  # catches archive/cask drift that six bare cross-compiles cannot see.
+  # catches archive/cask drift that six bare cross-compiles cannot see. Six
+  # cross-builds plus a package audit is too costly for every PR push, so it
+  # runs on main. When a PR touches .goreleaser.yaml, install.sh, man/, or
+  # scripts/, run it locally first:
+  #   goreleaser release --snapshot --clean && sh scripts/test_release_artifacts.sh
   release-artifacts:
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
