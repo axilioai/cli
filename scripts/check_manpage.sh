@@ -1,9 +1,11 @@
 #!/bin/sh
-# Verify that the checked-in axilio(1) outputs are current and roff is lint-clean.
+# Verify that the checked-in axilio(1) page is current and lint-clean. The
+# HTML manual is derived from this page at build/package time and is not
+# checked in, so it needs no drift check here.
 set -eu
 
 command -v go >/dev/null 2>&1 || {
-	printf 'error: go is required to verify the generated manual pages\n' >&2
+	printf 'error: go is required to verify the generated manual page\n' >&2
 	exit 1
 }
 command -v mandoc >/dev/null 2>&1 || {
@@ -12,7 +14,6 @@ command -v mandoc >/dev/null 2>&1 || {
 }
 
 go run ./cmd/manpage --check man/axilio.1
-sh scripts/generate_manpage_html.sh --check man/axilio.1
 
 lint_output=$(mktemp)
 trap 'rm -f "$lint_output"' EXIT

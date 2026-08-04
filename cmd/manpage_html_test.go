@@ -2,9 +2,7 @@ package cmd
 
 import (
 	"bytes"
-	"os"
 	"os/exec"
-	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -86,27 +84,6 @@ func TestGenerateManpageHTMLDeterministicAndComplete(t *testing.T) {
 		if strings.Contains(page, unwanted) {
 			t.Errorf("generated HTML contains unsafe or non-self-contained value %q", unwanted)
 		}
-	}
-}
-
-func TestGeneratedManpageHTMLMatchesCheckedInPage(t *testing.T) {
-	requireMandoc(t)
-	roffPath := filepath.Join("..", "man", "axilio.1")
-	roff, err := os.ReadFile(roffPath)
-	if err != nil {
-		t.Fatalf("read %s: %v; run `go generate ./...`", roffPath, err)
-	}
-	generated, err := GenerateManpageHTML(roff)
-	if err != nil {
-		t.Fatal(err)
-	}
-	path := filepath.Join("..", "man", "axilio.1.html")
-	checkedIn, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatalf("read %s: %v; run `go generate ./...`", path, err)
-	}
-	if !bytes.Equal(generated, checkedIn) {
-		t.Fatalf("%s is stale; run `go generate ./...`", path)
 	}
 }
 
