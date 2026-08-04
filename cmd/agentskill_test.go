@@ -1,16 +1,12 @@
 package cmd
 
 import (
-	"context"
-	"fmt"
-	"os"
 	"reflect"
 	"regexp"
 	"strings"
 	"testing"
 
 	"github.com/axilioai/platform-go/drivers/mobile"
-	"github.com/zalando/go-keyring"
 )
 
 // The skill is a prompt: an agent reads it and writes SDK code a customer runs
@@ -36,17 +32,6 @@ import (
 // agentSkillBody holds the fetched skill markdown for the duration of the
 // test binary.
 var agentSkillBody string
-
-func TestMain(m *testing.M) {
-	keyring.MockInit()
-	body, err := fetchSkillBody(context.Background())
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "fetching the agent skill for TestSkill*: %v\n", err)
-		os.Exit(1)
-	}
-	agentSkillBody = body
-	os.Exit(m.Run())
-}
 
 // langBlock extracts one <!-- lang:X --> ... <!-- /lang:X --> section.
 func langBlock(t *testing.T, lang string) string {
