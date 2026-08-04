@@ -3,6 +3,7 @@ package cmd
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -10,6 +11,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/axilioai/cli/internal/exit"
 	"github.com/charmbracelet/fang"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -557,6 +559,21 @@ func TestDocumentationHelpParity(t *testing.T) {
 	if !strings.Contains(normalizedReadme,
 		"Built-in help and completion commands, bare parent-command help, `--help`, and `--version` remain text") {
 		t.Error("README no longer documents the non-JSON built-in output paths")
+	}
+
+	// The README table is a deliberately terser summary of exit.Codes, which
+	// the manual renders in full. Only the set of codes has to agree; adding
+	// or removing one without touching the README is the drift that matters.
+	for _, documented := range exit.Codes {
+		row := fmt.Sprintf("| `%d` |", documented.Code)
+		if !strings.Contains(readme, row) {
+			t.Errorf("README exit-status table has no row for code %d (%s)",
+				documented.Code, documented.Name)
+		}
+	}
+	codeRows := regexp.MustCompile(`(?m)^\s*\|\s*`+"`"+`\d+`+"`"+`\s*\|`).FindAllString(readme, -1)
+	if got, want := len(codeRows), len(exit.Codes); got != want {
+		t.Errorf("README documents %d exit codes, exit.Codes has %d", got, want)
 	}
 
 	// The skill is no longer a file in this repo (AXI-1527): it's hosted at

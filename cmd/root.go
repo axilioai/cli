@@ -79,12 +79,11 @@ var (
 	flagOrg     string
 )
 
-// Root builds the root command with its global flags and subcommands.
-func Root() *cobra.Command {
-	root := &cobra.Command{
-		Use:   "axilio",
-		Short: "Acquire and drive Axilio phones from the command line.",
-		Long: `Acquire Axilio phones, drive live sessions, run workflows, and manage
+// The root description is written in three parts because the manual presents
+// them separately: an overview under DESCRIPTION, and the reference material
+// under NOTES. Cobra shows the parts joined, as rootLong.
+const (
+	rootOverview = `Acquire Axilio phones, drive live sessions, run workflows, and manage
 the resources that support them.
 
 Start with login, acquire a session, observe its phone, then act on what is
@@ -99,11 +98,9 @@ The main command families are:
   api-keys            manage organization-scoped API keys
 
 For detailed offline documentation, run man axilio. Run axilio help --html to
-print a clickable file:// URL for the browser-friendly version.
+print a clickable file:// URL for the browser-friendly version.`
 
-Precedence rules:
-
-Credentials resolve in this order: --api-key, AXILIO_API_KEY, the saved config
+	rootResolutionPrecedence = `Credentials resolve in this order: --api-key, AXILIO_API_KEY, the saved config
 API key, then the saved OAuth session.
 
 The organization resolves from --org, AXILIO_ORG, the saved active organization,
@@ -115,16 +112,28 @@ https://api.axilio.ai.
 
 Phone command session selection precedence is --session, AXILIO_SESSION, the
 only locally saved session, the most recently started session, then an ambiguity
-error.
+error.`
 
-Table output for human readability is the default. Every successful runnable
+	rootOutputBehavior = `Table output for human readability is the default. Every successful runnable
 application command emits valid JSON with -o json; action commands return a
 small acknowledgment. Built-in help, completion, and version output remains
 text. The sessions start --export command emits shell text for eval.
 Notes, prompts, and progress use stderr and are suppressed in JSON or quiet
 mode. Quiet and JSON modes do not confirm destructive actions; pass --yes where
 offered. API-key, base-URL, and organization flags affect API-backed commands;
-they do not select a local phone session.`,
+they do not select a local phone session.`
+
+	rootLong = rootOverview +
+		"\n\nPrecedence rules:\n\n" + rootResolutionPrecedence +
+		"\n\n" + rootOutputBehavior
+)
+
+// Root builds the root command with its global flags and subcommands.
+func Root() *cobra.Command {
+	root := &cobra.Command{
+		Use:           "axilio",
+		Short:         "Acquire and drive Axilio phones from the command line.",
+		Long:          rootLong,
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		PersistentPreRunE: func(_ *cobra.Command, _ []string) error {

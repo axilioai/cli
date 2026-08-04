@@ -102,9 +102,8 @@ func generateManpageMarkdown(root *cobra.Command, version string) (string, error
 	writeManpageHeading(&b, 1, "SYNOPSIS", "SYNOPSIS")
 	writeLiteral(&b, root.Name()+" [global options] <command> [command options]")
 
-	overview, resolution, outputBehavior := splitManpageRootDescription(firstNonempty(root.Long, root.Short))
 	writeManpageHeading(&b, 1, "DESCRIPTION", "DESCRIPTION")
-	writeDescription(&b, overview)
+	writeDescription(&b, rootOverview)
 	writeWrapped(&b, "Resolution precedence and output-mode details are collected under NOTES.")
 
 	writeManpageHeading(&b, 1, "COMMON WORKFLOW", "COMMON_WORKFLOW")
@@ -142,9 +141,9 @@ func generateManpageMarkdown(root *cobra.Command, version string) (string, error
 
 	writeManpageHeading(&b, 1, "NOTES", "NOTES")
 	writeManpageHeading(&b, 3, "Resolution precedence", "NOTES_resolution_precedence")
-	writeDescription(&b, resolution)
+	writeDescription(&b, rootResolutionPrecedence)
 	writeManpageHeading(&b, 3, "Output behavior", "NOTES_output_behavior")
-	writeDescription(&b, outputBehavior)
+	writeDescription(&b, rootOutputBehavior)
 	writeManpageHeading(&b, 3, "Error presentation", "NOTES_error_presentation")
 	writeWrapped(&b, "Error examples show the message text without terminal formatting. Actual error output may include an ERROR heading, spacing, and ANSI color.")
 
@@ -331,39 +330,6 @@ func commandHTMLAnchor(root, command *cobra.Command) string {
 	return "COMMAND_" + strings.ReplaceAll(path, " ", "-")
 }
 
-func splitManpageRootDescription(description string) (overview, resolution, outputBehavior string) {
-	paragraphs := strings.Split(strings.TrimSpace(description), "\n\n")
-	marker := -1
-	for i, paragraph := range paragraphs {
-		if strings.TrimSpace(paragraph) == "Precedence rules:" {
-			marker = i
-			break
-		}
-	}
-	if marker < 0 {
-		return strings.TrimSpace(description), "None.", "None."
-	}
-
-	overview = strings.Join(paragraphs[:marker], "\n\n")
-	reference := paragraphs[marker+1:]
-	if len(reference) == 0 {
-		return overview, "None.", "None."
-	}
-	last := strings.TrimSpace(reference[len(reference)-1])
-	if strings.HasPrefix(last, "Table output for human readability") {
-		outputBehavior = last
-		reference = reference[:len(reference)-1]
-	}
-	resolution = strings.Join(reference, "\n\n")
-	if strings.TrimSpace(resolution) == "" {
-		resolution = "None."
-	}
-	if strings.TrimSpace(outputBehavior) == "" {
-		outputBehavior = "None."
-	}
-	return overview, resolution, outputBehavior
-}
-
 func rootGlobalFlags(root *cobra.Command) []*pflag.Flag {
 	var flags []*pflag.Flag
 	root.PersistentFlags().VisitAll(func(flag *pflag.Flag) {
@@ -513,22 +479,9 @@ func writeEnvironment(b *strings.Builder) {
 }
 
 func writeExitStatuses(b *strings.Builder) {
-	entries := []struct {
-		code exit.Code
-		name string
-		desc string
-	}{
-		{exit.OK, "ok", "Success."},
-		{exit.Err, "error", "The command failed for a reason that does not fit a more specific category."},
-		{exit.Usage, "usage", "Invalid command syntax, argument count, or value; or the API rejected the request as invalid (HTTP 400 or 422)."},
-		{exit.Auth, "auth", "Missing or invalid credentials, unauthorized access, or permission denied (HTTP 401 or 403)."},
-		{exit.NotFound, "not-found", "A requested resource, phone allocation, or on-screen element was not found (HTTP 404)."},
-		{exit.Timeout, "timeout", "The operation exceeded its timeout or deadline (HTTP 408)."},
-		{exit.Unavailable, "unavailable", "The Axilio service or phone connection was unavailable, the phone was offline, the request was rate-limited, or the server failed (HTTP 429 or 5xx)."},
-		{exit.Canceled, "canceled", "The operation was canceled by the user, shell, or system."},
-	}
-	for _, entry := range entries {
-		writeWrapped(b, fmt.Sprintf("**%d (%s)**\n: %s", entry.code, entry.name, entry.desc))
+	for _, documented := range exit.Codes {
+		writeWrapped(b, fmt.Sprintf("**%d (%s)**\n: %s",
+			documented.Code, documented.Name, documented.Description))
 	}
 }
 
