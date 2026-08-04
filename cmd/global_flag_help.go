@@ -7,55 +7,29 @@ import (
 	"github.com/spf13/cobra"
 )
 
-type globalFlagSet uint8
-
-const (
-	globalAPIKey globalFlagSet = 1 << iota
-	globalBaseURL
-	globalNoColor
-	globalOrg
-	globalOutput
-	globalQuiet
-	globalAll = globalAPIKey | globalBaseURL | globalNoColor | globalOrg | globalOutput | globalQuiet
-)
-
-func globalFlagForName(name string) globalFlagSet {
-	switch name {
-	case "api-key":
-		return globalAPIKey
-	case "base-url":
-		return globalBaseURL
-	case "no-color":
-		return globalNoColor
-	case "org":
-		return globalOrg
-	case "output":
-		return globalOutput
-	case "quiet":
-		return globalQuiet
-	default:
-		return 0
-	}
-}
+// globalFlagNames are the inherited root flags each command describes.
+var globalFlagNames = []string{"api-key", "base-url", "no-color", "org", "output", "quiet"}
 
 // commandGlobalFlagHelp describes what each inherited root flag actually does
 // when a particular command runs. Root flags are shared pflag objects, so the
 // help renderer applies these descriptions temporarily and restores them after
 // rendering. Runtime parsing and behavior remain unchanged.
 type commandGlobalFlagHelp struct {
-	apiKey       string
-	baseURL      string
-	noColor      string
-	org          string
-	output       string
-	quiet        string
-	noEffect     globalFlagSet
-	noEffectHelp string
+	apiKey  string
+	baseURL string
+	noColor string
+	org     string
+	output  string
+	quiet   string
+	// noEffectSummary collapses every global flag into a single manual row
+	// for commands where none of them change anything observable. Elsewhere a
+	// flag is inert exactly when its own help says so, so the two never drift.
+	noEffectSummary string
 }
 
 func (help commandGlobalFlagHelp) hasNoEffect(name string) bool {
-	flag := globalFlagForName(name)
-	return flag != 0 && help.noEffect&flag != 0
+	usage, ok := help.usage(name)
+	return ok && (help.noEffectSummary != "" || strings.HasPrefix(usage, "No effect"))
 }
 
 func (help commandGlobalFlagHelp) usage(name string) (string, bool) {
@@ -92,13 +66,18 @@ func commandGlobalFlagHasNoEffect(command *cobra.Command, name string) bool {
 
 func commandGlobalNoEffectHelp(command *cobra.Command) string {
 	help, ok := globalFlagHelpByCommand[commandHelpKey(command)]
-	if !ok || help.noEffect == 0 {
+	if !ok {
 		return ""
 	}
-	if help.noEffectHelp != "" {
-		return help.noEffectHelp
+	if help.noEffectSummary != "" {
+		return help.noEffectSummary
 	}
-	return fmt.Sprintf("No effect on %s command", commandHelpKey(command))
+	for _, name := range globalFlagNames {
+		if help.hasNoEffect(name) {
+			return fmt.Sprintf("No effect on %s command", commandHelpKey(command))
+		}
+	}
+	return ""
 }
 
 func commandOwnedFlagUsage(command *cobra.Command, name string) (string, bool) {
@@ -136,25 +115,23 @@ func apiActionHelp(action string, destructive bool) commandGlobalFlagHelp {
 		quiet = fmt.Sprintf("Suppress the %s prompt and human result; --yes is still required; JSON still prints", action)
 	}
 	return commandGlobalFlagHelp{
-		apiKey:   fmt.Sprintf("API key for %s; %s", action, apiKeyPrecedence),
-		baseURL:  fmt.Sprintf("API host for %s; %s", action, baseURLPrecedence),
-		noColor:  fmt.Sprintf("No effect on %s; its runtime messages are unstyled", action),
-		org:      fmt.Sprintf("OAuth org for %s; %s", action, orgPrecedence),
-		output:   fmt.Sprintf("Emit a human confirmation or JSON %s result", action),
-		quiet:    quiet,
-		noEffect: globalNoColor,
+		apiKey:  fmt.Sprintf("API key for %s; %s", action, apiKeyPrecedence),
+		baseURL: fmt.Sprintf("API host for %s; %s", action, baseURLPrecedence),
+		noColor: fmt.Sprintf("No effect on %s; its runtime messages are unstyled", action),
+		org:     fmt.Sprintf("OAuth org for %s; %s", action, orgPrecedence),
+		output:  fmt.Sprintf("Emit a human confirmation or JSON %s result", action),
+		quiet:   quiet,
 	}
 }
 
 func localResultHelp(command, action, result string) commandGlobalFlagHelp {
 	return commandGlobalFlagHelp{
-		apiKey:   fmt.Sprintf("No effect on %s command; it uses local session data or its control URL", command),
-		baseURL:  fmt.Sprintf("No effect on %s command; it does not call the Axilio API", command),
-		noColor:  fmt.Sprintf("Disable ANSI color in the human-readable form of %s", result),
-		org:      fmt.Sprintf("No effect on %s command; phone control is selected by session, not org", command),
-		output:   fmt.Sprintf("Render %s as table or json", result),
-		quiet:    fmt.Sprintf("Suppress stderr notes for %s; %s remains on stdout", action, result),
-		noEffect: globalAPIKey | globalBaseURL | globalOrg,
+		apiKey:  fmt.Sprintf("No effect on %s command; it uses local session data or its control URL", command),
+		baseURL: fmt.Sprintf("No effect on %s command; it does not call the Axilio API", command),
+		noColor: fmt.Sprintf("Disable ANSI color in the human-readable form of %s", result),
+		org:     fmt.Sprintf("No effect on %s command; phone control is selected by session, not org", command),
+		output:  fmt.Sprintf("Render %s as table or json", result),
+		quiet:   fmt.Sprintf("Suppress stderr notes for %s; %s remains on stdout", action, result),
 	}
 }
 
@@ -166,40 +143,37 @@ func phoneResultHelp(command, action, result string) commandGlobalFlagHelp {
 
 func localActionHelp(command, action, outcome string) commandGlobalFlagHelp {
 	return commandGlobalFlagHelp{
-		apiKey:   phoneControlAuth,
-		baseURL:  fmt.Sprintf("No effect on %s command; it does not call the Axilio API", command),
-		noColor:  fmt.Sprintf("No effect on %s command; its runtime message is unstyled", command),
-		org:      fmt.Sprintf("No effect on %s command; the target is selected by session, not org", command),
-		output:   fmt.Sprintf("Emit a human confirmation or JSON %s result", outcome),
-		quiet:    fmt.Sprintf("Suppress the human %s result; the phone action still runs; JSON still prints", action),
-		noEffect: globalAPIKey | globalBaseURL | globalNoColor | globalOrg,
+		apiKey:  phoneControlAuth,
+		baseURL: fmt.Sprintf("No effect on %s command; it does not call the Axilio API", command),
+		noColor: fmt.Sprintf("No effect on %s command; its runtime message is unstyled", command),
+		org:     fmt.Sprintf("No effect on %s command; the target is selected by session, not org", command),
+		output:  fmt.Sprintf("Emit a human confirmation or JSON %s result", outcome),
+		quiet:   fmt.Sprintf("Suppress the human %s result; the phone action still runs; JSON still prints", action),
 	}
 }
 
 func noEffectHelp(command string) commandGlobalFlagHelp {
 	message := fmt.Sprintf("No effect on %s command", command)
 	return commandGlobalFlagHelp{
-		apiKey:   message,
-		baseURL:  message,
-		noColor:  message,
-		org:      message,
-		output:   message,
-		quiet:    message,
-		noEffect: globalAll,
+		apiKey:  message,
+		baseURL: message,
+		noColor: message,
+		org:     message,
+		output:  message,
+		quiet:   message,
 	}
 }
 
 func helpOnlyCommandHelp(command string) commandGlobalFlagHelp {
 	message := fmt.Sprintf("No effect on %s command; bare axilio %s only displays this help", command, command)
 	return commandGlobalFlagHelp{
-		apiKey:       message,
-		baseURL:      message,
-		noColor:      message,
-		org:          message,
-		output:       message,
-		quiet:        message,
-		noEffect:     globalAll,
-		noEffectHelp: fmt.Sprintf("No effect on %s command; bare axilio %s only displays this help", command, command),
+		apiKey:          message,
+		baseURL:         message,
+		noColor:         message,
+		org:             message,
+		output:          message,
+		quiet:           message,
+		noEffectSummary: fmt.Sprintf("No effect on %s command; bare axilio %s only displays this help", command, command),
 	}
 }
 
@@ -214,13 +188,12 @@ func buildGlobalFlagHelp() map[string]commandGlobalFlagHelp {
 			quiet:   "Suppress human login messages; browser OAuth still opens; JSON still prints",
 		},
 		"logout": {
-			apiKey:   "No effect on logout command; saved credentials are cleared regardless",
-			baseURL:  "No effect on logout command; OAuth revocation uses the session's saved host",
-			noColor:  "Disable ANSI color in the signed-out success message",
-			org:      "No effect on logout command; the saved active org is cleared regardless",
-			output:   "Emit a human sign-out message or JSON sign-out result",
-			quiet:    "Suppress human logout warnings and results; JSON still prints",
-			noEffect: globalAPIKey | globalBaseURL | globalOrg,
+			apiKey:  "No effect on logout command; saved credentials are cleared regardless",
+			baseURL: "No effect on logout command; OAuth revocation uses the session's saved host",
+			noColor: "Disable ANSI color in the signed-out success message",
+			org:     "No effect on logout command; the saved active org is cleared regardless",
+			output:  "Emit a human sign-out message or JSON sign-out result",
+			quiet:   "Suppress human logout warnings and results; JSON still prints",
 		},
 		"config": {
 			apiKey: "Temporarily shows this as the effective API key source;\n" +
@@ -235,60 +208,54 @@ func buildGlobalFlagHelp() map[string]commandGlobalFlagHelp {
 			quiet:  "Suppress stderr update notices; the configuration summary remains on stdout",
 		},
 		"config set": {
-			apiKey:   "No effect on config set command; only the named config value is saved",
-			baseURL:  "No effect on config set command; the positional value is saved instead",
-			noColor:  "No effect on config set command; its confirmation is unstyled",
-			org:      "No effect on config set command; active org is not an editable key",
-			output:   "Emit a human confirmation or JSON key, value, and config-path result",
-			quiet:    "Suppress the human config set confirmation; JSON still prints",
-			noEffect: globalAPIKey | globalBaseURL | globalNoColor | globalOrg,
+			apiKey:  "No effect on config set command; only the named config value is saved",
+			baseURL: "No effect on config set command; the positional value is saved instead",
+			noColor: "No effect on config set command; its confirmation is unstyled",
+			org:     "No effect on config set command; active org is not an editable key",
+			output:  "Emit a human confirmation or JSON key, value, and config-path result",
+			quiet:   "Suppress the human config set confirmation; JSON still prints",
 		},
 		"config unset": {
-			apiKey:   "No effect on config unset command; credentials are not removed",
-			baseURL:  "No effect on config unset command; it removes the saved base-url",
-			noColor:  "No effect on config unset command; its confirmation is unstyled",
-			org:      "No effect on config unset command; active org is not removed",
-			output:   "Emit a human confirmation or JSON key, unset, and config-path result",
-			quiet:    "Suppress the human config unset confirmation; JSON still prints",
-			noEffect: globalAPIKey | globalBaseURL | globalNoColor | globalOrg,
+			apiKey:  "No effect on config unset command; credentials are not removed",
+			baseURL: "No effect on config unset command; it removes the saved base-url",
+			noColor: "No effect on config unset command; its confirmation is unstyled",
+			org:     "No effect on config unset command; active org is not removed",
+			output:  "Emit a human confirmation or JSON key, unset, and config-path result",
+			quiet:   "Suppress the human config unset confirmation; JSON still prints",
 		},
 		"orgs":      orgListHelp("orgs"),
 		"orgs list": orgListHelp("orgs list"),
 		"orgs use": {
-			apiKey:   "API-key auth cannot switch orgs; use a saved OAuth session",
-			baseURL:  fmt.Sprintf("API host for the membership check; %s", baseURLPrecedence),
-			noColor:  "No effect on orgs use command; its confirmation is unstyled",
-			org:      "Does not choose the org to save; the positional slug or ID does",
-			output:   "Emit a human confirmation or JSON active-organization result",
-			quiet:    "Suppress the human org-selection confirmation; JSON still prints",
-			noEffect: globalNoColor,
+			apiKey:  "API-key auth cannot switch orgs; use a saved OAuth session",
+			baseURL: fmt.Sprintf("API host for the membership check; %s", baseURLPrecedence),
+			noColor: "No effect on orgs use command; its confirmation is unstyled",
+			org:     "Does not choose the org to save; the positional slug or ID does",
+			output:  "Emit a human confirmation or JSON active-organization result",
+			quiet:   "Suppress the human org-selection confirmation; JSON still prints",
 		},
 		"orgs clear": {
-			apiKey:   "No effect on orgs clear command; it only clears the saved org selection",
-			baseURL:  "No effect on orgs clear command; it makes no API request",
-			noColor:  "No effect on orgs clear command; its confirmation is unstyled",
-			org:      "No effect on orgs clear command; the supplied override is not saved",
-			output:   "Emit a human confirmation or JSON clear result",
-			quiet:    "Suppress the human org-clear confirmation; JSON still prints",
-			noEffect: globalAPIKey | globalBaseURL | globalNoColor | globalOrg,
+			apiKey:  "No effect on orgs clear command; it only clears the saved org selection",
+			baseURL: "No effect on orgs clear command; it makes no API request",
+			noColor: "No effect on orgs clear command; its confirmation is unstyled",
+			org:     "No effect on orgs clear command; the supplied override is not saved",
+			output:  "Emit a human confirmation or JSON clear result",
+			quiet:   "Suppress the human org-clear confirmation; JSON still prints",
 		},
 		"upgrade": {
-			apiKey:   "No effect on upgrade command; release checks use GitHub without Axilio auth",
-			baseURL:  "No effect on upgrade command; release checks use GitHub",
-			noColor:  "No effect on upgrade command; its runtime messages are unstyled",
-			org:      "No effect on upgrade command; releases are not organization-scoped",
-			output:   "Emit human upgrade guidance or a JSON upgrade-status result",
-			quiet:    "Suppress human upgrade guidance and status; JSON still prints",
-			noEffect: globalAPIKey | globalBaseURL | globalNoColor | globalOrg,
+			apiKey:  "No effect on upgrade command; release checks use GitHub without Axilio auth",
+			baseURL: "No effect on upgrade command; release checks use GitHub",
+			noColor: "No effect on upgrade command; its runtime messages are unstyled",
+			org:     "No effect on upgrade command; releases are not organization-scoped",
+			output:  "Emit human upgrade guidance or a JSON upgrade-status result",
+			quiet:   "Suppress human upgrade guidance and status; JSON still prints",
 		},
 		"init": {
-			apiKey:   "No effect on init command. A supplied value only changes the final sign-in message",
-			baseURL:  fmt.Sprintf("Host for the skill download and sign-in check; %s", baseURLPrecedence),
-			noColor:  "Disable ANSI color in init success messages",
-			org:      "No effect on init command. Skill download and generated files are not org-scoped",
-			output:   "Emit human init messages or JSON written and skipped path lists",
-			quiet:    "Suppress human init prompts and messages; --agent may be required; JSON still prints",
-			noEffect: globalAPIKey | globalOrg,
+			apiKey:  "No effect on init command. A supplied value only changes the final sign-in message",
+			baseURL: fmt.Sprintf("Host for the skill download and sign-in check; %s", baseURLPrecedence),
+			noColor: "Disable ANSI color in init success messages",
+			org:     "No effect on init command. Skill download and generated files are not org-scoped",
+			output:  "Emit human init messages or JSON written and skipped path lists",
+			quiet:   "Suppress human init prompts and messages; --agent may be required; JSON still prints",
 		},
 		"sessions":  helpOnlyCommandHelp("sessions"),
 		"phones":    helpOnlyCommandHelp("phones"),
@@ -298,14 +265,13 @@ func buildGlobalFlagHelp() map[string]commandGlobalFlagHelp {
 		"api-keys":  helpOnlyCommandHelp("api-keys"),
 		"uploads":   helpOnlyCommandHelp("uploads"),
 		"help": {
-			apiKey:       "No effect on help command or the help content it renders",
-			baseURL:      "No effect on help command or the help content it renders",
-			noColor:      "No effect on help command; help styling is controlled by the renderer",
-			org:          "No effect on help command or the help content it renders",
-			output:       "Does not reformat help as JSON; json only suppresses the update notice",
-			quiet:        "Does not hide help; only suppresses the post-command update notice",
-			noEffect:     globalAll,
-			noEffectHelp: "No effect on help command or the help content it renders",
+			apiKey:          "No effect on help command or the help content it renders",
+			baseURL:         "No effect on help command or the help content it renders",
+			noColor:         "No effect on help command; help styling is controlled by the renderer",
+			org:             "No effect on help command or the help content it renders",
+			output:          "Does not reformat help as JSON; json only suppresses the update notice",
+			quiet:           "Does not hide help; only suppresses the post-command update notice",
+			noEffectSummary: "No effect on help command or the help content it renders",
 		},
 		"completion": noEffectHelp("completion"),
 	}
@@ -354,7 +320,7 @@ func buildGlobalFlagHelp() map[string]commandGlobalFlagHelp {
 	help["runs start"] = withOutput(help["runs start"],
 		"Emit created run IDs as human messages or json",
 		"Suppress table-mode run IDs and guidance; a JSON result remains on stdout")
-	help["runs start"] = withNoEffectNoColor(help["runs start"],
+	help["runs start"] = withNoColor(help["runs start"],
 		"No effect on runs start command; its human messages are unstyled")
 	help["runs get"] = apiResultHelp("the run-detail request", "the run-detail result")
 	help["runs cancel"] = apiActionHelp("run cancellation", true)
@@ -376,20 +342,19 @@ func buildGlobalFlagHelp() map[string]commandGlobalFlagHelp {
 	help["uploads delete"] = withOutput(help["uploads delete"],
 		"Emit a human confirmation or JSON deletion result",
 		"Suppress the prompt and human confirmation; --yes is required; JSON still prints")
-	help["uploads delete"] = withNoEffectNoColor(help["uploads delete"],
+	help["uploads delete"] = withNoColor(help["uploads delete"],
 		"No effect on uploads delete command; its human confirmation is unstyled")
 
 	for _, shell := range []string{"bash", "zsh", "fish", "powershell"} {
 		key := "completion " + shell
 		help[key] = commandGlobalFlagHelp{
-			apiKey:       fmt.Sprintf("No effect on %s completion generation", shell),
-			baseURL:      fmt.Sprintf("No effect on %s completion generation", shell),
-			noColor:      fmt.Sprintf("No effect on %s completion; the script contains no ANSI styling", shell),
-			org:          fmt.Sprintf("No effect on %s completion generation", shell),
-			output:       fmt.Sprintf("Does not reformat %s completion as JSON; the shell script remains on stdout", shell),
-			quiet:        fmt.Sprintf("Does not suppress the %s completion script; only stderr notices", shell),
-			noEffect:     globalAll,
-			noEffectHelp: fmt.Sprintf("No effect on %s completion generation", shell),
+			apiKey:          fmt.Sprintf("No effect on %s completion generation", shell),
+			baseURL:         fmt.Sprintf("No effect on %s completion generation", shell),
+			noColor:         fmt.Sprintf("No effect on %s completion; the script contains no ANSI styling", shell),
+			org:             fmt.Sprintf("No effect on %s completion generation", shell),
+			output:          fmt.Sprintf("Does not reformat %s completion as JSON; the shell script remains on stdout", shell),
+			quiet:           fmt.Sprintf("Does not suppress the %s completion script; only stderr notices", shell),
+			noEffectSummary: fmt.Sprintf("No effect on %s completion generation", shell),
 		}
 	}
 
@@ -418,9 +383,8 @@ func withQuiet(help commandGlobalFlagHelp, quiet string) commandGlobalFlagHelp {
 	return help
 }
 
-func withNoEffectNoColor(help commandGlobalFlagHelp, noColor string) commandGlobalFlagHelp {
+func withNoColor(help commandGlobalFlagHelp, noColor string) commandGlobalFlagHelp {
 	help.noColor = noColor
-	help.noEffect |= globalNoColor
 	return help
 }
 

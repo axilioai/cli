@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"encoding/json"
 	"fmt"
 	"strings"
 	"unicode/utf8"
@@ -9,16 +8,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// commandDocumentationAnnotation is deliberately namespaced because Cobra
-// annotations are shared with flag completion and other integrations.
-const commandDocumentationAnnotation = "ai.axilio.cli/command-documentation.v1"
-
 // CommandDocumentation is the shared source for interactive examples and the
-// generated manual. It is serialized onto each Cobra command so every Root()
-// call owns a complete, independent documentation tree.
+// generated manual. Entries are immutable package data keyed by command path,
+// so every Root() call renders the same documentation without copying it.
 type CommandDocumentation struct {
-	Samples     []CommandSample `json:"samples"`
-	Walkthrough string          `json:"walkthrough,omitempty"`
+	Samples     []CommandSample
+	Walkthrough string
 }
 
 // CommandSample documents one representative invocation and its observable
@@ -26,29 +21,18 @@ type CommandDocumentation struct {
 // phone, run, release, or filesystem. For command failures, Stderr records the
 // underlying error message; failedSample notes Fang's presentation layer.
 type CommandSample struct {
-	Invocation       string `json:"invocation"`
-	Stdout           string `json:"stdout,omitempty"`
-	Stderr           string `json:"stderr,omitempty"`
-	ExitStatus       int    `json:"exit_status"`
-	Notes            string `json:"notes,omitempty"`
-	ExternalBehavior string `json:"external_behavior,omitempty"`
+	Invocation       string
+	Stdout           string
+	Stderr           string
+	ExitStatus       int
+	Notes            string
+	ExternalBehavior string
 }
 
-// AttachCommandDocumentation stores docs on cmd and derives Cobra's Example
-// field. Fang therefore renders the same invocation and process contract as
-// the manual generator without either renderer owning a second catalog.
-func AttachCommandDocumentation(cmd *cobra.Command, docs CommandDocumentation) *cobra.Command {
-	if cmd == nil {
-		panic("attach command documentation to nil command")
-	}
-	encoded, err := json.Marshal(docs)
-	if err != nil {
-		panic(fmt.Sprintf("encode command documentation for %q: %v", cmd.Name(), err))
-	}
-	if cmd.Annotations == nil {
-		cmd.Annotations = make(map[string]string)
-	}
-	cmd.Annotations[commandDocumentationAnnotation] = string(encoded)
+// applyCommandDocumentation derives Cobra's Example field from docs. Fang
+// therefore renders the same invocation and process contract as the manual
+// generator without either renderer owning a second catalog.
+func applyCommandDocumentation(cmd *cobra.Command, docs CommandDocumentation) {
 	cmd.Example = renderCommandExamples(cmd, docs)
 
 	if walkthrough := commandWalkthroughDescription(docs); walkthrough != "" &&
@@ -56,7 +40,6 @@ func AttachCommandDocumentation(cmd *cobra.Command, docs CommandDocumentation) *
 		cmd.Long = strings.TrimSpace(cmd.Long) +
 			"\n\n" + walkthrough
 	}
-	return cmd
 }
 
 // commandLongWithoutWalkthrough returns the prose portion of Long. The manual
@@ -80,22 +63,15 @@ func commandWalkthroughDescription(docs CommandDocumentation) string {
 		indentLiteral(walkthrough, "    ")
 }
 
-// CommandDocs reads the typed documentation attached to cmd. False means the
-// annotation is absent or invalid; callers can treat either case as a coverage
-// failure rather than silently rendering incomplete documentation.
-func CommandDocs(cmd *cobra.Command) (CommandDocumentation, bool) {
-	if cmd == nil || cmd.Annotations == nil {
+// commandDocs returns the documentation for cmd. False means the command has
+// no entry, which the coverage test treats as a failure rather than silently
+// rendering an incomplete manual.
+func commandDocs(cmd *cobra.Command) (CommandDocumentation, bool) {
+	if cmd == nil {
 		return CommandDocumentation{}, false
 	}
-	encoded, ok := cmd.Annotations[commandDocumentationAnnotation]
-	if !ok {
-		return CommandDocumentation{}, false
-	}
-	var docs CommandDocumentation
-	if err := json.Unmarshal([]byte(encoded), &docs); err != nil {
-		return CommandDocumentation{}, false
-	}
-	return docs, true
+	docs, ok := commandDocumentationByKey[commandHelpKey(cmd)]
+	return docs, ok
 }
 
 func renderCommandExamples(cmd *cobra.Command, docs CommandDocumentation) string {
@@ -133,7 +109,7 @@ func streamValue(value string) string {
 func writeExampleComment(out *strings.Builder, label, value string) {
 	lines := strings.Split(strings.TrimSpace(value), "\n")
 	if label == "note" {
-		lines = wrapExampleComment(lines, 74)
+		lines = wrapLines(lines, 74)
 	}
 	first := true
 	for _, line := range lines {
@@ -143,7 +119,7 @@ func writeExampleComment(out *strings.Builder, label, value string) {
 		}
 		wrapped := []string{line}
 		if utf8.RuneCountInString(prefix)+utf8.RuneCountInString(line) > 88 {
-			wrapped = wrapExampleComment([]string{line}, 88-utf8.RuneCountInString(prefix))
+			wrapped = wrapLines([]string{line}, 88-utf8.RuneCountInString(prefix))
 		}
 		for _, rendered := range wrapped {
 			out.WriteString(prefix)
@@ -155,7 +131,9 @@ func writeExampleComment(out *strings.Builder, label, value string) {
 	}
 }
 
-func wrapExampleComment(lines []string, width int) []string {
+// wrapLines greedily wraps each line to width runes. It is the single wrap
+// used by Cobra example comments, manual prose, and terminal transcripts.
+func wrapLines(lines []string, width int) []string {
 	var wrapped []string
 	for _, line := range lines {
 		words := strings.Fields(line)
@@ -185,26 +163,23 @@ func indentLiteral(value, indent string) string {
 	return strings.Join(lines, "\n")
 }
 
-func documentCommand(key string, cmd *cobra.Command) *cobra.Command {
-	docs, ok := applicationCommandDocumentation[key]
-	if !ok {
-		panic("missing command documentation for " + key)
-	}
-	return AttachCommandDocumentation(cmd, docs)
-}
-
-func attachApplicationCommandDocumentation(root *cobra.Command) {
+// attachCommandDocumentation gives every command in the tree its Cobra
+// Example text, replacing Cobra's terse built-in Long descriptions first. A
+// command with no documentation entry is a build-time mistake, not a
+// degraded-output case, so it panics rather than shipping a gap.
+func attachCommandDocumentation(root *cobra.Command) {
 	var walk func(*cobra.Command)
 	walk = func(command *cobra.Command) {
 		key := commandHelpKey(command)
-		if command == root {
-			key = root.Name()
+		if description, ok := generatedCommandLongDescriptions[key]; ok {
+			command.Long = description
 		}
-		documentCommand(key, command)
+		docs, ok := commandDocumentationByKey[key]
+		if !ok {
+			panic("missing command documentation for " + key)
+		}
+		applyCommandDocumentation(command, docs)
 		for _, child := range command.Commands() {
-			if child.Name() == "help" || child.Name() == "completion" {
-				continue
-			}
 			walk(child)
 		}
 	}
@@ -257,7 +232,10 @@ frame 1080x2400; frame-space pixels; (0,0) is top-left
 reuse the observed Continue center:
 axilio phone tap 540 1120`
 
-var applicationCommandDocumentation = map[string]CommandDocumentation{
+// commandDocumentationByKey is keyed by command path relative to the root
+// (commandHelpKey), with the root itself under its own name. Every public
+// command needs an entry, including the ones Cobra generates.
+var commandDocumentationByKey = map[string]CommandDocumentation{
 	"axilio": workflow(
 		"axilio login",
 		`eval "$(axilio sessions start --export)"`,
@@ -496,11 +474,37 @@ var applicationCommandDocumentation = map[string]CommandDocumentation{
 		sampleWithNote("axilio uploads delete upl_123", "none", "Delete upload upl_123? Also recall it from phones holding or receiving a copy?", "The table-mode prompt continues with [y/N], then reports Deleted upl_123 after confirmation. Redirected stdin can answer; JSON and quiet modes require --yes."),
 		sample("axilio uploads rm upl_123 --yes", "none", "Deleted upl_123"),
 	}},
+
+	// Commands Cobra generates. Their samples model installation and use
+	// rather than the generated script itself, which is not documentation.
+	"help": {Samples: []CommandSample{
+		sampleWithNote("axilio help phone tap", "Perform a tap action on the selected phone.\n\nUSAGE\n\n  axilio phone tap [x y] [--flags]", "none", "The complete help includes examples and command-effective flag descriptions."),
+		sampleWithNote("axilio help --html", "file:///path/to/axilio.1.html", "none", "The URL points to the self-contained HTML manual installed with Homebrew or install.sh."),
+	}},
+	"completion": workflow(
+		"source <(axilio completion bash)",
+		`axilio completion zsh > "${fpath[1]}/_axilio"`,
+		"axilio completion fish > ~/.config/fish/completions/axilio.fish",
+		"axilio completion powershell | Out-String | Invoke-Expression",
+	),
+	"completion bash": {Samples: []CommandSample{
+		sampleWithNote("source <(axilio completion bash)", "none", "none", "Loads completions in the current Bash session."),
+	}},
+	"completion zsh": {Samples: []CommandSample{
+		sampleWithNote(`axilio completion zsh > "${fpath[1]}/_axilio"`, "none", "none", "Installs the script for future Zsh sessions; start a new shell after installation."),
+	}},
+	"completion fish": {Samples: []CommandSample{
+		sampleWithNote("axilio completion fish > ~/.config/fish/completions/axilio.fish", "none", "none", "Installs the script where Fish loads it automatically."),
+	}},
+	"completion powershell": {Samples: []CommandSample{
+		sampleWithNote("axilio completion powershell | Out-String | Invoke-Expression", "none", "none", "Loads completions in the current PowerShell session."),
+	}},
 }
 
-func attachGeneratedCommandDocumentation(root *cobra.Command) {
-	longDescriptions := map[string]string{
-		"completion": `Generate a shell completion script for axilio.
+// generatedCommandLongDescriptions replaces the terse text Cobra writes for
+// the commands it generates.
+var generatedCommandLongDescriptions = map[string]string{
+	"completion": `Generate a shell completion script for axilio.
 
 After installing the generated completion script, users can type:
 
@@ -511,7 +515,7 @@ After installing the generated completion script, users can type:
 Their shell can complete command names, subcommands, and flags, reducing typos and making the command tree easier to discover. Completion is currently limited to this static command metadata; Axilio resource IDs and names are not fetched dynamically.
 
 Choose bash, zsh, fish, or powershell. The generated script is written to stdout so it can be sourced for the current shell or redirected to that shell's completion directory.`,
-		"completion bash": `Generate the Bash completion script for axilio.
+	"completion bash": `Generate the Bash completion script for axilio.
 
 Load completions in the current shell:
 
@@ -526,7 +530,7 @@ On macOS with Homebrew's bash-completion, use:
   axilio completion bash > "$(brew --prefix)/etc/bash_completion.d/axilio"
 
 The bash-completion package must be installed and loaded.`,
-		"completion zsh": `Generate the Zsh completion script for axilio.
+	"completion zsh": `Generate the Zsh completion script for axilio.
 
 Enable Zsh completion if needed, then install the script in a directory on fpath:
 
@@ -538,66 +542,18 @@ On macOS with Homebrew, use:
   axilio completion zsh > "$(brew --prefix)/share/zsh/site-functions/_axilio"
 
 Start a new shell after installing the script.`,
-		"completion fish": `Generate the Fish completion script for axilio.
+	"completion fish": `Generate the Fish completion script for axilio.
 
 Install it for future shells:
 
   axilio completion fish > ~/.config/fish/completions/axilio.fish
 
 Fish loads completion files from this directory automatically.`,
-		"completion powershell": `Generate the PowerShell completion script for axilio.
+	"completion powershell": `Generate the PowerShell completion script for axilio.
 
 Load completions in the current shell:
 
   axilio completion powershell | Out-String | Invoke-Expression
 
 Add the command to your PowerShell profile to load completions in future shells.`,
-	}
-	generated := map[string]CommandDocumentation{
-		"help": {Samples: []CommandSample{
-			sampleWithNote("axilio help phone tap", "Perform a tap action on the selected phone.\n\nUSAGE\n\n  axilio phone tap [x y] [--flags]", "none", "The complete help includes examples and command-effective flag descriptions."),
-			sampleWithNote("axilio help --html", "file:///path/to/axilio.1.html", "none", "The URL points to the self-contained HTML manual installed with Homebrew or install.sh."),
-		}},
-		"completion": workflow(
-			"source <(axilio completion bash)",
-			`axilio completion zsh > "${fpath[1]}/_axilio"`,
-			"axilio completion fish > ~/.config/fish/completions/axilio.fish",
-			"axilio completion powershell | Out-String | Invoke-Expression",
-		),
-		"completion bash": {Samples: []CommandSample{
-			sampleWithNote("source <(axilio completion bash)", "none", "none", "Loads completions in the current Bash session."),
-		}},
-		"completion zsh": {Samples: []CommandSample{
-			sampleWithNote(`axilio completion zsh > "${fpath[1]}/_axilio"`, "none", "none", "Installs the script for future Zsh sessions; start a new shell after installation."),
-		}},
-		"completion fish": {Samples: []CommandSample{
-			sampleWithNote("axilio completion fish > ~/.config/fish/completions/axilio.fish", "none", "none", "Installs the script where Fish loads it automatically."),
-		}},
-		"completion powershell": {Samples: []CommandSample{
-			sampleWithNote("axilio completion powershell | Out-String | Invoke-Expression", "none", "none", "Loads completions in the current PowerShell session."),
-		}},
-	}
-	for path, docs := range generated {
-		command := root
-		for _, name := range strings.Fields(path) {
-			var next *cobra.Command
-			for _, child := range command.Commands() {
-				if child.Name() == name {
-					next = child
-					break
-				}
-			}
-			command = next
-			if command == nil {
-				break
-			}
-		}
-		if command == nil || command.CommandPath() != root.Name()+" "+path {
-			panic("missing generated command documentation target " + path)
-		}
-		if description, ok := longDescriptions[path]; ok {
-			command.Long = description
-		}
-		AttachCommandDocumentation(command, docs)
-	}
 }

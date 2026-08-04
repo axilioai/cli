@@ -160,8 +160,7 @@ they do not select a local phone session.`,
 	root.SetVersionTemplate("{{.Name}} {{.Version}}\n")
 	configureHelpCommand(root)
 	groupCommandHelpFlags(root)
-	attachApplicationCommandDocumentation(root)
-	attachGeneratedCommandDocumentation(root)
+	attachCommandDocumentation(root)
 	return root
 }
 

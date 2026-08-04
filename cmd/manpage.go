@@ -34,6 +34,10 @@ func GenerateManpage(root *cobra.Command, version string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	return roffFromMarkdown(markdown), nil
+}
+
+func roffFromMarkdown(markdown string) []byte {
 	renderer := md2man.NewRoffRenderer()
 	roff := bytes.TrimRight(blackfriday.Run(
 		[]byte(markdown),
@@ -41,7 +45,7 @@ func GenerateManpage(root *cobra.Command, version string) ([]byte, error) {
 		blackfriday.WithExtensions(renderer.GetExtensions()|blackfriday.HeadingIDs),
 	), "\n")
 	roff = preserveLiteralBlankLines(roff)
-	return append(roff, '\n'), nil
+	return append(roff, '\n')
 }
 
 // mandoc's HTML renderer drops empty source lines inside .EX/.EE blocks. Use
@@ -105,7 +109,7 @@ func generateManpageMarkdown(root *cobra.Command, version string) (string, error
 
 	writeManpageHeading(&b, 1, "COMMON WORKFLOW", "COMMON_WORKFLOW")
 	writeWrapped(&b, "A typical interactive session signs in, acquires a phone, observes it, performs an action, verifies the result, and releases the session:")
-	if docs, ok := CommandDocs(root); ok && len(docs.Samples) > 0 {
+	if docs, ok := commandDocs(root); ok && len(docs.Samples) > 0 {
 		invocations := make([]string, 0, len(docs.Samples))
 		for _, sample := range docs.Samples {
 			invocations = append(invocations, sample.Invocation)
@@ -171,7 +175,7 @@ func writeCommandTree(b *strings.Builder, root, command *cobra.Command, level in
 
 func writeCommandReference(b *strings.Builder, root, command *cobra.Command) {
 	writeLiteral(b, command.UseLine())
-	docs, hasDocs := CommandDocs(command)
+	docs, hasDocs := commandDocs(command)
 	description := firstNonempty(command.Long, command.Short)
 	if hasDocs {
 		description = commandLongWithoutWalkthrough(command, docs)
@@ -272,7 +276,7 @@ func writeTerminalComment(out *strings.Builder, label, value string) {
 	prefix := "# " + label + ": "
 	continuation := "# " + strings.Repeat(" ", utf8.RuneCountInString(label)+2)
 	width := max(manpageWrapWidth-utf8.RuneCountInString(prefix), 20)
-	lines := wrapExampleComment(strings.Split(strings.TrimSpace(value), "\n"), width)
+	lines := wrapLines(strings.Split(strings.TrimSpace(value), "\n"), width)
 	for i, line := range lines {
 		if i == 0 {
 			out.WriteString(prefix)
@@ -598,26 +602,15 @@ func startsIndented(line string) bool {
 }
 
 func writeWrapped(b *strings.Builder, text string) {
-	text = strings.Join(strings.Fields(text), " ")
-	text = escapeMarkdownAngles(text)
+	text = escapeMarkdownAngles(strings.Join(strings.Fields(text), " "))
 	if text == "" {
 		return
 	}
-	lineWidth := 0
-	for _, word := range strings.Fields(text) {
-		width := utf8.RuneCountInString(word)
-		if lineWidth > 0 && lineWidth+1+width > manpageWrapWidth {
-			b.WriteByte('\n')
-			lineWidth = 0
-		}
-		if lineWidth > 0 {
-			b.WriteByte(' ')
-			lineWidth++
-		}
-		b.WriteString(word)
-		lineWidth += width
+	for _, line := range wrapLines([]string{text}, manpageWrapWidth) {
+		b.WriteString(line)
+		b.WriteByte('\n')
 	}
-	b.WriteString("\n\n")
+	b.WriteByte('\n')
 }
 
 func writeLiteral(b *strings.Builder, text string) {

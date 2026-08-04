@@ -85,7 +85,7 @@ func TestGenerateManpageDeterministicAndComplete(t *testing.T) {
 	}
 	commonWorkflow := strings.SplitN(markdown, "# COMMON WORKFLOW {#COMMON_WORKFLOW}\n", 2)[1]
 	commonWorkflow = strings.SplitN(commonWorkflow, "# GLOBAL OPTIONS {#GLOBAL_OPTIONS}\n", 2)[0]
-	rootDocs, ok := CommandDocs(root)
+	rootDocs, ok := commandDocs(root)
 	if !ok {
 		t.Fatal("root command has no structured documentation")
 	}
@@ -94,7 +94,7 @@ func TestGenerateManpageDeterministicAndComplete(t *testing.T) {
 			t.Errorf("common workflow missing root invocation %q", sample.Invocation)
 		}
 	}
-	observeDocs, ok := CommandDocs(findManpageTestCommand(t, root, "phone observe"))
+	observeDocs, ok := commandDocs(findManpageTestCommand(t, root, "phone observe"))
 	if !ok || strings.TrimSpace(observeDocs.Walkthrough) == "" {
 		t.Fatal("phone observe has no structured walkthrough")
 	}
@@ -210,20 +210,23 @@ func TestGeneratedManpageGroupsNoEffectGlobalFlagsFirst(t *testing.T) {
 	}
 
 	tests := []struct {
-		anchor      string
-		group       string
-		firstDetail string
+		anchor  string
+		grouped string // flag signatures expected on the single grouped row
+		effective,
+		noEffect string // one flag that must, and must not, keep its own row
 	}{
+		// help inherits a summary covering every global flag.
 		{
-			anchor: "COMMAND_help",
-			group: "**--api-key**, **--base-url**, **--no-color**, **--org**, **--output** / **-o**, **--quiet** / **-q** - " +
-				"No effect on help command or the help content it renders",
+			anchor:   "COMMAND_help",
+			grouped:  "**--api-key**, **--base-url**, **--no-color**, **--org**, **--output** / **-o**, **--quiet** / **-q**",
+			noEffect: "--output",
 		},
+		// phone tap groups only the flags its own help calls inert.
 		{
-			anchor: "COMMAND_phone-tap",
-			group: "**--api-key**, **--base-url**, **--no-color**, **--org** - " +
-				"No effect on phone tap command",
-			firstDetail: "**-o**, **--output**=*value* - Emit a human confirmation or JSON tap result",
+			anchor:    "COMMAND_phone-tap",
+			grouped:   "**--api-key**, **--base-url**, **--no-color**, **--org**",
+			effective: "--output",
+			noEffect:  "--api-key",
 		},
 	}
 
@@ -234,21 +237,26 @@ func TestGeneratedManpageGroupsNoEffectGlobalFlagsFirst(t *testing.T) {
 				t.Fatalf("%s section not found", tc.anchor)
 			}
 			normalized := strings.Join(strings.Fields(section), " ")
-			groupAt := strings.Index(normalized, tc.group)
+			groupAt := strings.Index(normalized, tc.grouped+" - ")
 			if groupAt < 0 {
-				t.Fatalf("%s is missing grouped no-effect flags %q\n%s", tc.anchor, tc.group, section)
+				t.Fatalf("%s is missing the grouped no-effect row %q\n%s", tc.anchor, tc.grouped, section)
 			}
 			behaviorAt := strings.Index(normalized, "Global-option behavior")
 			if behaviorAt < 0 || groupAt < behaviorAt {
 				t.Fatalf("%s grouped row is not in Global-option behavior\n%s", tc.anchor, section)
 			}
-			if tc.firstDetail != "" {
-				detailAt := strings.Index(normalized, tc.firstDetail)
+			// A grouped flag must not also get its own detail row, and an
+			// effective flag must keep one, after the group.
+			if own := strings.Index(normalized, "**"+tc.noEffect+"**=*"); own >= 0 {
+				t.Errorf("%s lists grouped flag %s separately as well\n%s", tc.anchor, tc.noEffect, section)
+			}
+			if tc.effective != "" {
+				detailAt := strings.Index(normalized, "**"+tc.effective+"**=*")
 				if detailAt < 0 {
-					t.Fatalf("%s is missing effective flag detail %q\n%s", tc.anchor, tc.firstDetail, section)
+					t.Fatalf("%s dropped the detail row for %s\n%s", tc.anchor, tc.effective, section)
 				}
 				if groupAt > detailAt {
-					t.Fatalf("%s lists effective flag details before the no-effect group\n%s", tc.anchor, section)
+					t.Errorf("%s lists effective flag details before the no-effect group\n%s", tc.anchor, section)
 				}
 			}
 		})
@@ -298,38 +306,31 @@ func TestManpageSampleUsesOneTerminalTranscript(t *testing.T) {
 			t.Errorf("terminal transcript retains separate field %q:\n%s", unwanted, got)
 		}
 	}
-}
 
-func TestManpageSampleLabelsNonemptyStderrInsideTranscript(t *testing.T) {
-	var rendered strings.Builder
-	writeSample(&rendered, CommandSample{
-		Invocation: "axilio login",
-		Stderr:     "Opening browser",
-		ExitStatus: 0,
-	})
-	got := rendered.String()
-	if !strings.Contains(got, "user@host ~ % axilio login\n\n# Standard error:\nOpening browser") {
-		t.Fatalf("stderr is not identified inside terminal transcript:\n%s", got)
+	// Non-empty stderr is labeled inside the same transcript rather than
+	// splitting into a second block.
+	rendered.Reset()
+	writeSample(&rendered, CommandSample{Invocation: "axilio login", Stderr: "Opening browser"})
+	if got := rendered.String(); !strings.Contains(got,
+		"user@host ~ % axilio login\n\n# Standard error:\nOpening browser") {
+		t.Errorf("stderr is not identified inside terminal transcript:\n%s", got)
 	}
 }
 
+// Roff treats a leading dot or apostrophe as a control request and a
+// backslash as an escape, so sample output containing them must survive the
+// Markdown-to-roff conversion as literal text.
 func TestGenerateManpageProtectsLiteralRoffInput(t *testing.T) {
-	root := &cobra.Command{Use: "axilio", Short: "Test command", Long: "Test command."}
-	child := AttachCommandDocumentation(&cobra.Command{
-		Use:   "literal",
-		Short: "Print difficult literal input",
-		Long:  "Print difficult literal input.",
-		RunE:  func(*cobra.Command, []string) error { return nil },
-	}, CommandDocumentation{Samples: []CommandSample{{
+	var markdown strings.Builder
+	markdown.WriteString("% \"AXILIO\" \"1\" \"" + manpageSourceDate + "\" \"axilio test\" \"Axilio CLI Manual\"\n")
+	writeManpageHeading(&markdown, 1, "NAME", "NAME")
+	writeWrapped(&markdown, "axilio - print difficult literal input")
+	writeSample(&markdown, CommandSample{
 		Invocation: "axilio literal",
 		Stdout:     ".leading-control\n'apostrophe-control\nback\\slash",
-	}}})
-	root.AddCommand(child)
+	})
 
-	rendered, err := GenerateManpage(root, "test")
-	if err != nil {
-		t.Fatal(err)
-	}
+	rendered := roffFromMarkdown(markdown.String())
 	path := filepath.Join(t.TempDir(), "literal.1")
 	if err := os.WriteFile(path, rendered, 0o600); err != nil {
 		t.Fatal(err)
