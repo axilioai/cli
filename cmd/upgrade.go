@@ -33,22 +33,18 @@ func upgradeCmd() *cobra.Command {
 			"release build, --check reports whether a newer release exists without " +
 			"installing it, including for Homebrew-managed installations.",
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			return runUpgrade(cmd.Context(), check)
+			return runUpgrade(cmd.Context(), check, upgradeDependencies{
+				isHomebrew:  update.IsHomebrew,
+				fetchLatest: update.FetchLatestRelease,
+				apply:       update.Apply,
+			})
 		},
 	}
 	cmd.Flags().BoolVar(&check, "check", false, "Check for a newer release without installing it")
 	return cmd
 }
 
-func runUpgrade(ctx context.Context, check bool) error {
-	return runUpgradeWithDependencies(ctx, check, upgradeDependencies{
-		isHomebrew:  update.IsHomebrew,
-		fetchLatest: update.FetchLatestRelease,
-		apply:       update.Apply,
-	})
-}
-
-func runUpgradeWithDependencies(ctx context.Context, check bool, deps upgradeDependencies) error {
+func runUpgrade(ctx context.Context, check bool, deps upgradeDependencies) error {
 	p := printer()
 
 	// A dev / source / `go install` build has no release binary to swap in; the

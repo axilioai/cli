@@ -30,7 +30,7 @@ func captureUpgradeJSON(t *testing.T, check bool, deps upgradeDependencies) (upg
 		os.Stdout = originalStdout
 	})
 
-	runErr := runUpgradeWithDependencies(context.Background(), check, deps)
+	runErr := runUpgrade(context.Background(), check, deps)
 	_ = w.Close()
 	os.Stdout = originalStdout
 	var buf bytes.Buffer
