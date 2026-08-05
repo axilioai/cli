@@ -102,6 +102,17 @@ func TestRenderedHelpContracts(t *testing.T) {
 		want []string
 	}{
 		{
+			name: "root",
+			args: []string{"--help"},
+			want: []string{
+				"Credentials resolve in this order: --api-key, AXILIO_API_KEY",
+				"each API key is scoped to the organization that created it",
+				"API host resolves from --base-url, AXILIO_BASE_URL",
+				"Phone command session selection precedence is --session, AXILIO_SESSION",
+				"Every successful command emits valid JSON with -o json",
+			},
+		},
+		{
 			name: "login",
 			args: []string{"login", "--help"},
 			want: []string{"browser OAuth", "--api-key axl_xxx", "printf '%s\\n'"},
@@ -109,17 +120,28 @@ func TestRenderedHelpContracts(t *testing.T) {
 		{
 			name: "config",
 			args: []string{"config", "--help"},
-			want: []string{"base-url", "does not detect a stored OAuth session", "config unset"},
+			want: []string{
+				"does not detect a stored OAuth session",
+				"config unset",
+				"set XDG_CONFIG_HOME; file is [value]/axilio/config.json",
+				"axilio config set base-url",
+				"axilio orgs use [org_name]",
+			},
 		},
 		{
 			name: "organizations",
 			args: []string{"orgs", "--help"},
-			want: []string{"OAuth", "API keys are bound to one org", "AXILIO_ORG", "orgs clear"},
+			want: []string{"Swap between the organizations", "OAuth", "API keys are bound to one org", "AXILIO_ORG", "orgs clear"},
 		},
 		{
 			name: "init",
 			args: []string{"init", "--help"},
-			want: []string{".claude/skills/axilio/SKILL.md", "AGENTS.md", ".cursor/rules/axilio.mdc", "--force"},
+			want: []string{
+				".claude/skills/axilio/SKILL.md",
+				"AGENTS.md",
+				".cursor/rules/axilio.mdc",
+				"--force",
+			},
 		},
 		{
 			name: "upgrade",
@@ -129,37 +151,94 @@ func TestRenderedHelpContracts(t *testing.T) {
 		{
 			name: "phones",
 			args: []string{"phones", "--help"},
-			want: []string{"shared", "dedicated", "phones mine", "sessions start --phone-id"},
+			want: []string{
+				"shared",
+				"dedicated",
+				"phones mine",
+				"sessions start --phone-id",
+			},
 		},
 		{
 			name: "sessions",
 			args: []string{"sessions", "--help"},
-			want: []string{"local lease file", "AXILIO_SESSION", "current-session pointer", "sessions list --remote"},
+			want: []string{
+				"local lease file",
+				"AXILIO_SESSION",
+				"current-session pointer",
+				"sessions list --remote",
+				"Show the session currently selected for phone commands",
+			},
 		},
 		{
 			name: "phone",
 			args: []string{"phone", "--help"},
-			want: []string{"observe", "find-text", "long-press", "screenshot", "wait-for", "send"},
+			want: []string{
+				"observe",
+				"find-text",
+				"long-press",
+				"screenshot",
+				"wait-for",
+				"send",
+			},
+		},
+		{
+			name: "phone type",
+			args: []string{"phone", "type", "--help"},
+			want: []string{
+				"Type text into the focused field",
+				"shell-special characters",
+				"US-layout keyboard",
+				"Printable ASCII characters are supported",
+				"emoji and other non-ASCII characters are silently skipped",
+			},
+		},
+		{
+			name: "phone screenshot",
+			args: []string{"phone", "screenshot", "--help"},
+			want: []string{
+				"contents are overwritten without confirmation",
+				"does not create a backup",
+				"overwrite existing contents without confirmation",
+			},
 		},
 		{
 			name: "workflows",
 			args: []string{"workflows", "--help"},
-			want: []string{"workflows list", "runs start", "sessions start --workflow"},
+			want: []string{
+				"workflows list",
+				"runs start",
+				"sessions start --workflow",
+			},
 		},
 		{
 			name: "runs",
 			args: []string{"runs", "--help"},
-			want: []string{"workflows list", "runs start", "runs get", "cancel"},
+			want: []string{
+				"workflows list",
+				"runs start",
+				"runs get",
+				"cancel",
+			},
 		},
 		{
 			name: "api keys",
 			args: []string{"api-keys", "--help"},
-			want: []string{"organization", "shown once", "api-keys delete"},
+			want: []string{
+				"organization",
+				"shown once",
+				"api-keys delete",
+			},
 		},
 		{
 			name: "uploads",
 			args: []string{"uploads", "--help"},
-			want: []string{"add", "list", "push", "delete", "phone send"},
+			want: []string{
+				"add",
+				"list",
+				"push",
+				"delete",
+				"phone send",
+			},
 		},
 	}
 
@@ -191,6 +270,7 @@ func TestPhoneTapRenderedContract(t *testing.T) {
 		"top-left",
 		"--query takes precedence",
 		"Session selection precedence is --session, AXILIO_SESSION, the sole active lease",
+		"No effect; the session's embedded control token in the websocket URL authenticates phone commands",
 		"TAP FLAGS",
 		"PHONE FLAGS",
 		"GLOBAL FLAGS",
@@ -277,6 +357,16 @@ func TestRenderedHelpUsesFlagOwnershipSections(t *testing.T) {
 					if !strings.Contains(got, section) {
 						t.Errorf("rendered help missing inherited %q\n%s", section, got)
 					}
+				}
+			}
+			for _, name := range []string{"api-key", "base-url", "no-color", "org", "output", "quiet"} {
+				usage, ok := commandGlobalFlagUsage(command, name)
+				if !ok {
+					t.Errorf("no expected --%s help registered", name)
+					continue
+				}
+				if !strings.Contains(strings.ToLower(got), strings.ToLower(contractText(usage))) {
+					t.Errorf("rendered help missing command-specific --%s usage %q\n%s", name, usage, rendered)
 				}
 			}
 		})

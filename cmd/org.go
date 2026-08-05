@@ -34,7 +34,7 @@ func orgCmd() *cobra.Command {
 		Use:     "orgs",
 		Aliases: []string{"org"},
 		Short:   "List and switch the active organization (OAuth sessions).",
-		Long: "Work across the organizations you belong to without signing in again. " +
+		Long: "Swap between the organizations you belong to without signing in again. " +
 			"`orgs list` shows them, `orgs use <slug>` sets the active org for future " +
 			"commands, and `--org` / `AXILIO_ORG` override it for a single call. API " +
 			"keys are bound to one org, so this applies to `axilio login` (OAuth) sessions.",

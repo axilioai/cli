@@ -69,13 +69,29 @@ func groupFlagsByOwner(command *cobra.Command) {
 
 		output := cmd.OutOrStdout()
 		originalHidden := make(map[*pflag.Flag]bool, len(flags))
+		originalUsage := map[*pflag.Flag]string{}
 		for _, flag := range flags {
 			originalHidden[flag] = flag.Hidden
 		}
+		cmd.Root().PersistentFlags().VisitAll(func(flag *pflag.Flag) {
+			if usage, ok := commandGlobalFlagUsage(cmd, flag.Name); ok {
+				originalUsage[flag] = flag.Usage
+				flag.Usage = usage
+			}
+		})
+		cmd.Flags().VisitAll(func(flag *pflag.Flag) {
+			if usage, ok := commandOwnedFlagUsage(cmd, flag.Name); ok {
+				originalUsage[flag] = flag.Usage
+				flag.Usage = usage
+			}
+		})
 		defer func() {
 			cmd.SetOut(output)
 			for flag, hidden := range originalHidden {
 				flag.Hidden = hidden
+			}
+			for flag, usage := range originalUsage {
+				flag.Usage = usage
 			}
 		}()
 

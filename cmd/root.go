@@ -88,9 +88,7 @@ func Root() *cobra.Command {
 the resources that support them.
 
 Start with login, acquire a session, observe its phone, then act on what is
-visible. Sessions persist locally until stopped. Phone command session selection
-precedence is --session, AXILIO_SESSION, the sole active lease, the saved
-current-session pointer, then an ambiguity error.
+visible. Sessions persist locally until stopped.
 
 The main command families are:
   phones / sessions   discover phones and manage interactive leases
@@ -99,18 +97,28 @@ The main command families are:
   uploads             store media and deliver it to phones
   api-keys            manage organization-scoped API keys
 
-Credentials resolve in this order: --api-key, AXILIO_API_KEY, the saved config
-API key, then the saved OAuth session. The API host resolves from --base-url,
-AXILIO_BASE_URL, saved base-url, then https://api.axilio.ai. For OAuth, the
-organization resolves from --org, AXILIO_ORG, the saved active organization,
-then the OAuth session default. API keys are already bound to one organization.
+Precedence rules:
 
-Table output is the human default. JSON is emitted on stdout by commands that
-return structured results, but action-only commands do not all have a JSON
-success body yet. Notes, prompts, and progress use stderr and are suppressed in
-JSON or quiet mode. Quiet and JSON modes do not confirm destructive actions;
-pass --yes where offered. API-key, base-URL, and organization flags affect
-API-backed commands; they do not select a local phone session.`,
+Credentials resolve in this order: --api-key, AXILIO_API_KEY, the saved config
+API key, then the saved OAuth session.
+
+The organization resolves from --org, AXILIO_ORG, the saved active organization,
+then the OAuth session default. Note that each API key is scoped to the
+organization that created it and cannot switch organizations with --org.
+
+API host resolves from --base-url, AXILIO_BASE_URL, saved base-url, then
+https://api.axilio.ai.
+
+Phone command session selection precedence is --session, AXILIO_SESSION, the
+sole active lease, the saved current-session pointer, then an ambiguity error.
+
+Table output for human readability is the default. Every successful command
+emits valid JSON with -o json; action commands return a small acknowledgment.
+The exception is sessions start --export, which emits shell text for eval.
+Notes, prompts, and progress use stderr and are suppressed in JSON or quiet
+mode. Quiet and JSON modes do not confirm destructive actions; pass --yes where
+offered. API-key, base-URL, and organization flags affect API-backed commands;
+they do not select a local phone session.`,
 		Example: `  axilio login
   eval "$(axilio sessions start --export)"
   axilio phone observe
@@ -135,7 +143,7 @@ API-backed commands; they do not select a local phone session.`,
 		},
 	}
 	pf := root.PersistentFlags()
-	pf.StringVarP(&flagOutput, "output", "o", "table", "Result format: table or json; JSON requires a structured command result")
+	pf.StringVarP(&flagOutput, "output", "o", "table", "Result format: table or json; every success emits valid JSON except sessions start --export")
 	pf.BoolVar(&flagNoColor, "no-color", false, "Disable ANSI color in human-oriented output")
 	pf.BoolVarP(&flagQuiet, "quiet", "q", false, "Suppress stderr notes and prompts; destructive commands still require --yes")
 	pf.StringVar(&flagAPIKey, "api-key", "", "API key for API-backed commands; overrides AXILIO_API_KEY and the saved key")

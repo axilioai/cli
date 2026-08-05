@@ -19,14 +19,17 @@ func phoneCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "phone",
 		Short: "Observe and control the selected session's phone.",
-		Long: "Drive a phone leased with `axilio sessions start`.\n\n" +
+		Long: "Running `axilio phone` without a subcommand is equivalent to " +
+			"`axilio phone --help`: it only displays this help and does not observe " +
+			"or control a phone. Phone and global flags shown here therefore have no " +
+			"effect. Pass flags to a phone subcommand instead.\n\n" +
+			"Drive a phone leased with `axilio sessions start`.\n\n" +
 			"A reliable loop is " +
 			"observe the screen, find or semantically target an element, act, then " +
 			"observe again to verify.\n\n" +
 			"Available verbs are observe, find, find-text, " +
 			"tap, long-press, swipe, type, key, screenshot, wait-for, and send. " +
-			"Vision commands can return structured JSON; action-only commands do not " +
-			"all emit a JSON success body.\n\n" +
+			"Every successful verb emits a structured result with -o json.\n\n" +
 			"Session selection precedence is --session, AXILIO_SESSION, the sole active " +
 			"local lease, the saved current-session pointer, then an ambiguity error. " +
 			"The verbs mirror the SDK MobileDriver so an explored interaction maps " +
@@ -262,8 +265,8 @@ func phoneLongPressCmd() *cobra.Command {
 			"screen's top-left. This command is coordinate-only; use observe or find " +
 			"to inspect the current frame before choosing a point. The default hold " +
 			"duration is 800 milliseconds.",
-		Example: `  axilio phone long-press 540 1200
-  axilio phone long-press 540 1200 --duration-ms 1200`,
+		Example: `  axilio phone long-press 540 1080
+  axilio phone long-press 540 1080 --duration-ms 1200`,
 		Args: cobra.ExactArgs(2),
 		RunE: func(_ *cobra.Command, args []string) error {
 			d, err := currentDriver()
@@ -331,9 +334,10 @@ func phoneTypeCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "type <text>",
 		Short: "Type a string of text.",
-		Long: "Type one shell argument into the focused field on the selected phone. " +
-			"Quote spaces and shell metacharacters so the text remains one argument. " +
-			"Input is limited to characters typeable with the US keyboard layout.",
+		Long: "Type text into the focused field on the selected phone.\n\n" +
+			"Enclose text in quotes when it contains spaces or shell-special characters. " +
+			"Text is entered through a US-layout keyboard. Printable ASCII characters " +
+			"are supported; emoji and other non-ASCII characters are silently skipped.",
 		Example: `  axilio phone type "hello world"
   axilio phone type 'user@example.com'
   axilio phone type "don't split this text"`,
@@ -390,7 +394,8 @@ func phoneScreenshotCmd() *cobra.Command {
 		Short: "Capture the screen as a PNG file.",
 		Long: "Capture the selected phone's screen as PNG bytes and write them to " +
 			"--out. The default destination is screenshot.png in the current " +
-			"directory. An existing file at the destination is overwritten. On " +
+			"directory. If the destination already exists, its contents are overwritten " +
+			"without confirmation; the CLI does not create a backup. On " +
 			"success the human result reports the path and byte count.",
 		Example: `  axilio phone screenshot
   axilio phone screenshot --out artifacts/login.png`,
@@ -414,7 +419,7 @@ func phoneScreenshotCmd() *cobra.Command {
 			return nil
 		},
 	}
-	cmd.Flags().StringVar(&out, "out", "screenshot.png", "PNG path to create or overwrite")
+	cmd.Flags().StringVar(&out, "out", "screenshot.png", "PNG path to create; overwrite existing contents without confirmation")
 	return cmd
 }
 

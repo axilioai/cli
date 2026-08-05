@@ -24,7 +24,18 @@ func configCmd() *cobra.Command {
 			"summary, active organization, config path, and sessions directory. The " +
 			"current summary does not detect a stored OAuth session, so an OAuth-only " +
 			"login may be shown as auth method `none`; `status` verifies effective " +
-			"credentials. The only editable key is base-url.",
+			"credentials. The only editable key is base-url.\n\n" +
+			"Current ways to change these values are:\n" +
+			"  API host         axilio config set base-url [url]\n" +
+			"                   axilio config unset base-url\n" +
+			"  API key          axilio login --api-key [api_key]\n" +
+			"                   axilio logout clears saved credentials\n" +
+			"  Active org       axilio orgs use [org_name]\n" +
+			"                   axilio orgs clear\n" +
+			"  Config path      set XDG_CONFIG_HOME; file is [value]/axilio/config.json\n" +
+			"                   (default ~/.config/axilio/config.json)\n" +
+			"  Sessions dir     set XDG_CONFIG_HOME; directory is [value]/axilio/sessions\n" +
+			"                   (default ~/.config/axilio/sessions)",
 		Example: `  axilio config
   axilio config set base-url https://api.axilio.ai
   axilio config unset base-url`,
