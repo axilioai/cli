@@ -36,7 +36,7 @@ if [ -n "$effective_hooks_path" ] && [ "$effective_hooks_path" != ".githooks" ];
   exit 1
 fi
 
-if [ ! -x .githooks/pre-commit ] || [ ! -x .githooks/pre-push ] || [ ! -x .github/scripts/check-git-identities.sh ]; then
+if [ ! -x .githooks/pre-push ] || [ ! -x .github/scripts/check-git-identities.sh ]; then
   echo "versioned identity hooks are missing or not executable" >&2
   exit 1
 fi
