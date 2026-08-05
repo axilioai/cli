@@ -5,9 +5,11 @@ go 1.26.3
 require (
 	github.com/axilioai/platform-go v0.5.0
 	github.com/charmbracelet/fang v1.0.0
+	github.com/cpuguy83/go-md2man/v2 v2.0.6
 	github.com/minio/selfupdate v0.6.0
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c
 	github.com/pterm/pterm v0.12.83
+	github.com/russross/blackfriday/v2 v2.1.0
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.9
 	github.com/zalando/go-keyring v0.2.8

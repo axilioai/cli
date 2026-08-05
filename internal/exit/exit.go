@@ -1,18 +1,8 @@
 // Package exit defines the CLI's stable exit-code contract and the classifier
 // that maps an error onto one of the codes. Agents and scripts branch on the
-// exit code instead of parsing stderr, so this table is an API: keep it stable,
-// and document it wherever the CLI is documented (README).
-//
-//	0  ok           success
-//	1  error        generic / unclassified failure
-//	2  usage        bad flags, args, or input (invalid_args, HTTP 400/422)
-//	3  auth         missing key or unauthorized (unauthorized, HTTP 401/403)
-//	4  not-found    element/session/resource not found (element_not_found,
-//	                no_allocation, HTTP 404)
-//	5  timeout      deadline exceeded, retryable (timeout, HTTP 408)
-//	6  unavailable  network/device/server, transient (connection, not_connected,
-//	                device_offline, HTTP 429/5xx)
-//	7  canceled     the operation was canceled
+// exit code instead of parsing stderr, so this table is an API: keep it
+// stable. Codes carries the name and meaning of every code, and the generated
+// manual renders it, so the contract is described in one place.
 //
 // Classification precedence: an explicit code stamped with With wins, then the
 // driver's mobile.Error taxonomy, then the SDK's HTTP status, then context
@@ -42,6 +32,27 @@ const (
 	Unavailable Code = 6
 	Canceled    Code = 7
 )
+
+// Documented pairs a code with the short name and the meaning the CLI
+// publishes for it.
+type Documented struct {
+	Code        Code
+	Name        string
+	Description string
+}
+
+// Codes is the published exit-code contract, in code order. The generated
+// manual renders this directly, so a code's meaning is written once.
+var Codes = []Documented{
+	{OK, "ok", "Success."},
+	{Err, "error", "The command failed for a reason that does not fit a more specific category."},
+	{Usage, "usage", "Invalid command syntax, argument count, or value; or the API rejected the request as invalid (HTTP 400 or 422)."},
+	{Auth, "auth", "Missing or invalid credentials, unauthorized access, or permission denied (HTTP 401 or 403)."},
+	{NotFound, "not-found", "A requested resource, phone allocation, or on-screen element was not found (HTTP 404)."},
+	{Timeout, "timeout", "The operation exceeded its timeout or deadline (HTTP 408)."},
+	{Unavailable, "unavailable", "The Axilio service or phone connection was unavailable, the phone was offline, the request was rate-limited, or the server failed (HTTP 429 or 5xx)."},
+	{Canceled, "canceled", "The operation was canceled by the user, shell, or system."},
+}
 
 // coded carries an explicit exit code alongside an error, so a command can
 // classify its own failure (e.g. a bad flag as Usage) without a sentinel.

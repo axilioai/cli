@@ -16,13 +16,16 @@ name: Publish CLI
 #   2. `tag` reads + validates VERSION and pushes the annotated vX.Y.Z tag at
 #      the merge commit. Idempotent: an existing tag is left alone, so a
 #      docs-only PR can touch VERSION without re-tagging.
-#   3. `release` runs goreleaser AT THE TAG (cross-platform binaries, the
-#      GitHub Release, the Homebrew formula). Skipped when a GitHub Release
-#      for the tag already exists, so re-runs and no-op merges are safe.
+#   3. `release` runs goreleaser AT THE TAG when the GitHub Release for the
+#      tag is missing, or when a stable release exists but the Homebrew cask
+#      never reached this version — the one recoverable partial failure.
+#      Recovery rebuilds assets and cask together so the cask hashes match.
 #
 # Each step converges independently, which makes failure recovery a plain
 # re-run: tag exists + release missing (a goreleaser flake) -> re-run publishes
 # without re-tagging. workflow_dispatch is the manual entry for exactly that.
+# Deeper artifact integrity is not audited here; it is enforced at build time
+# by the before hooks and scripts/test_release_artifacts.sh in ci.yml.
 #
 # Everything happens inside this one workflow run — no tag-push event chaining.
 # That is deliberate: tags pushed with the default GITHUB_TOKEN never trigger
@@ -101,18 +104,46 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Skip if this version is already released
+      # Publish when the release is missing, or when a stable release exists
+      # but the tap never reached this version (release created, cask push
+      # failed). Asset-level integrity is deliberately not audited here:
+      # ci.yml verifies archives and the generated cask against fresh
+      # goreleaser output, which is where format drift belongs.
+      - name: Check whether this version still needs publishing
         id: gate
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
           VERSION: ${{ needs.tag.outputs.version }}
         run: |
           TAG="v${VERSION}"
-          if gh release view "${TAG}" --json tagName >/dev/null 2>&1; then
-            echo "release ${TAG} already exists; nothing to publish"
-            echo "publish=false" >> "$GITHUB_OUTPUT"
+          # skip_upload: auto omits prereleases from the tap, so for those the
+          # release alone decides.
+          prerelease=false
+          case "${VERSION%%+*}" in
+            *-*) prerelease=true ;;
+          esac
+
+          publish=true
+          if ! gh release view "${TAG}" --json tagName >/dev/null 2>&1; then
+            echo "release ${TAG} is missing; publishing"
+          elif [[ "${prerelease}" == true ]]; then
+            echo "prerelease ${TAG} already exists; nothing to publish"
+            publish=false
+          elif gh api repos/axilioai/homebrew-tap/contents/Casks/axilio.rb --jq .content 2>/dev/null \
+            | base64 --decode | grep -Fq "version \"${VERSION}\""; then
+            echo "release ${TAG} and its Homebrew cask are current; nothing to publish"
+            publish=false
           else
-            echo "publish=true" >> "$GITHUB_OUTPUT"
+            echo "release ${TAG} exists but the cask is not at ${VERSION}; republishing both"
+          fi
+          echo "publish=${publish}" >> "$GITHUB_OUTPUT"
+
+          # Fail before release creation when a stable publish has no tap
+          # credential; the state check above keeps the re-run idempotent.
+          if [[ "${publish}" == true && "${prerelease}" == false && -z "${HOMEBREW_TAP_TOKEN}" ]]; then
+            echo "::error::HOMEBREW_TAP_TOKEN is required for stable CLI releases"
+            exit 1
           fi
 
       - name: Check out the tag
@@ -131,6 +162,15 @@ jobs:
         with:
           go-version-file: go.mod
 
+      # GoReleaser's before hook checks byte-for-byte generation drift and
+      # requires mandoc -Tlint to produce no diagnostics. Install mandoc here
+      # so publication cannot race ahead of the ordinary CI workflow.
+      - name: Install manpage linter
+        if: steps.gate.outputs.publish == 'true'
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends --yes mandoc
+
       - uses: goreleaser/goreleaser-action@v6
         if: steps.gate.outputs.publish == 'true'
         with:
@@ -138,6 +178,5 @@ jobs:
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Optional: set to publish the Homebrew formula to axilioai/homebrew-tap.
-          # When unset, goreleaser skips the brew step (skip_upload: auto).
+          # Required for stable releases; skip_upload: auto skips prereleases.
           HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}

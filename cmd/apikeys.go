@@ -15,17 +15,14 @@ func apiKeysCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "api-keys",
 		Short: "List, create, and delete organization API keys.",
-		Long: "Running `axilio api-keys` without a subcommand is equivalent to " +
-			"`axilio api-keys --help`: it only displays this help and does not list, " +
-			"create, or delete API keys. Global flags shown here therefore have no " +
-			"effect. Pass flags to an api-keys subcommand instead.\n\n" +
-			"Manage API keys scoped to the active organization. List keys to discover " +
+		Long: "Manage API keys scoped to the active organization. List keys to discover " +
 			"their IDs, create a named key whose secret is shown once, or delete a key " +
 			"by ID. Organization access and API-key management permissions are enforced " +
-			"by the API.",
-		Example: `  axilio api-keys list
-  axilio api-keys create ci
-  axilio api-keys delete key_123 --yes`,
+			"by the API.\n\n" +
+			"Running `axilio api-keys` without a subcommand is equivalent to " +
+			"`axilio api-keys --help`: it only displays this help and does not list, " +
+			"create, or delete API keys. Global flags shown here therefore have no " +
+			"effect. Pass flags to an api-keys subcommand instead.",
 	}
 	cmd.AddCommand(apiKeysListCmd(), apiKeysCreateCmd(), apiKeysDeleteCmd())
 	return cmd
@@ -38,8 +35,6 @@ func apiKeysListCmd() *cobra.Command {
 		Long: "List API keys in the active organization. Results include key ID, name, " +
 			"masked preview, last-used time, and creation time. Full secret values are " +
 			"never returned; use the ID with `api-keys delete`.",
-		Example: `  axilio api-keys list
-  axilio api-keys list -o json`,
 		RunE: func(_ *cobra.Command, _ []string) error {
 			cl, err := newClient()
 			if err != nil {
@@ -74,8 +69,6 @@ func apiKeysCreateCmd() *cobra.Command {
 		Long: "Create a named API key in the active organization. The result includes " +
 			"the ID, name, full secret, and creation time. Save the secret immediately: " +
 			"later list calls show only a preview and the full value cannot be retrieved.",
-		Example: `  axilio api-keys create ci
-  axilio api-keys create "release automation" -o json`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
 			cl, err := newClient()
@@ -107,12 +100,9 @@ func apiKeysDeleteCmd() *cobra.Command {
 		Use:   "delete <key-id>",
 		Short: "Delete an API key by id.",
 		Long: "Permanently delete an organization API key using an ID discovered with " +
-			"`api-keys list`. Interactive use asks for confirmation. JSON, quiet, " +
-			"or redirected use cannot confirm, so pass --yes for non-interactive " +
-			"deletion. JSON success reports the deleted key ID.",
-		Example: `  axilio api-keys list
-  axilio api-keys delete key_123
-  axilio api-keys delete key_123 --yes`,
+			"`api-keys list`. Without --yes, table mode reads confirmation from stdin, " +
+			"including redirected input. JSON and quiet modes do not prompt and require " +
+			"--yes. JSON success reports the deleted key ID.",
 		Args: cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
 			cl, err := newClient()
@@ -133,6 +123,6 @@ func apiKeysDeleteCmd() *cobra.Command {
 			return nil
 		},
 	}
-	cmd.Flags().BoolVarP(&yes, "yes", "y", false, "Delete without prompting; required for non-interactive use")
+	cmd.Flags().BoolVarP(&yes, "yes", "y", false, "Delete without prompting; required in JSON or quiet mode")
 	return cmd
 }

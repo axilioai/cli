@@ -5,8 +5,8 @@ Perform a tap action on the selected phone.
   Use --query to find an element by natural-language description and tap its center. If --query and coordinates are both
   provided, --query takes precedence.
 
-  Session selection precedence is --session, AXILIO_SESSION, the sole active lease, the saved current-session pointer,
-  then an ambiguity error.
+  Session selection precedence is --session, AXILIO_SESSION, the only locally saved session, the most recently started
+  session, then an ambiguity error.
 
   USAGE
 
@@ -15,8 +15,19 @@ Perform a tap action on the selected phone.
   EXAMPLES
 
     axilio phone tap --query "the search box"
+    # stdout: none
+    # stderr: Tapped "the search box" at 540,620
+    # exit status: 0
+
     axilio phone tap 540 1200
+    # stdout: none
+    # stderr: Tapped 540,1200
+    # exit status: 0
+
     axilio phone tap --session sess_123 --query "continue"
+    # stdout: none
+    # stderr: Tapped "continue" at 540,1120
+    # exit status: 0
 
   TAP FLAGS
 
@@ -27,7 +38,7 @@ Perform a tap action on the selected phone.
 
   PHONE FLAGS
 
-    --session  Session ID; overrides AXILIO_SESSION, sole-lease, and current-pointer selection
+    --session  Session ID; overrides AXILIO_SESSION and automatic session selection
 
   GLOBAL FLAGS
 

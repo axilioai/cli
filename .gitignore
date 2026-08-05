@@ -1,6 +1,8 @@
 # Build output
 /axilio
 /dist/
+# Derived from man/axilio.1 at build/package time (go generate ./...)
+/man/axilio.1.html
 
 # Test / coverage
 *.out

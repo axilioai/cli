@@ -17,20 +17,17 @@ func sessionsCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "sessions",
 		Short: "Acquire, list, select, and release phone sessions.",
-		Long: "Running `axilio sessions` without a subcommand is equivalent to " +
+		Long: "Manage the phone sessions used by `axilio phone`. Sessions remain active " +
+			"in Axilio until stopped; the CLI saves connection information locally so " +
+			"later phone commands can reconnect. Session selection precedence is " +
+			"--session, AXILIO_SESSION, the only locally saved session, the most " +
+			"recently started session, then an ambiguity error. `sessions list " +
+			"--remote` asks the API for all active Axilio sessions, including sessions " +
+			"not saved on this computer.\n\n" +
+			"Running `axilio sessions` without a subcommand is equivalent to " +
 			"`axilio sessions --help`: it only displays this help and does not acquire, " +
 			"list, select, or stop sessions. Global flags shown here therefore have no " +
-			"effect. Pass flags to a sessions subcommand instead.\n\n" +
-			"Manage the phone leases used by `axilio phone`. Starting a session " +
-			"stores a local lease file and a current-session pointer until the " +
-			"session is stopped. Session selection precedence is --session, " +
-			"AXILIO_SESSION, the sole active lease, the current-session pointer, " +
-			"then an ambiguity error. `sessions list --remote` instead asks the API " +
-			"for all active server sessions.",
-		Example: `  axilio sessions start
-  axilio sessions list
-  axilio sessions current
-  axilio sessions stop sess_123`,
+			"effect. Pass flags to a sessions subcommand instead.",
 	}
 	cmd.AddCommand(sessionsListCmd(), sessionsStartCmd(), sessionsStopCmd(), sessionsCurrentCmd())
 	return cmd
@@ -40,15 +37,12 @@ func sessionsListCmd() *cobra.Command {
 	var remote bool
 	cmd := &cobra.Command{
 		Use:   "list",
-		Short: "List the phone leases this CLI holds (--remote for all server sessions).",
-		Long: "List local lease files by default. The `*` marker identifies the lease " +
-			"that phone commands would select in this shell when resolution is not " +
-			"ambiguous. Use --remote to list active server sessions instead; remote " +
-			"rows include session ID, phone ID, phone type, and model but are not the " +
-			"local lease registry.",
-		Example: `  axilio sessions list
-  axilio sessions list --remote
-  axilio sessions list -o json`,
+		Short: "List sessions saved by this CLI (--remote for all active Axilio sessions).",
+		Long: "List sessions saved locally by default. The `*` marker identifies the " +
+			"session that phone commands would select in this shell when selection is " +
+			"not ambiguous. Use --remote to list all active Axilio sessions instead; " +
+			"remote rows include session ID, phone ID, phone type, and model but do not " +
+			"indicate which session this CLI would select.",
 		RunE: func(_ *cobra.Command, _ []string) error {
 			if remote {
 				return listRemoteSessions()
@@ -59,7 +53,7 @@ func sessionsListCmd() *cobra.Command {
 			sel, _ := session.Resolve("")
 			printer().Emit(leases, func() {
 				if len(leases) == 0 {
-					fmt.Println("No active leases. Run `axilio sessions start` to acquire one.")
+					fmt.Println("No sessions saved locally. Run `axilio sessions start` to start one.")
 					return
 				}
 				rows := [][]string{{"", "SESSION", "PHONE", "TYPE"}}
@@ -75,7 +69,7 @@ func sessionsListCmd() *cobra.Command {
 			return nil
 		},
 	}
-	cmd.Flags().BoolVar(&remote, "remote", false, "List all active server sessions instead of this CLI's local lease files")
+	cmd.Flags().BoolVar(&remote, "remote", false, "List all active Axilio sessions instead of sessions saved locally")
 	return cmd
 }
 
@@ -109,14 +103,10 @@ func sessionsCurrentCmd() *cobra.Command {
 		Use:   "current",
 		Short: "Show the session currently selected for phone commands.",
 		Long: "Resolve and show the session selected for phone commands. Phone command " +
-			"session selection precedence is --session, AXILIO_SESSION, the sole active " +
-			"local lease, the saved current-session pointer, then an ambiguity " +
-			"error. This command has no --session flag, so it starts at " +
-			"AXILIO_SESSION. If no session resolves, the current implementation " +
-			"prints a note and exits successfully.",
-		Example: `  axilio sessions current
-  AXILIO_SESSION=sess_123 axilio sessions current
-  axilio sessions current -o json`,
+			"session selection precedence is --session, AXILIO_SESSION, the only locally " +
+			"saved session, the most recently started session, then an ambiguity error. " +
+			"This command has no --session flag, so it starts at AXILIO_SESSION. If no " +
+			"session is selected, the command prints a note and exits 0.",
 		RunE: func(_ *cobra.Command, _ []string) error {
 			s, err := session.Resolve("")
 			if err != nil {
@@ -143,18 +133,14 @@ func sessionsStartCmd() *cobra.Command {
 	var export bool
 	cmd := &cobra.Command{
 		Use:   "start",
-		Short: "Acquire a phone and open a session; the lease persists until you stop it.",
-		Long: "Acquire an Android phone by default and persist its session as a local " +
-			"lease and current-session pointer. Select iphone with --phone-type, pin " +
+		Short: "Acquire a phone and open a session that remains active until stopped.",
+		Long: "Acquire an Android phone by default. The session remains active in Axilio " +
+			"until stopped; the CLI saves its connection information locally and marks " +
+			"it as the most recently started session. Select iphone with --phone-type, pin " +
 			"a dedicated phone discovered through `phones mine` with --phone-id, or " +
 			"attach the session to a workflow with --workflow. --export prints only " +
 			"`export AXILIO_SESSION=<id>` for shell eval; that shell syntax also wins " +
-			"when -o json is supplied. The lease remains active until explicitly stopped.",
-		Example: `  axilio sessions start
-  axilio sessions start --phone-type iphone
-  axilio sessions start --phone-id ph_123
-  axilio sessions start --workflow wf_123
-  eval "$(axilio sessions start --export)"`,
+			"when -o json is supplied.",
 		RunE: func(_ *cobra.Command, _ []string) error {
 			cl, err := newClient()
 			if err != nil {
@@ -210,7 +196,7 @@ func sessionsStartCmd() *cobra.Command {
 	}
 	cmd.Flags().StringVar(&phoneType, "phone-type", "android", "Phone platform to allocate: android or iphone")
 	cmd.Flags().StringVar(&phoneID, "phone-id", "", "Pin a dedicated phone ID from `phones mine` instead of pool allocation")
-	cmd.Flags().StringVar(&workflowID, "workflow", "", "Workflow ID to attach; omit for an interactive lease")
+	cmd.Flags().StringVar(&workflowID, "workflow", "", "Workflow ID to attach; omit for an interactive session")
 	cmd.Flags().BoolVar(&export, "export", false, "Print only `export AXILIO_SESSION=<id>` for shell eval")
 	return cmd
 }
@@ -221,13 +207,11 @@ func sessionsStopCmd() *cobra.Command {
 		Use:   "stop <session-id|phone-id>",
 		Short: "Release a session by session id or phone id.",
 		Long: "Release an active phone allocation using either its session ID or phone " +
-			"ID. Discover IDs with `sessions list --remote`; a matching local lease " +
-			"and current-session pointer are removed after release. Interactive use " +
-			"asks for confirmation. JSON, quiet, or redirected use cannot confirm, " +
-			"so pass --yes for non-interactive release.",
-		Example: `  axilio sessions list --remote
-  axilio sessions stop sess_123
-  axilio sessions stop ph_123 --yes`,
+			"ID. Discover IDs with `sessions list --remote`; matching locally saved " +
+			"session information and the most-recent-session marker are removed after " +
+			"release. Without --yes, table " +
+			"mode reads confirmation from stdin, including redirected input. JSON and " +
+			"quiet modes do not prompt and require --yes.",
 		Args: cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
 			cl, err := newClient()
@@ -260,6 +244,6 @@ func sessionsStopCmd() *cobra.Command {
 			return nil
 		},
 	}
-	cmd.Flags().BoolVarP(&yes, "yes", "y", false, "Release without prompting; required for non-interactive use")
+	cmd.Flags().BoolVarP(&yes, "yes", "y", false, "Release without prompting; required in JSON or quiet mode")
 	return cmd
 }

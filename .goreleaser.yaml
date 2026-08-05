@@ -10,6 +10,12 @@ project_name: axilio
 before:
   hooks:
     - go mod tidy
+    # Fail the release if command metadata changed without regenerating the
+    # checked-in page, or if mandoc finds even a non-fatal diagnostic.
+    - sh scripts/check_manpage.sh
+    # The HTML manual renders from the same command tree here at package time;
+    # it is not checked in.
+    - go run ./cmd/manpage --html man/axilio.1.html
 
 builds:
   - id: axilio
@@ -32,6 +38,13 @@ archives:
       - goos: windows
         formats: [zip]
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    # A non-empty files list replaces GoReleaser's implicit README/license
+    # globs, so keep README explicit alongside both manual formats (the HTML
+    # one produced by the before hook above).
+    files:
+      - README.md
+      - man/axilio.1
+      - man/axilio.1.html
 
 checksum:
   name_template: checksums.txt
@@ -47,6 +60,11 @@ changelog:
 release:
   draft: false
   prerelease: auto
+  # Only reached on the recovery path in publish.yml: a release exists but the
+  # tap never got this version, so goreleaser must run again to push the cask.
+  # The rebuilt archives replace the originals — the Date ldflag makes them
+  # byte-different — so recovery re-publishes checksums along with the cask.
+  replace_existing_artifacts: true
 
 # Homebrew tap (macOS). Publishes the axilio cask to axilioai/homebrew-tap on
 # each non-prerelease tag — goreleaser deprecated formula `brews` in favor of
@@ -58,6 +76,8 @@ homebrew_casks:
   - name: axilio
     binaries:
       - axilio
+    manpages:
+      - man/axilio.1
     repository:
       owner: axilioai
       name: homebrew-tap

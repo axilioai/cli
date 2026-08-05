@@ -79,27 +79,28 @@ var (
 	flagOrg     string
 )
 
-// Root builds the root command with its global flags and subcommands.
-func Root() *cobra.Command {
-	root := &cobra.Command{
-		Use:   "axilio",
-		Short: "Acquire and drive Axilio phones from the command line.",
-		Long: `Acquire Axilio phones, drive live sessions, run workflows, and manage
+// The root description is written in three parts because the manual presents
+// them separately: an overview under DESCRIPTION, and the reference material
+// under NOTES. Cobra shows the parts joined, as rootLong.
+const (
+	rootOverview = `Acquire Axilio phones, drive live sessions, run workflows, and manage
 the resources that support them.
 
 Start with login, acquire a session, observe its phone, then act on what is
-visible. Sessions persist locally until stopped.
+visible. Sessions remain active in Axilio until stopped. The CLI also saves
+session information locally so later phone commands can reconnect.
 
 The main command families are:
-  phones / sessions   discover phones and manage interactive leases
+  phones / sessions   discover phones and manage active phone sessions
   phone               observe and control the selected session's phone
   workflows / runs    discover workflows and create or inspect runs
   uploads             store media and deliver it to phones
   api-keys            manage organization-scoped API keys
 
-Precedence rules:
+For detailed offline documentation, run man axilio. Run axilio help --html to
+print a clickable file:// URL for the browser-friendly version.`
 
-Credentials resolve in this order: --api-key, AXILIO_API_KEY, the saved config
+	rootResolutionPrecedence = `Credentials resolve in this order: --api-key, AXILIO_API_KEY, the saved config
 API key, then the saved OAuth session.
 
 The organization resolves from --org, AXILIO_ORG, the saved active organization,
@@ -110,19 +111,29 @@ API host resolves from --base-url, AXILIO_BASE_URL, saved base-url, then
 https://api.axilio.ai.
 
 Phone command session selection precedence is --session, AXILIO_SESSION, the
-sole active lease, the saved current-session pointer, then an ambiguity error.
+only locally saved session, the most recently started session, then an ambiguity
+error.`
 
-Table output for human readability is the default. Every successful command
-emits valid JSON with -o json; action commands return a small acknowledgment.
-The exception is sessions start --export, which emits shell text for eval.
+	rootOutputBehavior = `Table output for human readability is the default. Every successful runnable
+application command emits valid JSON with -o json; action commands return a
+small acknowledgment. Built-in help, completion, and version output remains
+text. The sessions start --export command emits shell text for eval.
 Notes, prompts, and progress use stderr and are suppressed in JSON or quiet
 mode. Quiet and JSON modes do not confirm destructive actions; pass --yes where
 offered. API-key, base-URL, and organization flags affect API-backed commands;
-they do not select a local phone session.`,
-		Example: `  axilio login
-  eval "$(axilio sessions start --export)"
-  axilio phone observe
-  axilio phone tap --query "the search box"`,
+they do not select a local phone session.`
+
+	rootLong = rootOverview +
+		"\n\nPrecedence rules:\n\n" + rootResolutionPrecedence +
+		"\n\n" + rootOutputBehavior
+)
+
+// Root builds the root command with its global flags and subcommands.
+func Root() *cobra.Command {
+	root := &cobra.Command{
+		Use:           "axilio",
+		Short:         "Acquire and drive Axilio phones from the command line.",
+		Long:          rootLong,
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		PersistentPreRunE: func(_ *cobra.Command, _ []string) error {
@@ -143,7 +154,7 @@ they do not select a local phone session.`,
 		},
 	}
 	pf := root.PersistentFlags()
-	pf.StringVarP(&flagOutput, "output", "o", "table", "Result format: table or json; every success emits valid JSON except sessions start --export")
+	pf.StringVarP(&flagOutput, "output", "o", "table", "Result format for runnable application commands: table or json; help, completion, and version stay text, and sessions start --export stays shell")
 	pf.BoolVar(&flagNoColor, "no-color", false, "Disable ANSI color in human-oriented output")
 	pf.BoolVarP(&flagQuiet, "quiet", "q", false, "Suppress stderr notes and prompts; destructive commands still require --yes")
 	pf.StringVar(&flagAPIKey, "api-key", "", "API key for API-backed commands; overrides AXILIO_API_KEY and the saved key")
@@ -156,7 +167,9 @@ they do not select a local phone session.`,
 	// word); cobra adds the --version flag when root.Version is set.
 	root.Version = versionString()
 	root.SetVersionTemplate("{{.Name}} {{.Version}}\n")
+	configureHelpCommand(root)
 	groupCommandHelpFlags(root)
+	attachCommandDocumentation(root)
 	return root
 }
 

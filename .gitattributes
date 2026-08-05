@@ -1,0 +1,3 @@
+# man/axilio.1 is generated from cmd/command_docs.go and the manpage
+# generator; review those sources and let diffs collapse the artifact.
+man/axilio.1 linguist-generated=true

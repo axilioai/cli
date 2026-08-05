@@ -3,6 +3,7 @@ package cmd
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -10,6 +11,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/axilioai/cli/internal/exit"
 	"github.com/charmbracelet/fang"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -73,6 +75,84 @@ func TestApplicationFlagUsage(t *testing.T) {
 	}
 }
 
+func TestNoEffectGlobalFlagClassification(t *testing.T) {
+	root := Root()
+	globalFlags := []string{"api-key", "base-url", "no-color", "org", "output", "quiet"}
+	initCommand := findCommand(t, root, "init")
+	for _, name := range []string{"api-key", "org"} {
+		if !commandGlobalFlagHasNoEffect(initCommand, name) {
+			t.Errorf("init --%s is not classified as having no effect", name)
+		}
+	}
+	for _, name := range []string{"base-url", "no-color", "output", "quiet"} {
+		if commandGlobalFlagHasNoEffect(initCommand, name) {
+			t.Errorf("init --%s is incorrectly classified as having no effect", name)
+		}
+	}
+	helpCommand := findCommand(t, root, "help")
+	for _, name := range globalFlags {
+		if !commandGlobalFlagHasNoEffect(helpCommand, name) {
+			t.Errorf("help --%s is not classified as having no effect", name)
+		}
+	}
+}
+
+func TestTimeoutFlagHelpDocumentsSyntaxAndEffectiveDefault(t *testing.T) {
+	root := Root()
+	tests := []struct {
+		path         string
+		usage        string
+		defaultValue string
+	}{
+		{path: "phone find", usage: visionTimeoutHelp, defaultValue: "10s"},
+		{path: "phone wait-for", usage: ocrTimeoutHelp, defaultValue: "10s"},
+		{path: "phone send", usage: deliveryTimeoutHelp, defaultValue: "1m0s"},
+		{path: "uploads push", usage: deliveryTimeoutHelp, defaultValue: "1m0s"},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.path, func(t *testing.T) {
+			command := findCommand(t, root, tc.path)
+			flag := command.Flags().Lookup("timeout")
+			if flag == nil {
+				t.Fatalf("%s has no --timeout flag", command.CommandPath())
+			}
+			if got := flag.Value.Type(); got != "duration" {
+				t.Errorf("%s --timeout type = %q, want duration", command.CommandPath(), got)
+			}
+			if flag.Usage != tc.usage {
+				t.Errorf("%s --timeout usage = %q, want %q", command.CommandPath(), flag.Usage, tc.usage)
+			}
+			if got := flag.Value.String(); got != tc.defaultValue {
+				t.Errorf("%s --timeout effective default = %q, want %q", command.CommandPath(), got, tc.defaultValue)
+			}
+			if flag.DefValue != "" {
+				t.Errorf("%s --timeout automatic default suffix = %q; usage owns the normalized default", command.CommandPath(), flag.DefValue)
+			}
+		})
+	}
+}
+
+func TestStartTimeoutHelpDocumentsIntegerSecondsSemantics(t *testing.T) {
+	command := findCommand(t, Root(), "runs start")
+	flag := command.Flags().Lookup("start-timeout")
+	if flag == nil {
+		t.Fatal("runs start has no --start-timeout flag")
+	}
+	if got := flag.Value.Type(); got != "int64" {
+		t.Errorf("runs start --start-timeout type = %q, want int64", got)
+	}
+	if flag.Usage != startTimeoutHelp {
+		t.Errorf("runs start --start-timeout usage = %q, want %q", flag.Usage, startTimeoutHelp)
+	}
+	if got := flag.Value.String(); got != "0" {
+		t.Errorf("runs start --start-timeout default = %q, want 0", got)
+	}
+	if strings.Contains(flag.Usage, durationUnitsHelp) {
+		t.Error("runs start --start-timeout incorrectly advertises duration suffixes instead of whole seconds")
+	}
+}
+
 func TestRenderedHelpSnapshots(t *testing.T) {
 	t.Setenv("NO_COLOR", "1")
 	t.Setenv("__FANG_TEST_WIDTH", "120")
@@ -105,11 +185,14 @@ func TestRenderedHelpContracts(t *testing.T) {
 			name: "root",
 			args: []string{"--help"},
 			want: []string{
+				"For detailed offline documentation, run man axilio",
+				"axilio help --html",
 				"Credentials resolve in this order: --api-key, AXILIO_API_KEY",
 				"each API key is scoped to the organization that created it",
 				"API host resolves from --base-url, AXILIO_BASE_URL",
 				"Phone command session selection precedence is --session, AXILIO_SESSION",
-				"Every successful command emits valid JSON with -o json",
+				"Every successful runnable application command emits valid JSON with -o json",
+				"Built-in help, completion, and version output remains text",
 			},
 		},
 		{
@@ -124,6 +207,7 @@ func TestRenderedHelpContracts(t *testing.T) {
 				"does not detect a stored OAuth session",
 				"config unset",
 				"set XDG_CONFIG_HOME; file is [value]/axilio/config.json",
+				"directory is [value]/axilio/sessions",
 				"axilio config set base-url",
 				"axilio orgs use [org_name]",
 			},
@@ -162,9 +246,10 @@ func TestRenderedHelpContracts(t *testing.T) {
 			name: "sessions",
 			args: []string{"sessions", "--help"},
 			want: []string{
-				"local lease file",
+				"Sessions remain active in Axilio until stopped",
+				"saves connection information locally",
 				"AXILIO_SESSION",
-				"current-session pointer",
+				"most recently started session",
 				"sessions list --remote",
 				"Show the session currently selected for phone commands",
 			},
@@ -269,7 +354,7 @@ func TestPhoneTapRenderedContract(t *testing.T) {
 		"frame-space pixels",
 		"top-left",
 		"--query takes precedence",
-		"Session selection precedence is --session, AXILIO_SESSION, the sole active lease",
+		"Session selection precedence is --session, AXILIO_SESSION, the only locally saved session",
 		"No effect; the session's embedded control token in the websocket URL authenticates phone commands",
 		"TAP FLAGS",
 		"PHONE FLAGS",
@@ -373,6 +458,15 @@ func TestRenderedHelpUsesFlagOwnershipSections(t *testing.T) {
 	}
 }
 
+func findCommand(t *testing.T, root *cobra.Command, path string) *cobra.Command {
+	t.Helper()
+	command, _, err := root.Find(strings.Fields(path))
+	if err != nil || command == nil {
+		t.Fatalf("find command %q: %v", path, err)
+	}
+	return command
+}
+
 func TestHelpCaptureWriterPreservesFileDescriptor(t *testing.T) {
 	const fd = uintptr(42)
 	var buffer bytes.Buffer
@@ -398,6 +492,18 @@ func TestGeneratedCompletionHelp(t *testing.T) {
 	t.Setenv("__FANG_TEST_WIDTH", "120")
 
 	rootHelp := renderHelp(t, "completion", "--help")
+	normalizedRootHelp := strings.Join(strings.Fields(rootHelp), " ")
+	for _, want := range []string{
+		"axilio api-<Tab>",
+		"axilio phone <Tab>",
+		"axilio sessions start --<Tab>",
+		"complete command names, subcommands, and flags",
+		"resource IDs and names are not fetched dynamically",
+	} {
+		if !strings.Contains(normalizedRootHelp, want) {
+			t.Errorf("completion help missing %q\n%s", want, rootHelp)
+		}
+	}
 	for _, shell := range []string{"bash", "zsh", "fish", "powershell"} {
 		if !strings.Contains(rootHelp, shell) {
 			t.Errorf("completion help missing %q\n%s", shell, rootHelp)
@@ -405,6 +511,9 @@ func TestGeneratedCompletionHelp(t *testing.T) {
 		help := renderHelp(t, "completion", shell, "--help")
 		if !strings.Contains(help, "--no-descriptions") {
 			t.Errorf("completion %s help missing --no-descriptions\n%s", shell, help)
+		}
+		if strings.Contains(help, "__axilio_debug") || strings.Contains(help, "#compdef axilio") {
+			t.Errorf("completion %s help embeds generated script output\n%s", shell, help)
 		}
 	}
 }
@@ -435,11 +544,36 @@ func TestDocumentationHelpParity(t *testing.T) {
 			t.Errorf("README completion docs missing %q", completion)
 		}
 	}
-	// AXI-1507 made universal JSON success output true: every successful
-	// command emits valid JSON under -o json (json_output_test.go holds the
-	// line), so the README is required to say so rather than forbidden to.
-	if !strings.Contains(readme, "emits valid JSON") {
-		t.Error("README no longer documents universal JSON success output (AXI-1507)")
+	// AXI-1507 made JSON success output true for the runnable application
+	// commands held by json_output_test.go. Cobra's built-in help/completion and
+	// version paths remain text and are documented as explicit exceptions.
+	normalizedReadme := strings.Join(strings.Fields(readme), " ")
+	if !strings.Contains(normalizedReadme,
+		"successful runnable application commands emit valid JSON under `-o json`") {
+		t.Error("README no longer documents runnable-command JSON success output (AXI-1507)")
+	}
+	if !strings.Contains(normalizedReadme,
+		"except for the documented `sessions start --export` shell contract") {
+		t.Error("README no longer documents the sessions export JSON exception")
+	}
+	if !strings.Contains(normalizedReadme,
+		"Built-in help and completion commands, bare parent-command help, `--help`, and `--version` remain text") {
+		t.Error("README no longer documents the non-JSON built-in output paths")
+	}
+
+	// The README table is a deliberately terser summary of exit.Codes, which
+	// the manual renders in full. Only the set of codes has to agree; adding
+	// or removing one without touching the README is the drift that matters.
+	for _, documented := range exit.Codes {
+		row := fmt.Sprintf("| `%d` |", documented.Code)
+		if !strings.Contains(readme, row) {
+			t.Errorf("README exit-status table has no row for code %d (%s)",
+				documented.Code, documented.Name)
+		}
+	}
+	codeRows := regexp.MustCompile(`(?m)^\s*\|\s*`+"`"+`\d+`+"`"+`\s*\|`).FindAllString(readme, -1)
+	if got, want := len(codeRows), len(exit.Codes); got != want {
+		t.Errorf("README documents %d exit codes, exit.Codes has %d", got, want)
 	}
 
 	// The skill is no longer a file in this repo (AXI-1527): it's hosted at

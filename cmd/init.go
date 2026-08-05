@@ -86,7 +86,8 @@ func initCmd() *cobra.Command {
 		Use:   "init",
 		Short: "Drop an agent skill into this repo so a coding agent can drive phones via the CLI.",
 		Long: "Write an instruction file that teaches your coding agent to drive a phone " +
-			"through the axilio CLI and then hand back a runnable SDK script. The agent " +
+			"through the axilio CLI and then hand back a runnable Python or Go script " +
+			"using the Axilio SDK. The agent " +
 			"asks whether you want Python or Go.\n\n" +
 			"Bare `axilio init` detects which agents this repo uses (.claude/, AGENTS.md, " +
 			".cursor/) and writes a skill for each; on a terminal with nothing detected it " +
@@ -101,9 +102,6 @@ func initCmd() *cobra.Command {
 			"quiet, or redirected use requires --agent.\n\n" +
 			"It finishes with a sign-in check: browser login is the one step an agent " +
 			"can't do itself, so init surfaces it while a human is likely at the keyboard.",
-		Example: `  axilio init
-  axilio init --agent codex
-  axilio init --agent claude --force`,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			return runInit(cmd.Context(), agent, force)
 		},

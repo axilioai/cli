@@ -14,16 +14,13 @@ func workflowsCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "workflows",
 		Short: "Discover workflows that can be run.",
-		Long: "Running `axilio workflows` without a subcommand is equivalent to " +
+		Long: "Inspect workflows in the active organization. Use `workflows list` " +
+			"to discover a workflow ID, then pass that ID to `runs start` or " +
+			"`sessions start --workflow`.\n\n" +
+			"Running `axilio workflows` without a subcommand is equivalent to " +
 			"`axilio workflows --help`: it only displays this help and does not list " +
 			"workflows. Global flags shown here therefore have no effect. Pass flags " +
-			"to `workflows list` instead.\n\n" +
-			"Inspect workflows in the active organization. Use `workflows list` " +
-			"to discover a workflow ID, then pass that ID to `runs start` or " +
-			"`sessions start --workflow`.",
-		Example: `  axilio workflows list
-  axilio workflows list --search checkout
-  axilio runs start wf_123`,
+			"to `workflows list` instead.",
 	}
 	cmd.AddCommand(workflowsListCmd())
 	return cmd
@@ -41,9 +38,6 @@ func workflowsListCmd() *cobra.Command {
 			"include workflow ID, name, platform, status, and last-run time. Use " +
 			"--search for a name substring and --limit to control the number returned. " +
 			"A listed workflow ID can be passed directly to `runs start`.",
-		Example: `  axilio workflows list
-  axilio workflows list --search checkout --limit 10
-  axilio workflows list -o json`,
 		RunE: func(_ *cobra.Command, _ []string) error {
 			cl, err := newClient()
 			if err != nil {

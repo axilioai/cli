@@ -79,9 +79,14 @@ func IsHomebrew() bool {
 	if resolved, rerr := filepath.EvalSymlinks(exe); rerr == nil {
 		exe = resolved
 	}
-	// Homebrew keeps binaries under <prefix>/Cellar/<formula>/... on both macOS
-	// and Linuxbrew; the bin/ entry is a symlink into Cellar, resolved above.
-	return strings.Contains(filepath.ToSlash(exe), "/Cellar/")
+	return isHomebrewExecutable(exe)
+}
+
+func isHomebrewExecutable(path string) bool {
+	path = filepath.ToSlash(path)
+	// Formula binaries live under Cellar. Cask binaries live under Caskroom and
+	// are linked into bin; EvalSymlinks above exposes either managed location.
+	return strings.Contains(path, "/Cellar/") || strings.Contains(path, "/Caskroom/")
 }
 
 // Apply upgrades the running binary to rel: download the release archive for

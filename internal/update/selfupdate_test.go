@@ -95,6 +95,26 @@ func TestIsReleaseVersion(t *testing.T) {
 	}
 }
 
+func TestIsHomebrewExecutable(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		path string
+		want bool
+	}{
+		{name: "Apple Silicon cask", path: "/opt/homebrew/Caskroom/axilio/0.6.1/axilio", want: true},
+		{name: "Intel cask", path: "/usr/local/Caskroom/axilio/0.6.1/axilio", want: true},
+		{name: "formula", path: "/opt/homebrew/Cellar/axilio/0.6.1/bin/axilio", want: true},
+		{name: "curl prefix", path: "/usr/local/bin/axilio", want: false},
+		{name: "name only", path: "/tmp/Caskroom-like/axilio", want: false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := isHomebrewExecutable(tc.path); got != tc.want {
+				t.Fatalf("isHomebrewExecutable(%q) = %v, want %v", tc.path, got, tc.want)
+			}
+		})
+	}
+}
+
 func writeTar(t *testing.T, tw *tar.Writer, name string, data []byte) {
 	t.Helper()
 	if err := tw.WriteHeader(&tar.Header{Name: name, Mode: 0o755, Size: int64(len(data))}); err != nil {
