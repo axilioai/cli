@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repo_root=$(git rev-parse --show-toplevel)
+cd "$repo_root"
+
+origin_url=$(git config --get remote.origin.url || true)
+pinned_origin=$(git config --local --get axilio.identityPolicyOrigin || true)
+if [ -z "$origin_url" ] || [ "$origin_url" != "$pinned_origin" ]; then
+  echo "identity policy origin changed; rerun scripts/install-git-hooks.sh" >&2
+  exit 1
+fi
+
+if ! tracking_oid=$(git rev-parse --verify refs/remotes/origin/main 2>/dev/null); then
+  echo "origin/main is missing; fetch origin and rerun scripts/install-git-hooks.sh" >&2
+  exit 1
+fi
+
+hook_tmp_dir=$(mktemp -d "${TMPDIR:-/tmp}/git-identity-commit.XXXXXX")
+trap 'rm -rf "$hook_tmp_dir"' EXIT
+policy_file="$hook_tmp_dir/policy.txt"
+git show "${tracking_oid}:.github/git-identity-allowlist.txt" > "$policy_file"
+
+identity_email() {
+  printf '%s\n' "$1" \
+    | sed -n 's/^.* <\([^<>]*\)> [0-9][0-9]* [+-][0-9][0-9][0-9][0-9]$/\1/p'
+}
+
+author_email=$(identity_email "$(git var GIT_AUTHOR_IDENT)")
+committer_email=$(identity_email "$(git var GIT_COMMITTER_IDENT)")
+if [ -z "$author_email" ] || [ -z "$committer_email" ]; then
+  echo "could not resolve the pending commit author and committer identities" >&2
+  exit 1
+fi
+
+check_pending_identity() {
+  label=$1
+  email=$2
+  if ! .github/scripts/check-git-identities.sh \
+    --policy "$policy_file" \
+    --active-email "$email" >/dev/null; then
+    echo "pending commit $label identity is not approved; set an approved repository-local Git identity" >&2
+    return 1
+  fi
+}
+
+check_pending_identity author "$author_email"
+check_pending_identity committer "$committer_email"
+
+echo "identity pre-commit gate passed"

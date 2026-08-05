@@ -3,7 +3,8 @@ set -euo pipefail
 
 repo_root=$(git rev-parse --show-toplevel)
 checker="$repo_root/.github/scripts/check-git-identities.sh"
-hook="$repo_root/.githooks/pre-push"
+pre_commit_hook="$repo_root/.githooks/pre-commit"
+pre_push_hook="$repo_root/.githooks/pre-push"
 
 test_tmp_dir=$(mktemp -d "${TMPDIR:-/tmp}/git-identity-tests.XXXXXX")
 trap 'rm -rf "$test_tmp_dir"' EXIT
@@ -12,8 +13,12 @@ fixture_repo="$test_tmp_dir/repo"
 mkdir -p "$fixture_repo/.github/scripts" "$fixture_repo/.githooks"
 git -C "$fixture_repo" init -q -b main
 cp "$checker" "$fixture_repo/.github/scripts/check-git-identities.sh"
-cp "$hook" "$fixture_repo/.githooks/pre-push"
-chmod +x "$fixture_repo/.github/scripts/check-git-identities.sh" "$fixture_repo/.githooks/pre-push"
+cp "$pre_commit_hook" "$fixture_repo/.githooks/pre-commit"
+cp "$pre_push_hook" "$fixture_repo/.githooks/pre-push"
+chmod +x \
+  "$fixture_repo/.github/scripts/check-git-identities.sh" \
+  "$fixture_repo/.githooks/pre-commit" \
+  "$fixture_repo/.githooks/pre-push"
 
 policy="$fixture_repo/policy.txt"
 printf 'domain axilio.ai\ndomain-tree github.com\n' > "$policy"
@@ -113,7 +118,8 @@ expect_failure "unsorted policy" "" \
 git -C "$fixture_repo" switch -q main
 mkdir -p "$fixture_repo/.github/scripts" "$fixture_repo/.githooks"
 cp "$checker" "$fixture_repo/.github/scripts/check-git-identities.sh"
-cp "$hook" "$fixture_repo/.githooks/pre-push"
+cp "$pre_commit_hook" "$fixture_repo/.githooks/pre-commit"
+cp "$pre_push_hook" "$fixture_repo/.githooks/pre-push"
 cp "$policy" "$fixture_repo/.github/git-identity-allowlist.txt"
 git -C "$fixture_repo" add .github .githooks
 make_commit "tester@axilio.ai" "tester@axilio.ai" "add identity policy fixtures" >/dev/null
@@ -136,6 +142,19 @@ printf 'allowed\n' > "$hook_clone/allowed.txt"
 git -C "$hook_clone" add allowed.txt
 git -C "$hook_clone" commit -q -m "allowed push"
 
+git -C "$hook_clone" switch -q -c rejected-commit main
+printf 'rejected at commit\n' > "$hook_clone/rejected-at-commit.txt"
+git -C "$hook_clone" add rejected-at-commit.txt
+expect_failure "pre-commit author" "unapproved@example.invalid" \
+  env \
+    GIT_AUTHOR_NAME="Fixture Author" \
+    GIT_AUTHOR_EMAIL="unapproved@example.invalid" \
+    GIT_COMMITTER_NAME="Fixture Committer" \
+    GIT_COMMITTER_EMAIL="tester@axilio.ai" \
+    git -C "$hook_clone" commit -q -m "rejected at commit"
+git -C "$hook_clone" restore --staged rejected-at-commit.txt
+rm -f "$hook_clone/rejected-at-commit.txt"
+
 git -C "$hook_clone" switch -q -c rejected-push main
 printf 'rejected\n' > "$hook_clone/rejected.txt"
 git -C "$hook_clone" add rejected.txt
@@ -143,7 +162,7 @@ GIT_AUTHOR_NAME="Fixture Author" \
 GIT_AUTHOR_EMAIL="unapproved@example.invalid" \
 GIT_COMMITTER_NAME="Fixture Committer" \
 GIT_COMMITTER_EMAIL="tester@axilio.ai" \
-  git -C "$hook_clone" commit -q -m "rejected push"
+  git -C "$hook_clone" commit -q --no-verify -m "rejected push"
 
 printf 'domain axilio.ai\ndomain-tree example.invalid\ndomain-tree github.com\n' \
   > "$hook_clone/.github/git-identity-allowlist.txt"

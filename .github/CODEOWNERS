@@ -5,5 +5,6 @@
 /.github/scripts/test-git-identities.sh @axilioai/axilio
 /.github/workflows/identity-policy.yml @axilioai/axilio
 /.github/workflows/publish.yml @axilioai/axilio
+/.githooks/pre-commit @axilioai/axilio
 /.githooks/pre-push @axilioai/axilio
 /scripts/install-git-hooks.sh @axilioai/axilio

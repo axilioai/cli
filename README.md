@@ -105,11 +105,12 @@ scripts/install-git-hooks.sh
 scripts/install-git-hooks.sh --check
 ```
 
+The pre-commit gate validates the pending commit's actual author and committer.
 The pre-push gate validates the configured Git email and the complete history
 of every outgoing branch or tag against the reviewed identity policy on
 `origin/main`. Hosted CI performs the same validation and remains authoritative.
-The installer refuses to replace another active `core.hooksPath`; chain the
-versioned `.githooks/pre-push` hook manually in that case.
+The installer refuses to replace another active `core.hooksPath`; chain both
+versioned `.githooks` hooks manually in that case.
 
 ## Quick start
 
