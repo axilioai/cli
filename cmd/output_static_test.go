@@ -43,8 +43,11 @@ func TestApplicationCommandsAvoidDirectProcessWrites(t *testing.T) {
 				if !isProcessOutput(arg) {
 					continue
 				}
-				// update.Notify owns a gated stderr note and accepts its writer
-				// explicitly; all command result paths go through Printer.
+				// root owns the real process streams passed into Printer. update.Notify
+				// owns one gated stderr note and also accepts its writer explicitly.
+				if path == "root.go" && calledSelector(call, "output", "NewWithStreams") {
+					continue
+				}
 				if path == "root.go" && calledSelector(call, "update", "Notify") {
 					continue
 				}

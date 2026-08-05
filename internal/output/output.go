@@ -9,11 +9,9 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"os"
 	"strings"
 
 	"github.com/pterm/pterm"
-	"golang.org/x/term"
 )
 
 // Streams is the process boundary used by Printer. Production uses the real
@@ -35,16 +33,6 @@ type Printer struct {
 	stdin    io.Reader
 	stdinTTY bool
 	err      error
-}
-
-// New builds a Printer for the real process streams.
-func New(format string, noColor, quiet bool) *Printer {
-	return NewWithStreams(format, noColor, quiet, Streams{
-		Stdout:   os.Stdout,
-		Stderr:   os.Stderr,
-		Stdin:    os.Stdin,
-		StdinTTY: term.IsTerminal(int(os.Stdin.Fd())),
-	})
 }
 
 // NewWithStreams builds a Printer with an explicit I/O boundary.

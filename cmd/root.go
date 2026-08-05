@@ -178,7 +178,14 @@ func Root() *cobra.Command {
 	return root
 }
 
-func printer() *output.Printer { return output.New(flagOutput, flagNoColor, flagQuiet) }
+func printer() *output.Printer {
+	return output.NewWithStreams(flagOutput, flagNoColor, flagQuiet, output.Streams{
+		Stdout:   os.Stdout,
+		Stderr:   os.Stderr,
+		Stdin:    os.Stdin,
+		StdinTTY: term.IsTerminal(int(os.Stdin.Fd())),
+	})
+}
 
 // resolvedCreds applies flag > env > config precedence for the key and host.
 func resolvedCreds() (apiKey, baseURL string) {
