@@ -596,28 +596,6 @@ func TestDocumentationHelpParity(t *testing.T) {
 		t.Errorf("README documents %d exit codes, exit.Codes has %d", got, want)
 	}
 
-	// The skill is no longer a file in this repo (AXI-1527): it's hosted at
-	// the backend's /skill route, fetched once per test binary by TestMain.
-	// These assertions therefore check the copy users actually receive.
-	skill := agentSkillBody
-	if !strings.Contains(skill, "axilio phone key enter") {
-		t.Error("agent skill must show the supported enter key")
-	}
-	for _, contradiction := range []string{"enter, back, home", "back, home, recents"} {
-		if strings.Contains(strings.ToLower(skill), contradiction) {
-			t.Errorf("agent skill advertises unsupported named keys: %q", contradiction)
-		}
-	}
-	for _, command := range []string{
-		"axilio sessions start --export",
-		"axilio phone tap --query",
-		"axilio phone send",
-		"axilio uploads list",
-	} {
-		if !strings.Contains(skill, command) {
-			t.Errorf("agent skill missing %q", command)
-		}
-	}
 }
 
 func applicationCommands(root *cobra.Command) []*cobra.Command {

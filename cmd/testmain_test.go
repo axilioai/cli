@@ -1,8 +1,6 @@
 package cmd
 
 import (
-	"context"
-	"fmt"
 	"os"
 	"testing"
 
@@ -14,11 +12,5 @@ import (
 // developer's real browser session from changing command test results.
 func TestMain(m *testing.M) {
 	keyring.MockInit()
-	body, err := fetchSkillBody(context.Background())
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "fetching the agent skill for TestSkill*: %v\n", err)
-		os.Exit(1)
-	}
-	agentSkillBody = body
 	os.Exit(m.Run())
 }

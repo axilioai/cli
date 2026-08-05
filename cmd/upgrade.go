@@ -7,12 +7,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-type upgradeDependencies struct {
-	isHomebrew  func() bool
-	fetchLatest func(context.Context) (*update.Release, error)
-	apply       func(context.Context, *update.Release) error
-}
-
 type upgradeResult struct {
 	Status          string `json:"status"`
 	Current         string `json:"current"`
@@ -20,6 +14,27 @@ type upgradeResult struct {
 	UpdateAvailable bool   `json:"update_available"`
 	InstallMethod   string `json:"install_method"`
 	NextCommand     string `json:"next_command"`
+}
+
+type upgradeAction uint8
+
+const (
+	upgradeReport upgradeAction = iota
+	upgradeFetch
+	upgradeApply
+)
+
+type upgradeState struct {
+	current        string
+	check          bool
+	homebrew       bool
+	releaseChecked bool
+	release        *update.Release
+}
+
+type upgradeDecision struct {
+	action upgradeAction
+	result upgradeResult
 }
 
 func upgradeCmd() *cobra.Command {
@@ -33,108 +48,117 @@ func upgradeCmd() *cobra.Command {
 			"release build, --check reports whether a newer release exists without " +
 			"installing it, including for Homebrew-managed installations.",
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			return runUpgrade(cmd.Context(), check, upgradeDependencies{
-				isHomebrew:  update.IsHomebrew,
-				fetchLatest: update.FetchLatestRelease,
-				apply:       update.Apply,
-			})
+			return runUpgrade(cmd.Context(), check)
 		},
 	}
 	cmd.Flags().BoolVar(&check, "check", false, "Check for a newer release without installing it")
 	return cmd
 }
 
-func runUpgrade(ctx context.Context, check bool, deps upgradeDependencies) error {
+func runUpgrade(ctx context.Context, check bool) error {
 	p := printer()
+	state := upgradeState{
+		current:  Version,
+		check:    check,
+		homebrew: update.IsHomebrew(),
+	}
+	decision := decideUpgrade(state)
+	if decision.action == upgradeFetch {
+		rel, err := update.FetchLatestRelease(ctx)
+		if err != nil {
+			return err
+		}
+		state.releaseChecked = true
+		state.release = rel
+		decision = decideUpgrade(state)
+	}
+	if decision.action == upgradeApply {
+		p.Note("Upgrading axilio %s -> %s...", Version, state.release.Tag)
+		if err := update.Apply(ctx, state.release); err != nil {
+			return err
+		}
+	}
 
-	// A dev / source / `go install` build has no release binary to swap in; the
-	// toolchain manages it.
-	if !update.IsReleaseVersion(Version) {
-		p.Emit(upgradeResult{
+	p.Emit(decision.result, func() {
+		switch decision.result.Status {
+		case "dev-build":
+			p.Note("This is a development build (%s). Install a release with:\n  go install github.com/axilioai/cli@latest", versionString())
+		case "homebrew-managed":
+			p.Note("This axilio was installed with Homebrew. Upgrade with:\n  brew upgrade axilio")
+		case "no-releases":
+			p.Note("No releases have been published yet.")
+		case "up-to-date":
+			p.Note("axilio is up to date (%s).", Version)
+		case "update-available":
+			p.Note("A newer release is available: %s -> %s. Run `%s` to install.", Version, decision.result.Latest, decision.result.NextCommand)
+		case "upgraded":
+			p.Note("Upgraded to %s.", decision.result.Latest)
+		}
+	})
+	return nil
+}
+
+func decideUpgrade(state upgradeState) upgradeDecision {
+	if !update.IsReleaseVersion(state.current) {
+		return upgradeDecision{result: upgradeResult{
 			Status:        "dev-build",
-			Current:       Version,
+			Current:       state.current,
 			InstallMethod: "go-toolchain",
 			NextCommand:   "go install github.com/axilioai/cli@latest",
-		}, func() {
-			p.Note("This is a development build (%s). Install a release with:\n  go install github.com/axilioai/cli@latest", versionString())
-		})
-		return nil
+		}}
 	}
-
-	homebrew := deps.isHomebrew()
-	// Homebrew owns its binary; replacing it out from under brew breaks
-	// `brew upgrade`/`uninstall` bookkeeping. A non-check invocation therefore
-	// returns guidance without fetching a release or touching the binary.
-	if homebrew && !check {
-		p.Emit(upgradeResult{
+	if state.homebrew && !state.check {
+		return upgradeDecision{result: upgradeResult{
 			Status:        "homebrew-managed",
-			Current:       Version,
+			Current:       state.current,
 			InstallMethod: "homebrew",
 			NextCommand:   "brew upgrade axilio",
-		}, func() {
-			p.Note("This axilio was installed with Homebrew. Upgrade with:\n  brew upgrade axilio")
-		})
-		return nil
+		}}
+	}
+	if !state.releaseChecked {
+		return upgradeDecision{action: upgradeFetch}
 	}
 
-	rel, err := deps.fetchLatest(ctx)
-	if err != nil {
-		return err
-	}
 	installMethod := "standalone"
-	if homebrew {
+	if state.homebrew {
 		installMethod = "homebrew"
 	}
-	if rel == nil || rel.Tag == "" {
-		p.Emit(upgradeResult{
+	if state.release == nil || state.release.Tag == "" {
+		return upgradeDecision{result: upgradeResult{
 			Status:        "no-releases",
-			Current:       Version,
+			Current:       state.current,
 			InstallMethod: installMethod,
-		}, func() {
-			p.Note("No releases have been published yet.")
-		})
-		return nil
+		}}
 	}
-	if !update.Newer(rel.Tag, Version) {
-		p.Emit(upgradeResult{
+	if !update.Newer(state.release.Tag, state.current) {
+		return upgradeDecision{result: upgradeResult{
 			Status:        "up-to-date",
-			Current:       Version,
-			Latest:        rel.Tag,
+			Current:       state.current,
+			Latest:        state.release.Tag,
 			InstallMethod: installMethod,
-		}, func() {
-			p.Note("axilio is up to date (%s).", Version)
-		})
-		return nil
+		}}
 	}
-	if check {
+	if state.check {
 		nextCommand := "axilio upgrade"
-		if homebrew {
+		if state.homebrew {
 			nextCommand = "brew upgrade axilio"
 		}
-		p.Emit(upgradeResult{
+		return upgradeDecision{result: upgradeResult{
 			Status:          "update-available",
-			Current:         Version,
-			Latest:          rel.Tag,
+			Current:         state.current,
+			Latest:          state.release.Tag,
 			UpdateAvailable: true,
 			InstallMethod:   installMethod,
 			NextCommand:     nextCommand,
-		}, func() {
-			p.Note("A newer release is available: %s -> %s. Run `%s` to install.", Version, rel.Tag, nextCommand)
-		})
-		return nil
+		}}
 	}
-
-	p.Note("Upgrading axilio %s -> %s...", Version, rel.Tag)
-	if err := deps.apply(ctx, rel); err != nil {
-		return err
+	return upgradeDecision{
+		action: upgradeApply,
+		result: upgradeResult{
+			Status:        "upgraded",
+			Current:       state.current,
+			Latest:        state.release.Tag,
+			InstallMethod: installMethod,
+		},
 	}
-	p.Emit(upgradeResult{
-		Status:        "upgraded",
-		Current:       Version,
-		Latest:        rel.Tag,
-		InstallMethod: installMethod,
-	}, func() {
-		p.Note("Upgraded to %s.", rel.Tag)
-	})
-	return nil
 }
