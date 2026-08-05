@@ -326,6 +326,7 @@ var commandDocumentationByKey = map[string]CommandDocumentation{
 	"sessions stop": {Samples: []CommandSample{
 		sampleWithNote("axilio sessions stop sess_123", "Released <phone-id>.", "Release <phone-id>? [y/N]", "Without --yes, table mode prompts only when stdin is a terminal. Redirected, JSON, and quiet execution require --yes."),
 		sample("axilio sessions stop ph_123 --yes", "Released ph_123.", "none"),
+		sampleWithNote("axilio sessions stop ph_123 --yes -o json", "{\n  \"deallocated_at\": \"<timestamp>\",\n  \"phone_id\": \"ph_123\",\n  \"session_id\": \"<session-id>\",\n  \"workflow_id\": \"<workflow-id>\"\n}", "none", "JSON is the canonical API deallocation response; workflow_id may be empty for an interactive session."),
 	}},
 	"phones": workflow("axilio phones list", "axilio phones mine"),
 	"phones list": {Samples: []CommandSample{

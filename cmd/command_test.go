@@ -29,7 +29,7 @@ func fakeAPI(t *testing.T) *httptest.Server {
 		case strings.Contains(p, "/phones/sessions/active"):
 			body = `{"sessions":[]}`
 		case strings.Contains(p, "/phones/deallocate"):
-			body = `{"success":true}`
+			body = `{"phone_id":"p1","session_id":"s1","workflow_id":"w1","deallocated_at":"2026-08-05T20:00:00Z"}`
 		case strings.Contains(p, "/phones/available"):
 			if got := r.URL.Query().Get("phone_type"); got != "android" {
 				t.Errorf("phones list requested phone_type %q, want android", got)
