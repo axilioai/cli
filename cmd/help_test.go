@@ -191,8 +191,10 @@ func TestRenderedHelpContracts(t *testing.T) {
 				"each API key is scoped to the organization that created it",
 				"API host resolves from --base-url, AXILIO_BASE_URL",
 				"Phone command session selection precedence is --session, AXILIO_SESSION",
-				"Every successful runnable application command emits valid JSON with -o json",
-				"Built-in help, completion, and version output remains text",
+				"Every successful runnable application command emits exactly one JSON document with -o json",
+				"Built-in help, completion, and version remain text",
+				"Warnings and errors also use stderr, but remain visible in every mode",
+				"Destructive commands prompt only when stdin is a terminal",
 			},
 		},
 		{
@@ -564,17 +566,17 @@ func TestDocumentationHelpParity(t *testing.T) {
 			t.Errorf("README completion docs missing %q", completion)
 		}
 	}
-	// AXI-1507 made JSON success output true for the runnable application
-	// commands held by json_output_test.go. Cobra's built-in help/completion and
-	// version paths remain text and are documented as explicit exceptions.
+	// JSON success is one document for runnable application commands. Cobra's
+	// built-in help/completion and version paths remain text, while --export is
+	// a distinct shell contract that rejects JSON.
 	normalizedReadme := strings.Join(strings.Fields(readme), " ")
 	if !strings.Contains(normalizedReadme,
-		"successful runnable application commands emit valid JSON under `-o json`") {
-		t.Error("README no longer documents runnable-command JSON success output (AXI-1507)")
+		"successful runnable application commands emit one JSON document under `-o json`") {
+		t.Error("README no longer documents runnable-command JSON success output")
 	}
 	if !strings.Contains(normalizedReadme,
-		"except for the documented `sessions start --export` shell contract") {
-		t.Error("README no longer documents the sessions export JSON exception")
+		"`sessions start --export` is a separate exact shell contract and rejects JSON") {
+		t.Error("README no longer documents the sessions export/JSON conflict")
 	}
 	if !strings.Contains(normalizedReadme,
 		"Built-in help and completion commands, bare parent-command help, `--help`, and `--version` remain text") {

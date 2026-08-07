@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/axilioai/cli/internal/exit"
-	"github.com/axilioai/cli/internal/output"
 	"github.com/axilioai/cli/internal/util"
 	platformgo "github.com/axilioai/platform-go"
 	"github.com/spf13/cobra"
@@ -44,9 +43,10 @@ func apiKeysListCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			printer().Emit(resp, func() {
+			p := printer()
+			return p.Emit(resp, func() {
 				if len(resp.APIKeys) == 0 {
-					fmt.Println("No API keys found.")
+					p.Result("No API keys found.")
 					return
 				}
 				rows := [][]string{{"ID", "NAME", "KEY", "LAST USED", "CREATED"}}
@@ -55,9 +55,8 @@ func apiKeysListCmd() *cobra.Command {
 						k.ID, k.Name, k.KeyPreview, util.OrDash(tsp(k.LastUsedAt)), ts(k.CreatedAt),
 					})
 				}
-				output.Table(rows)
+				p.Table(rows)
 			})
-			return nil
 		},
 	}
 }
@@ -80,16 +79,18 @@ func apiKeysCreateCmd() *cobra.Command {
 				return err
 			}
 			p := printer()
-			p.Emit(resp, func() {
-				output.KV([][2]string{
+			if err := p.Emit(resp, func() {
+				p.KV([][2]string{
 					{"ID", resp.ID},
 					{"Name", resp.Name},
 					{"Key", resp.KeyValue},
 					{"Created", ts(resp.CreatedAt)},
 				})
-			})
-			p.Note("\nSave this key now; it will not be shown again.")
-			return nil
+			}); err != nil {
+				return err
+			}
+			p.Warn("Save this key now; it will not be shown again.")
+			return p.Err()
 		},
 	}
 }
@@ -100,29 +101,31 @@ func apiKeysDeleteCmd() *cobra.Command {
 		Use:   "delete <key-id>",
 		Short: "Delete an API key by id.",
 		Long: "Permanently delete an organization API key using an ID discovered with " +
-			"`api-keys list`. Without --yes, table mode reads confirmation from stdin, " +
-			"including redirected input. JSON and quiet modes do not prompt and require " +
+			"`api-keys list`. Without --yes, table mode prompts only when stdin is a terminal. " +
+			"Redirected, JSON, and quiet execution do not prompt and require " +
 			"--yes. JSON success reports the deleted key ID.",
 		Args: cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
+			p := printer()
+			id := args[0]
+			if !yes && !p.Confirm(fmt.Sprintf("Delete API key %s?", id)) {
+				if err := p.Err(); err != nil {
+					return err
+				}
+				return exit.Usagef("aborted (pass --yes to delete non-interactively)")
+			}
 			cl, err := newClient()
 			if err != nil {
 				return err
 			}
-			id := args[0]
-			if !yes && !printer().Confirm(fmt.Sprintf("Delete API key %s?", id)) {
-				return exit.Usagef("aborted (pass --yes to delete non-interactively)")
-			}
 			if _, err := cl.APIKeys.Delete(context.Background(), &platformgo.APIKeysDeleteRequest{KeyID: id}); err != nil {
 				return err
 			}
-			p := printer()
-			p.Emit(map[string]any{"id": id, "deleted": true}, func() {
-				p.Note("Deleted %s", id)
+			return p.Emit(map[string]any{"id": id, "deleted": true}, func() {
+				p.Ack("Deleted %s", id)
 			})
-			return nil
 		},
 	}
-	cmd.Flags().BoolVarP(&yes, "yes", "y", false, "Delete without prompting; required in JSON or quiet mode")
+	cmd.Flags().BoolVarP(&yes, "yes", "y", false, "Delete without prompting; required in JSON, quiet, or redirected execution")
 	return cmd
 }

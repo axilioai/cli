@@ -13,6 +13,7 @@ import (
 
 	"github.com/axilioai/cli/internal/exit"
 	"github.com/axilioai/cli/internal/oauth"
+	"github.com/axilioai/cli/internal/output"
 	"github.com/axilioai/cli/internal/util"
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
@@ -112,6 +113,7 @@ func initCmd() *cobra.Command {
 }
 
 func runInit(ctx context.Context, agent string, force bool) error {
+	p := printer()
 	targets, explicit, err := initTargets(agent)
 	if err != nil {
 		return err
@@ -127,7 +129,7 @@ func runInit(ctx context.Context, agent string, force bool) error {
 		// note; only an explicit --agent hard-errors, since then the user named
 		// exactly one file and silence about it would be a lie.
 		if !explicit && !force && skillPresent(t) {
-			printer().Note("  %s already has the skill; refresh with `axilio init --agent %s --force`.", skillTargetPath(t), t)
+			p.Note("  %s already has the skill; refresh with `axilio init --agent %s --force`.", skillTargetPath(t), t)
 			skipped = append(skipped, skillTargetPath(t))
 			continue
 		}
@@ -136,11 +138,19 @@ func runInit(ctx context.Context, agent string, force bool) error {
 		}
 		written = append(written, skillTargetPath(t))
 	}
-	// The human chrome (per-file Success lines, sign-in check) already went to
-	// stderr; the JSON result carries what was written and what was left alone.
-	printer().Emit(map[string]any{"written": written, "skipped": skipped}, func() {})
-	initNextSteps(ctx)
-	return nil
+	if err := p.Emit(map[string]any{"written": written, "skipped": skipped}, func() {
+		if len(written) == 0 {
+			p.Ack("No agent instruction files changed.")
+			return
+		}
+		for _, path := range written {
+			p.Success("Wrote the Axilio agent skill to %s", path)
+		}
+	}); err != nil {
+		return err
+	}
+	initNextSteps(ctx, p)
+	return p.Err()
 }
 
 func writeAgentTarget(agent, body string, force bool) error {
@@ -216,12 +226,16 @@ func promptAgentChoice() ([]string, bool) {
 	if flagQuiet || flagOutput == "json" || !term.IsTerminal(int(os.Stdin.Fd())) {
 		return nil, false
 	}
-	fmt.Fprintln(os.Stderr, "Which agent runs in this repo?")
-	fmt.Fprintln(os.Stderr, "  1) claude  (.claude/skills/)")
-	fmt.Fprintln(os.Stderr, "  2) codex   (AGENTS.md)")
-	fmt.Fprintln(os.Stderr, "  3) cursor  (.cursor/rules/)")
-	fmt.Fprintln(os.Stderr, "  4) all three")
-	fmt.Fprint(os.Stderr, "Choose [1-4]: ")
+	p := printer()
+	p.Note("Which agent runs in this repo?")
+	p.Note("  1) claude  (.claude/skills/)")
+	p.Note("  2) codex   (AGENTS.md)")
+	p.Note("  3) cursor  (.cursor/rules/)")
+	p.Note("  4) all three")
+	p.Prompt("Choose [1-4]: ")
+	if p.Err() != nil {
+		return nil, false
+	}
 	line, _ := bufio.NewReader(os.Stdin).ReadString('\n')
 	switch strings.ToLower(strings.TrimSpace(line)) {
 	case "1", "claude":
@@ -243,26 +257,25 @@ const agentFirstPrompt = `Use the axilio CLI to take a phone, open the browser, 
 // initNextSteps closes the loop after the skill lands: confirm sign-in (browser
 // login is the one step an agent can't do itself, so surface it while a human
 // is likely at the keyboard), then hand over the first prompt for the agent.
-func initNextSteps(ctx context.Context) {
-	p := printer()
+func initNextSteps(ctx context.Context, p *output.Printer) {
 	key, host := resolvedCreds()
 	apiHost := util.FirstNonEmpty(host, defaultAPIHost)
 	switch {
 	case key != "":
-		p.Success("Signed in to %s (API key)", apiHost)
+		p.Note("Signed in to %s (API key)", apiHost)
 	case oauthSignedIn(ctx, apiHost):
 		tok, _ := oauth.Load()
 		if org := sessionOrgLabel(tok); org != "" {
-			p.Success("Signed in to %s (org %s)", apiHost, org)
+			p.Note("Signed in to %s (org %s)", apiHost, org)
 		} else {
-			p.Success("Signed in to %s", apiHost)
+			p.Note("Signed in to %s", apiHost)
 		}
 	case term.IsTerminal(int(os.Stdin.Fd())) && p.Confirm("You're not signed in — open the browser to log in now?"):
 		if err := loginWithBrowser(ctx); err != nil {
-			p.Note("Login didn't complete (%v); run `axilio login` when ready.", err)
+			p.Warn("login didn't complete (%v); run `axilio login` when ready", err)
 		}
 	default:
-		p.Note("Not signed in. A human must run `axilio login` (browser), or set AXILIO_API_KEY.")
+		p.Warn("not signed in; a human must run `axilio login` (browser), or set AXILIO_API_KEY")
 	}
 	p.Note("\nNow tell your agent:\n  %q", agentFirstPrompt)
 }
@@ -288,7 +301,6 @@ func writeSkillFile(path, content string, force bool) error {
 	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
 		return err
 	}
-	reportInit(path)
 	return nil
 }
 
@@ -308,7 +320,6 @@ func writeAgentsMD(body string, force bool) error {
 		if werr := os.WriteFile(path, []byte(block), 0o644); werr != nil {
 			return werr
 		}
-		reportInit(path)
 		return nil
 	}
 	if err != nil {
@@ -335,10 +346,5 @@ func writeAgentsMD(body string, force bool) error {
 	if werr := os.WriteFile(path, []byte(s), 0o644); werr != nil {
 		return werr
 	}
-	reportInit(path)
 	return nil
-}
-
-func reportInit(path string) {
-	printer().Success("Wrote the Axilio agent skill to %s", path)
 }

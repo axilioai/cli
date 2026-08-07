@@ -2,9 +2,7 @@ package cmd
 
 import (
 	"context"
-	"fmt"
 
-	"github.com/axilioai/cli/internal/output"
 	"github.com/axilioai/cli/internal/util"
 	platformgo "github.com/axilioai/platform-go"
 	"github.com/spf13/cobra"
@@ -51,9 +49,10 @@ func workflowsListCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			printer().Emit(resp, func() {
+			p := printer()
+			return p.Emit(resp, func() {
 				if len(resp.Workflows) == 0 {
-					fmt.Println("No workflows found.")
+					p.Result("No workflows found.")
 					return
 				}
 				rows := [][]string{{"WORKFLOW ID", "NAME", "PLATFORM", "STATUS", "LAST RUN"}}
@@ -66,9 +65,8 @@ func workflowsListCmd() *cobra.Command {
 						s.ID, s.Name, string(s.Platform), string(s.Status), util.OrDash(tsp(s.LastRunAt)),
 					})
 				}
-				output.Table(rows)
+				p.Table(rows)
 			})
-			return nil
 		},
 	}
 	cmd.Flags().Int64Var(&limit, "limit", 20, "Maximum number of most-recent workflows to return")

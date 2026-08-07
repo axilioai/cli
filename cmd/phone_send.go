@@ -65,12 +65,14 @@ func phoneSendCmd() *cobra.Command {
 			}
 			p := printer()
 			p.Step("Sending %s to phone %s", filepath.Base(args[0]), s.PhoneID)
+			if err := p.Err(); err != nil {
+				return err
+			}
 			d, err := files.Send(cmd.Context(), cl, s.PhoneID, args[0], opts...)
 			if err != nil {
 				return err
 			}
-			p.Emit(d, func() { printDelivery(p, d, wait) })
-			return nil
+			return p.Emit(d, func() { printDelivery(p, d, wait) })
 		},
 	}
 	cmd.Flags().BoolVar(&wait, "wait", false, "Block until the phone reports delivered or failed instead of returning at dispatch")

@@ -245,12 +245,12 @@ var commandDocumentationByKey = map[string]CommandDocumentation{
 		"axilio sessions stop <session-id>",
 	),
 	"login": {Samples: []CommandSample{
-		sampleWithNote("axilio login", "none", "→ Opening your browser to authorize the CLI…\n✓ Signed in to https://api.axilio.ai", "Representative stderr excerpt; the browser URL, optional organization line, and balance result vary by login."),
-		sampleWithNote("axilio login --api-key axl_xxx", "none", "✓ Signed in to https://api.axilio.ai\n  Balance  $5.00\n  Saved to <config-path>", "axl_xxx is a non-secret format placeholder; replace it with a valid key before running the command."),
-		sample(`printf '%s\n' "$AXILIO_API_KEY" | axilio login`, "none", "✓ Signed in to https://api.axilio.ai\n  Balance  $5.00\n  Saved to <config-path>"),
+		sampleWithNote("axilio login", "✓ Signed in to https://api.axilio.ai", "→ Opening your browser to authorize the CLI…", "Representative stderr excerpt; the browser URL, optional organization line, balance result, and warnings vary by login."),
+		sampleWithNote("axilio login --api-key axl_xxx", "✓ Signed in to https://api.axilio.ai", "  Balance  $5.00\n  Saved to <config-path>", "axl_xxx is a non-secret format placeholder; replace it with a valid key before running the command."),
+		sample(`printf '%s\n' "$AXILIO_API_KEY" | axilio login`, "✓ Signed in to https://api.axilio.ai", "  Balance  $5.00\n  Saved to <config-path>"),
 	}},
 	"logout": {Samples: []CommandSample{
-		sampleWithNote("axilio logout", "none", "✓ Signed out.", "Already-signed-out is also exit 0 and reports Already signed out."),
+		sampleWithNote("axilio logout", "✓ Signed out.", "none", "Already-signed-out is also exit 0 and reports Already signed out. Revocation failures are warnings on stderr."),
 	}},
 	"status": {Samples: []CommandSample{
 		sample("axilio status", "Status      ok\nAPI host    https://api.axilio.ai/api/v1\nActive org  (session default)\nBalance     $5.00", "none"),
@@ -263,21 +263,21 @@ var commandDocumentationByKey = map[string]CommandDocumentation{
 	}},
 	"config": {Samples: []CommandSample{
 		sampleWithNote("axilio config", "API host     https://api.axilio.ai\nAuth method  oauth (source: browser-session)\nActive org   (session default)\nConfig file  <config-path>\nSessions dir <sessions-directory>", "none", "The effective method follows request precedence. API keys report flag, environment, or config as their source; a stored OAuth session is effective only for the selected API host."),
-		sample("axilio config set base-url https://api.axilio.ai", "none", "Set base-url = https://api.axilio.ai in <config-path>"),
-		sample("axilio config unset base-url", "none", "Unset base-url in <config-path>"),
+		sample("axilio config set base-url https://api.axilio.ai", "Set base-url = https://api.axilio.ai in <config-path>", "none"),
+		sample("axilio config unset base-url", "Unset base-url in <config-path>", "none"),
 	}},
 	"config set": {Samples: []CommandSample{
-		sample("axilio config set base-url https://api.axilio.ai", "none", "Set base-url = https://api.axilio.ai in <config-path>"),
+		sample("axilio config set base-url https://api.axilio.ai", "Set base-url = https://api.axilio.ai in <config-path>", "none"),
 	}},
 	"config unset": {Samples: []CommandSample{
-		sample("axilio config unset base-url", "none", "Unset base-url in <config-path>"),
+		sample("axilio config unset base-url", "Unset base-url in <config-path>", "none"),
 	}},
 	"orgs": {Samples: []CommandSample{
 		sample("axilio orgs", "   SLUG         NAME          ID\n*  example-org  Example Inc.  <organization-id>", "none"),
 		sample("axilio orgs list", "   SLUG         NAME          ID\n*  example-org  Example Inc.  <organization-id>", "none"),
-		sample("axilio orgs use example-org", "none", "Active organization set to example-org (Example Inc.)."),
+		sample("axilio orgs use example-org", "Active organization set to example-org (Example Inc.).", "none"),
 		sample("axilio --org another-org workflows list", "WORKFLOW ID   NAME      PLATFORM  STATUS  LAST RUN\n<workflow-id> Checkout  android   active  <timestamp>", "none"),
-		sample("axilio orgs clear", "none", "Cleared the active organization; using your session default."),
+		sample("axilio orgs clear", "Cleared the active organization; using your session default.", "none"),
 	}},
 	"orgs list": {Samples: []CommandSample{
 		sample("axilio orgs list", "   SLUG         NAME          ID\n*  example-org  Example Inc.  <organization-id>", "none"),
@@ -285,20 +285,20 @@ var commandDocumentationByKey = map[string]CommandDocumentation{
 		sampleWithNote("axilio orgs list -o json", "{\n  \"active\": \"example-org\",\n  \"organizations\": [\n    {\"id\": \"<organization-id>\", \"slug\": \"example-org\", \"name\": \"Example Inc.\"}\n  ]\n}", "none", "Organization membership and the active selector vary by session."),
 	}},
 	"orgs use": {Samples: []CommandSample{
-		sample("axilio orgs use example-org", "none", "Active organization set to example-org (Example Inc.)."),
+		sample("axilio orgs use example-org", "Active organization set to example-org (Example Inc.).", "none"),
 	}},
 	"orgs clear": {Samples: []CommandSample{
-		sampleWithNote("axilio orgs clear", "none", "Cleared the active organization; using your session default.", "If no organization is set, it reports that state and still exits 0."),
+		sampleWithNote("axilio orgs clear", "Cleared the active organization; using your session default.", "none", "If no organization is set, it reports that state and still exits 0."),
 	}},
 	"upgrade": {Samples: []CommandSample{
-		sampleWithNote("axilio upgrade --check", "none", "A newer release is available: <old> -> <new>. Run `axilio upgrade` to install.", "The version placeholders vary. Homebrew installations perform the same release check but name `brew upgrade axilio` as the next command. Up-to-date, no-release, and development builds report their own state."),
-		sampleWithNote("axilio upgrade", "none", "Upgrading axilio <current-version> -> <latest-version>...\nUpgraded to <latest-version>.", "Standalone release only; development builds and Homebrew-managed installs print their own package-manager guidance."),
+		sampleWithNote("axilio upgrade --check", "A newer release is available: <old> -> <new>. Run `axilio upgrade` to install.", "none", "The version placeholders vary. Homebrew installations perform the same release check but name `brew upgrade axilio` as the next command. Up-to-date, no-release, and development builds report their own state."),
+		sampleWithNote("axilio upgrade", "Upgraded to <latest-version>.", "→ Upgrading axilio <current-version> -> <latest-version>...", "Standalone release only; development builds and Homebrew-managed installs print their own package-manager guidance."),
 		externalSample("brew upgrade axilio", "Output and exit status are owned by Homebrew, not the axilio CLI."),
 	}},
 	"init": {Samples: []CommandSample{
-		sampleWithNote("axilio init", "none", "✓ Wrote the Axilio agent skill to <detected-target>\nNot signed in. A human must run `axilio login` (browser), or set AXILIO_API_KEY.", "Representative stderr excerpt; detected targets depend on repository markers, existing auto-detected skills may be skipped, and the command finishes with a suggested agent prompt."),
-		sampleWithNote("axilio init --agent codex", "none", "✓ Wrote the Axilio agent skill to AGENTS.md\nNot signed in. A human must run `axilio login` (browser), or set AXILIO_API_KEY.", "Excerpt: stderr then prints the suggested first agent prompt."),
-		sampleWithNote("axilio init --agent claude --force", "none", "✓ Wrote the Axilio agent skill to .claude/skills/axilio/SKILL.md\nNot signed in. A human must run `axilio login` (browser), or set AXILIO_API_KEY.", "Excerpt: --force replaces an existing Axilio-owned Claude skill before the suggested first agent prompt."),
+		sampleWithNote("axilio init", "✓ Wrote the Axilio agent skill to <detected-target>", "warning: not signed in; a human must run `axilio login` (browser), or set AXILIO_API_KEY", "Representative stderr excerpt; detected targets depend on repository markers, existing auto-detected skills may be skipped, and the command finishes with a suggested agent prompt."),
+		sampleWithNote("axilio init --agent codex", "✓ Wrote the Axilio agent skill to AGENTS.md", "warning: not signed in; a human must run `axilio login` (browser), or set AXILIO_API_KEY", "Excerpt: stderr then prints the suggested first agent prompt."),
+		sampleWithNote("axilio init --agent claude --force", "✓ Wrote the Axilio agent skill to .claude/skills/axilio/SKILL.md", "warning: not signed in; a human must run `axilio login` (browser), or set AXILIO_API_KEY", "Excerpt: --force replaces an existing Axilio-owned Claude skill before the suggested first agent prompt."),
 	}},
 	"sessions": workflow(
 		"axilio sessions list",
@@ -320,12 +320,12 @@ var commandDocumentationByKey = map[string]CommandDocumentation{
 		sample("axilio sessions start", "Session      <session-id>\nPhone        <phone-id>\nRegion       us-central\nLive view    <live-view-url>\nControl URL  <control-url>", "Drive it:  axilio phone observe\nPin it to this shell (for parallel work):  export AXILIO_SESSION=<session-id>\nRelease it with:  axilio sessions stop <session-id>"),
 		sample("axilio sessions start --phone-id ph_123", "Session      <session-id>\nPhone        ph_123\nRegion       us-central\nLive view    <live-view-url>\nControl URL  <control-url>", "Drive it:  axilio phone observe\nPin it to this shell (for parallel work):  export AXILIO_SESSION=<session-id>\nRelease it with:  axilio sessions stop <session-id>"),
 		sample("axilio sessions start --workflow wf_123", "Session      <session-id>\nPhone        <phone-id>\nRegion       us-central\nLive view    <live-view-url>\nControl URL  <control-url>", "Drive it:  axilio phone observe\nPin it to this shell (for parallel work):  export AXILIO_SESSION=<session-id>\nRelease it with:  axilio sessions stop <session-id>"),
-		sampleWithNote("axilio sessions start --export", "export AXILIO_SESSION=<session-id>", "none", "--export emits shell text even when -o json is also supplied."),
+		sampleWithNote("axilio sessions start --export", "export AXILIO_SESSION=<session-id>", "none", "--export is exact shell text; combining it with -o json is a usage error before allocation."),
 		sampleWithNote(`eval "$(axilio sessions start --export)"`, "none", "none", "The shell consumes the nested command's export line and sets AXILIO_SESSION in the current shell."),
 	}},
 	"sessions stop": {Samples: []CommandSample{
-		sampleWithNote("axilio sessions stop sess_123", "none", "Release <phone-id>? [y/N] Released <phone-id>.", "Without --yes, table mode reads confirmation from stdin, including redirected input. JSON and quiet modes require --yes."),
-		sample("axilio sessions stop ph_123 --yes", "none", "Released ph_123."),
+		sampleWithNote("axilio sessions stop sess_123", "Released <phone-id>.", "Release <phone-id>? [y/N]", "Without --yes, table mode prompts only when stdin is a terminal. Redirected, JSON, and quiet execution require --yes."),
+		sample("axilio sessions stop ph_123 --yes", "Released ph_123.", "none"),
 	}},
 	"phones": workflow("axilio phones list", "axilio phones mine"),
 	"phones list": {Samples: []CommandSample{
@@ -361,33 +361,33 @@ var commandDocumentationByKey = map[string]CommandDocumentation{
 		sampleWithNote(`axilio phone find-text "settings" -o json`, "null", "none", "No match is a successful literal JSON null."),
 	}},
 	"phone tap": {Samples: []CommandSample{
-		sample(`axilio phone tap --query "the search box"`, "none", `Tapped "the search box" at 540,620`),
-		sample("axilio phone tap 540 1200", "none", "Tapped 540,1200"),
-		sample(`axilio phone tap --session sess_123 --query "continue"`, "none", `Tapped "continue" at 540,1120`),
+		sample(`axilio phone tap --query "the search box"`, `Tapped "the search box" at 540,620`, "none"),
+		sample("axilio phone tap 540 1200", "Tapped 540,1200", "none"),
+		sample(`axilio phone tap --session sess_123 --query "continue"`, `Tapped "continue" at 540,1120`, "none"),
 	}},
 	"phone long-press": {Samples: []CommandSample{
-		sample("axilio phone long-press 540 1080", "none", "Long-pressed 540,1080 for 800ms"),
-		sample("axilio phone long-press 540 1080 --duration-ms 1200", "none", "Long-pressed 540,1080 for 1200ms"),
+		sample("axilio phone long-press 540 1080", "Long-pressed 540,1080 for 800ms", "none"),
+		sample("axilio phone long-press 540 1080 --duration-ms 1200", "Long-pressed 540,1080 for 1200ms", "none"),
 	}},
 	"phone swipe": {Samples: []CommandSample{
-		sample("axilio phone swipe 540 1600 540 500", "none", "Swiped 540,1600 -> 540,500"),
-		sample("axilio phone swipe 200 800 900 800 --duration-ms 500", "none", "Swiped 200,800 -> 900,800"),
+		sample("axilio phone swipe 540 1600 540 500", "Swiped 540,1600 -> 540,500", "none"),
+		sample("axilio phone swipe 200 800 900 800 --duration-ms 500", "Swiped 200,800 -> 900,800", "none"),
 	}},
 	"phone type": {Samples: []CommandSample{
-		sample(`axilio phone type "hello world"`, "none", `Typed "hello world"`),
-		sample(`axilio phone type 'user@example.com'`, "none", `Typed "user@example.com"`),
-		sample(`axilio phone type "don't split this text"`, "none", `Typed "don't split this text"`),
+		sample(`axilio phone type "hello world"`, `Typed "hello world"`, "none"),
+		sample(`axilio phone type 'user@example.com'`, `Typed "user@example.com"`, "none"),
+		sample(`axilio phone type "don't split this text"`, `Typed "don't split this text"`, "none"),
 	}},
 	"phone key": {Samples: []CommandSample{
-		sample("axilio phone key enter", "none", "Pressed enter"),
+		sample("axilio phone key enter", "Pressed enter", "none"),
 	}},
 	"phone screenshot": {Samples: []CommandSample{
-		sampleWithNote("axilio phone screenshot", "none", "Wrote screenshot.png (<bytes> bytes)", "A new file requests mode 0644, subject to the process umask. Overwriting an existing file preserves its mode while replacing its contents."),
-		sampleWithNote("axilio phone screenshot --out login.png", "none", "Wrote login.png (<bytes> bytes)", "A new file requests mode 0644, subject to the process umask. Overwriting an existing file preserves its mode while replacing its contents."),
+		sampleWithNote("axilio phone screenshot", "Wrote screenshot.png (<bytes> bytes)", "none", "A new file requests mode 0644, subject to the process umask. Overwriting an existing file preserves its mode while replacing its contents."),
+		sampleWithNote("axilio phone screenshot --out login.png", "Wrote login.png (<bytes> bytes)", "none", "A new file requests mode 0644, subject to the process umask. Overwriting an existing file preserves its mode while replacing its contents."),
 	}},
 	"phone wait-for": {Samples: []CommandSample{
 		sample(`axilio phone wait-for "Results"`, "Text        Results\nCenter      540,1120\nBBox        80,1060 920x120\nConfidence  0.98\nSource      ocr", "none"),
-		sample(`axilio phone wait-for "Loading" --gone`, "none", `"Loading" gone`),
+		sample(`axilio phone wait-for "Loading" --gone`, `"Loading" gone`, "none"),
 		sampleWithNote(`axilio phone wait-for "Ready" --exact --timeout 30s`, "Text        Ready\nCenter      540,1120\nBBox        80,1060 920x120\nConfidence  0.98\nSource      ocr", "none", "Exact matching is case-sensitive and waits up to 30 seconds."),
 		failedSample(`axilio phone wait-for "Results" --timeout 1s`, "none", "timeout: text not found within deadline: Results", 5, "A wait timeout exits 5."),
 	}},
@@ -418,19 +418,19 @@ var commandDocumentationByKey = map[string]CommandDocumentation{
 		sampleWithNote("axilio runs list -o json", "{\n  \"limit\": 20,\n  \"offset\": 0,\n  \"runs\": [\n    {\n      \"id\": \"<run-id>\",\n      \"status\": \"completed\",\n      \"trigger\": \"manual\",\n      \"workflow_id\": \"<workflow-id>\"\n    }\n  ],\n  \"total\": 1\n}", "none", "Shortened representative JSON output; run records may include additional fields."),
 	}},
 	"runs start": {Samples: []CommandSample{
-		sampleWithNote("axilio runs start wf_123", "none", "Started run <run-id>", "-o json emits the complete run_ids response on stdout. --count accepts 1 through 1000, inclusive."),
-		sample("axilio runs start wf_123 --count 3", "none", "Started run <run-id-1>\nStarted run <run-id-2>\nStarted run <run-id-3>"),
+		sampleWithNote("axilio runs start wf_123", "Started run <run-id>", "none", "-o json emits the complete run_ids response on stdout. --count accepts 1 through 1000, inclusive."),
+		sample("axilio runs start wf_123 --count 3", "Started run <run-id-1>\nStarted run <run-id-2>\nStarted run <run-id-3>", "none"),
 		failedSample("axilio runs start wf_123 --count 0", "none", "--count must be between 1 and 1000 (got 0)", 2, "The range is validated before credentials, allocation, or an API request."),
-		sample("axilio runs start wf_123 --phone-id ph_123", "none", "Started run <run-id>"),
-		sample("axilio runs start wf_123 --start-timeout 300", "none", "Started run <run-id>"),
+		sample("axilio runs start wf_123 --phone-id ph_123", "Started run <run-id>", "none"),
+		sample("axilio runs start wf_123 --start-timeout 300", "Started run <run-id>", "none"),
 	}},
 	"runs get": {Samples: []CommandSample{
 		sample("axilio runs get run_123", "Run        run_123\nStatus     completed\nTrigger    manual\nWorkflow   <workflow-id>\nSession    <session-id>\nPhone      <phone-id>\nCreated    <created-at>\nStarted    <started-at>\nCompleted  <completed-at>\nError      -\nVideo      <video-url>", "none"),
 		sampleWithNote("axilio runs get run_123 -o json", "{\n  \"id\": \"run_123\",\n  \"status\": \"completed\",\n  \"trigger\": \"manual\",\n  \"workflow_id\": \"<workflow-id>\",\n  \"session_id\": \"<session-id>\",\n  \"phone_id\": \"<phone-id>\"\n}", "none", "Shortened representative JSON output; timestamps, errors, and video URL appear when available."),
 	}},
 	"runs cancel": {Samples: []CommandSample{
-		sampleWithNote("axilio runs cancel run_123", "none", "Cancel run run_123? [y/N] Canceled run_123", "Without --yes, table mode reads confirmation from stdin, including redirected input. JSON and quiet modes require --yes."),
-		sample("axilio runs cancel run_123 --yes", "none", "Canceled run_123"),
+		sampleWithNote("axilio runs cancel run_123", "Canceled run_123", "Cancel run run_123? [y/N]", "Without --yes, table mode prompts only when stdin is a terminal. Redirected, JSON, and quiet execution require --yes."),
+		sample("axilio runs cancel run_123 --yes", "Canceled run_123", "none"),
 	}},
 	"api-keys": workflow(
 		"axilio api-keys list",
@@ -442,12 +442,12 @@ var commandDocumentationByKey = map[string]CommandDocumentation{
 		sampleWithNote("axilio api-keys list -o json", "{\n  \"api_keys\": [\n    {\n      \"id\": \"<key-id>\",\n      \"name\": \"ci\",\n      \"key_preview\": \"axl_ci…\",\n      \"created_at\": \"<timestamp>\"\n    }\n  ],\n  \"limit\": 50,\n  \"offset\": 0,\n  \"total\": 1\n}", "none", "Key IDs and timestamps vary; full secrets are never listed."),
 	}},
 	"api-keys create": {Samples: []CommandSample{
-		sample("axilio api-keys create ci", "ID       <key-id>\nName     ci\nKey      axl_<new-secret>\nCreated  <timestamp>", "Save this key now; it will not be shown again."),
-		sample(`axilio api-keys create "release automation" -o json`, "{\n  \"id\": \"<key-id>\",\n  \"name\": \"release automation\",\n  \"key_value\": \"axl_<new-secret>\",\n  \"created_at\": \"<timestamp>\"\n}", "none"),
+		sample("axilio api-keys create ci", "ID       <key-id>\nName     ci\nKey      axl_<new-secret>\nCreated  <timestamp>", "warning: Save this key now; it will not be shown again."),
+		sample(`axilio api-keys create "release automation" -o json`, "{\n  \"id\": \"<key-id>\",\n  \"name\": \"release automation\",\n  \"key_value\": \"axl_<new-secret>\",\n  \"created_at\": \"<timestamp>\"\n}", "warning: Save this key now; it will not be shown again."),
 	}},
 	"api-keys delete": {Samples: []CommandSample{
-		sampleWithNote("axilio api-keys delete key_123", "none", "Delete API key key_123? [y/N] Deleted key_123", "Without --yes, table mode reads confirmation from stdin, including redirected input. JSON and quiet modes require --yes."),
-		sample("axilio api-keys delete key_123 --yes", "none", "Deleted key_123"),
+		sampleWithNote("axilio api-keys delete key_123", "Deleted key_123", "Delete API key key_123? [y/N]", "Without --yes, table mode prompts only when stdin is a terminal. Redirected, JSON, and quiet execution require --yes."),
+		sample("axilio api-keys delete key_123 --yes", "Deleted key_123", "none"),
 	}},
 	"uploads": workflow(
 		"axilio uploads list",
@@ -471,8 +471,8 @@ var commandDocumentationByKey = map[string]CommandDocumentation{
 		sampleWithNote("axilio uploads push upl_123 --phone-id ph_123 --wait --timeout 2m", "Delivery  <delivery-id>\nFile      photo.jpg\nStatus    delivered", "→ Pushing upl_123 to phone ph_123", "With --wait, the command returns only after delivered, failed, or the two-minute deadline."),
 	}},
 	"uploads delete": {Samples: []CommandSample{
-		sampleWithNote("axilio uploads delete upl_123", "none", "Delete upload upl_123? Also recall it from phones holding or receiving a copy?", "The table-mode prompt continues with [y/N], then reports Deleted upl_123 after confirmation. Redirected stdin can answer; JSON and quiet modes require --yes."),
-		sample("axilio uploads rm upl_123 --yes", "none", "Deleted upl_123"),
+		sampleWithNote("axilio uploads delete upl_123", "Deleted upl_123", "Delete upload upl_123? Also recall it from phones holding or receiving a copy? [y/N]", "Table mode prompts only when stdin is a terminal. Redirected, JSON, and quiet execution require --yes."),
+		sample("axilio uploads rm upl_123 --yes", "Deleted upl_123", "none"),
 	}},
 
 	// Commands Cobra generates. Their samples model installation and use

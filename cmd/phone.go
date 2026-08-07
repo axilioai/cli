@@ -6,7 +6,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/axilioai/cli/internal/output"
 	"github.com/axilioai/cli/internal/session"
 	"github.com/axilioai/platform-go/drivers/mobile"
 	"github.com/spf13/cobra"
@@ -102,15 +101,14 @@ func phoneObserveCmd() *cobra.Command {
 				return err
 			}
 			p := printer()
-			p.Emit(screen, func() {
+			return p.Emit(screen, func() {
 				rows := [][]string{{"TEXT", "X", "Y", "CONF"}}
 				for _, t := range screen.Texts {
 					rows = append(rows, []string{t.Text, strconv.Itoa(t.Center.X), strconv.Itoa(t.Center.Y), fmt.Sprintf("%.2f", t.Confidence)})
 				}
-				output.Table(rows)
+				p.Table(rows)
 				p.Note("%d texts, %d icons  %dx%d", len(screen.Texts), len(screen.Icons), screen.Width, screen.Height)
 			})
-			return nil
 		},
 	}
 	cmd.Flags().StringVar(&engine, "ocr-engine", "", "OCR engine: free or premium; omitted uses free")
@@ -143,8 +141,8 @@ func phoneFindCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			printer().Emit(el, func() { output.KV(elementKV(*el)) })
-			return nil
+			p := printer()
+			return p.Emit(el, func() { p.KV(elementKV(*el)) })
 		},
 	}
 	cmd.Flags().StringVar(&engine, "ocr-engine", "", "OCR engine: free or premium; omitted uses free")
@@ -173,14 +171,14 @@ func phoneFindTextCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			printer().Emit(el, func() {
+			p := printer()
+			return p.Emit(el, func() {
 				if el == nil {
-					fmt.Println("No match.")
+					p.Result("No match.")
 					return
 				}
-				output.KV(elementKV(*el))
+				p.KV(elementKV(*el))
 			})
-			return nil
 		},
 	}
 	cmd.Flags().BoolVar(&exact, "exact", false, "Require a case-sensitive exact match instead of case-insensitive substring")
@@ -217,10 +215,9 @@ func phoneTapCmd() *cobra.Command {
 				if err := el.Tap(); err != nil {
 					return err
 				}
-				p.Emit(map[string]any{"action": "tap", "query": query, "x": el.Center.X, "y": el.Center.Y}, func() {
-					p.Note("Tapped %q at %d,%d", query, el.Center.X, el.Center.Y)
+				return p.Emit(map[string]any{"action": "tap", "query": query, "x": el.Center.X, "y": el.Center.Y}, func() {
+					p.Ack("Tapped %q at %d,%d", query, el.Center.X, el.Center.Y)
 				})
-				return nil
 			}
 			c, err := coordsArg(args)
 			if err != nil {
@@ -229,10 +226,9 @@ func phoneTapCmd() *cobra.Command {
 			if err := d.Tap(c); err != nil {
 				return err
 			}
-			p.Emit(map[string]any{"action": "tap", "x": c.X, "y": c.Y}, func() {
-				p.Note("Tapped %d,%d", c.X, c.Y)
+			return p.Emit(map[string]any{"action": "tap", "x": c.X, "y": c.Y}, func() {
+				p.Ack("Tapped %d,%d", c.X, c.Y)
 			})
-			return nil
 		},
 	}
 	cmd.Flags().StringVar(&query, "query", "", "Recommended natural-language target; vision finds it and taps its center")
@@ -265,10 +261,9 @@ func phoneLongPressCmd() *cobra.Command {
 				return err
 			}
 			p := printer()
-			p.Emit(map[string]any{"action": "long_press", "x": c.X, "y": c.Y, "duration_ms": durationMs}, func() {
-				p.Note("Long-pressed %d,%d for %dms", c.X, c.Y, durationMs)
+			return p.Emit(map[string]any{"action": "long_press", "x": c.X, "y": c.Y, "duration_ms": durationMs}, func() {
+				p.Ack("Long-pressed %d,%d for %dms", c.X, c.Y, durationMs)
 			})
-			return nil
 		},
 	}
 	cmd.Flags().IntVar(&durationMs, "duration-ms", 800, "How long to hold the coordinate, in milliseconds")
@@ -300,11 +295,10 @@ func phoneSwipeCmd() *cobra.Command {
 				return err
 			}
 			p := printer()
-			p.Emit(
+			return p.Emit(
 				map[string]any{"action": "swipe", "x1": start.X, "y1": start.Y, "x2": end.X, "y2": end.Y, "duration_ms": durationMs},
-				func() { p.Note("Swiped %d,%d -> %d,%d", start.X, start.Y, end.X, end.Y) },
+				func() { p.Ack("Swiped %d,%d -> %d,%d", start.X, start.Y, end.X, end.Y) },
 			)
-			return nil
 		},
 	}
 	cmd.Flags().IntVar(&durationMs, "duration-ms", 300, "How long the swipe gesture takes, in milliseconds")
@@ -330,10 +324,9 @@ func phoneTypeCmd() *cobra.Command {
 				return err
 			}
 			p := printer()
-			p.Emit(map[string]any{"action": "type", "text": args[0]}, func() {
-				p.Note("Typed %q", args[0])
+			return p.Emit(map[string]any{"action": "type", "text": args[0]}, func() {
+				p.Ack("Typed %q", args[0])
 			})
-			return nil
 		},
 	}
 }
@@ -355,10 +348,9 @@ func phoneKeyCmd() *cobra.Command {
 				return err
 			}
 			p := printer()
-			p.Emit(map[string]any{"action": "key", "key": args[0]}, func() {
-				p.Note("Pressed %s", args[0])
+			return p.Emit(map[string]any{"action": "key", "key": args[0]}, func() {
+				p.Ack("Pressed %s", args[0])
 			})
-			return nil
 		},
 	}
 }
@@ -387,10 +379,9 @@ func phoneScreenshotCmd() *cobra.Command {
 				return err
 			}
 			p := printer()
-			p.Emit(map[string]any{"action": "screenshot", "path": out, "bytes": len(png)}, func() {
-				p.Note("Wrote %s (%d bytes)", out, len(png))
+			return p.Emit(map[string]any{"action": "screenshot", "path": out, "bytes": len(png)}, func() {
+				p.Ack("Wrote %s (%d bytes)", out, len(png))
 			})
-			return nil
 		},
 	}
 	cmd.Flags().StringVar(&out, "out", "screenshot.png", "PNG path to create; overwrite existing contents without confirmation")
@@ -423,17 +414,16 @@ func phoneWaitForCmd() *cobra.Command {
 					return err
 				}
 				p := printer()
-				p.Emit(map[string]any{"action": "wait_for", "text": args[0], "gone": true}, func() {
-					p.Note("%q gone", args[0])
+				return p.Emit(map[string]any{"action": "wait_for", "text": args[0], "gone": true}, func() {
+					p.Ack("%q gone", args[0])
 				})
-				return nil
 			}
 			el, err := d.WaitForText(args[0], timeout, exact)
 			if err != nil {
 				return err
 			}
-			printer().Emit(el, func() { output.KV(elementKV(*el)) })
-			return nil
+			p := printer()
+			return p.Emit(el, func() { p.KV(elementKV(*el)) })
 		},
 	}
 	documentedDurationVar(cmd.Flags(), &timeout, "timeout", 10*time.Second, ocrTimeoutHelp)

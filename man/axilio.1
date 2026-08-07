@@ -1,5 +1,5 @@
 .nh
-.TH "AXILIO" "1" "2026-08-02" "axilio 0.7.0" "Axilio CLI Manual"
+.TH "AXILIO" "1" "2026-08-03" "axilio 0.7.0" "Axilio CLI Manual"
 
 .SH NAME
 axilio \- Acquire and drive Axilio phones from the command line
@@ -71,12 +71,12 @@ AXILIO_BASE_URL and saved base-url
 \fB--org\fP=\fIvalue\fP - OAuth organization slug or id; overrides
 AXILIO_ORG and the saved active org
 .IP \(bu 2
-\fB-o\fP, \fB--output\fP=\fIvalue\fP - Result format for runnable application
-commands: table or json; help, completion, and version stay text, and
-sessions start --export stays shell (default "table")
+\fB-o\fP, \fB--output\fP=\fIvalue\fP - Result format: table or one JSON
+document; help, completion, and version stay text; sessions start
+--export rejects JSON (default "table")
 .IP \(bu 2
-\fB-q\fP, \fB--quiet\fP - Suppress stderr notes and prompts; destructive
-commands still require --yes
+\fB-q\fP, \fB--quiet\fP - Suppress human acknowledgments, notes, progress,
+and prompts; preserve result data, warnings, and errors
 
 
 .SH COMMANDS
@@ -220,8 +220,8 @@ overrides AXILIO_ORG and the saved active org; API keys ignore it
 \fB-o\fP, \fB--output\fP=\fIvalue\fP - Render the created API key as table or
 json (default "table")
 .IP \(bu 2
-\fB-q\fP, \fB--quiet\fP - Suppress the save-now warning; the created key
-remains on stdout
+\fB-q\fP, \fB--quiet\fP - Suppress optional notes; the created key and
+save-now warning remain visible
 
 .PP
 \fBExamples and expected output\fP
@@ -237,7 +237,7 @@ Key      axl_<new-secret>
 Created  <timestamp>
 .sp
 # Standard error:
-Save this key now; it will not be shown again.
+warning: Save this key now; it will not be shown again.
 .sp
 # Exit status: 0
 .EE
@@ -254,6 +254,9 @@ user@host ~ % axilio api-keys create "release automation" -o json
   "created_at": "<timestamp>"
 }
 .sp
+# Standard error:
+warning: Save this key now; it will not be shown again.
+.sp
 # Exit status: 0
 .EE
 
@@ -267,15 +270,15 @@ Permanently delete an organization API key using an ID discovered with
 \fBapi-keys list\fR\&.
 
 .PP
-Without --yes, table mode reads confirmation from stdin, including
-redirected input. JSON and quiet modes do not prompt and require --yes.
+Without --yes, table mode prompts only when stdin is a terminal.
+Redirected, JSON, and quiet execution do not prompt and require --yes.
 JSON success reports the deleted key ID.
 
 .PP
 \fBCommand options\fP
 .IP \(bu 2
-\fB-y\fP, \fB--yes\fP - Delete without prompting; required in JSON or
-quiet mode
+\fB-y\fP, \fB--yes\fP - Delete without prompting; required in JSON, quiet,
+or redirected execution
 
 .PP
 \fBGlobal-option behavior\fP
@@ -305,13 +308,14 @@ result; --yes is still required; JSON still prints
 
 .EX
 user@host ~ % axilio api-keys delete key_123
+Deleted key_123
 .sp
 # Standard error:
-Delete API key key_123? [y/N] Deleted key_123
+Delete API key key_123? [y/N]
 .sp
 # Exit status: 0
-# Notes: Without --yes, table mode reads confirmation from stdin,
-#        including redirected input. JSON and quiet modes require --yes.
+# Notes: Without --yes, table mode prompts only when stdin is a
+#        terminal. Redirected, JSON, and quiet execution require --yes.
 .EE
 
 .PP
@@ -319,8 +323,6 @@ Delete API key key_123? [y/N] Deleted key_123
 
 .EX
 user@host ~ % axilio api-keys delete key_123 --yes
-.sp
-# Standard error:
 Deleted key_123
 .sp
 # Exit status: 0
@@ -599,8 +601,6 @@ Sessions dir <sessions-directory>
 
 .EX
 user@host ~ % axilio config set base-url https://api.axilio.ai
-.sp
-# Standard error:
 Set base-url = https://api.axilio.ai in <config-path>
 .sp
 # Exit status: 0
@@ -611,8 +611,6 @@ Set base-url = https://api.axilio.ai in <config-path>
 
 .EX
 user@host ~ % axilio config unset base-url
-.sp
-# Standard error:
 Unset base-url in <config-path>
 .sp
 # Exit status: 0
@@ -650,8 +648,6 @@ still prints
 
 .EX
 user@host ~ % axilio config set base-url https://api.axilio.ai
-.sp
-# Standard error:
 Set base-url = https://api.axilio.ai in <config-path>
 .sp
 # Exit status: 0
@@ -686,8 +682,6 @@ JSON still prints
 
 .EX
 user@host ~ % axilio config unset base-url
-.sp
-# Standard error:
 Unset base-url in <config-path>
 .sp
 # Exit status: 0
@@ -949,8 +943,8 @@ check; overrides AXILIO_BASE_URL and saved base-url
 \fB-o\fP, \fB--output\fP=\fIvalue\fP - Emit human init messages or JSON
 written and skipped path lists (default "table")
 .IP \(bu 2
-\fB-q\fP, \fB--quiet\fP - Suppress human init prompts and messages;
---agent may be required; JSON still prints
+\fB-q\fP, \fB--quiet\fP - Suppress init acknowledgments, notes, and
+prompts; warnings remain; --agent may be required; JSON still prints
 
 .PP
 \fBExamples and expected output\fP
@@ -960,10 +954,10 @@ written and skipped path lists (default "table")
 
 .EX
 user@host ~ % axilio init
+✓ Wrote the Axilio agent skill to <detected-target>
 .sp
 # Standard error:
-✓ Wrote the Axilio agent skill to <detected-target>
-Not signed in. A human must run `axilio login` (browser), or set AXILIO_API_KEY.
+warning: not signed in; a human must run `axilio login` (browser), or set AXILIO_API_KEY
 .sp
 # Exit status: 0
 # Notes: Representative stderr excerpt; detected targets depend on
@@ -977,10 +971,10 @@ Not signed in. A human must run `axilio login` (browser), or set AXILIO_API_KEY.
 
 .EX
 user@host ~ % axilio init --agent codex
+✓ Wrote the Axilio agent skill to AGENTS.md
 .sp
 # Standard error:
-✓ Wrote the Axilio agent skill to AGENTS.md
-Not signed in. A human must run `axilio login` (browser), or set AXILIO_API_KEY.
+warning: not signed in; a human must run `axilio login` (browser), or set AXILIO_API_KEY
 .sp
 # Exit status: 0
 # Notes: Excerpt: stderr then prints the suggested first agent prompt.
@@ -991,10 +985,10 @@ Not signed in. A human must run `axilio login` (browser), or set AXILIO_API_KEY.
 
 .EX
 user@host ~ % axilio init --agent claude --force
+✓ Wrote the Axilio agent skill to .claude/skills/axilio/SKILL.md
 .sp
 # Standard error:
-✓ Wrote the Axilio agent skill to .claude/skills/axilio/SKILL.md
-Not signed in. A human must run `axilio login` (browser), or set AXILIO_API_KEY.
+warning: not signed in; a human must run `axilio login` (browser), or set AXILIO_API_KEY
 .sp
 # Exit status: 0
 # Notes: Excerpt: --force replaces an existing Axilio-owned Claude skill
@@ -1034,8 +1028,9 @@ post-login OAuth balance request
 \fB-o\fP, \fB--output\fP=\fIvalue\fP - Emit human login messages or a JSON
 sign-in result (default "table")
 .IP \(bu 2
-\fB-q\fP, \fB--quiet\fP - Suppress human login messages; browser OAuth
-still opens; JSON still prints
+\fB-q\fP, \fB--quiet\fP - Suppress login acknowledgments, notes, progress,
+and prompts; warnings remain; browser OAuth still opens; JSON still
+prints
 
 .PP
 \fBExamples and expected output\fP
@@ -1045,14 +1040,14 @@ still opens; JSON still prints
 
 .EX
 user@host ~ % axilio login
+✓ Signed in to https://api.axilio.ai
 .sp
 # Standard error:
 → Opening your browser to authorize the CLI…
-✓ Signed in to https://api.axilio.ai
 .sp
 # Exit status: 0
 # Notes: Representative stderr excerpt; the browser URL, optional
-#        organization line, and balance result vary by login.
+#        organization line, balance result, and warnings vary by login.
 .EE
 
 .PP
@@ -1060,10 +1055,10 @@ user@host ~ % axilio login
 
 .EX
 user@host ~ % axilio login --api-key axl_xxx
+✓ Signed in to https://api.axilio.ai
 .sp
 # Standard error:
-✓ Signed in to https://api.axilio.ai
-  Balance  $5.00
+Balance  $5.00
   Saved to <config-path>
 .sp
 # Exit status: 0
@@ -1076,10 +1071,10 @@ user@host ~ % axilio login --api-key axl_xxx
 
 .EX
 user@host ~ % printf '%s\\n' "$AXILIO_API_KEY" | axilio login
+✓ Signed in to https://api.axilio.ai
 .sp
 # Standard error:
-✓ Signed in to https://api.axilio.ai
-  Balance  $5.00
+Balance  $5.00
   Saved to <config-path>
 .sp
 # Exit status: 0
@@ -1109,21 +1104,19 @@ files are not removed.
 \fB-o\fP, \fB--output\fP=\fIvalue\fP - Emit a human sign-out message or JSON
 sign-out result (default "table")
 .IP \(bu 2
-\fB-q\fP, \fB--quiet\fP - Suppress human logout warnings and results; JSON
-still prints
+\fB-q\fP, \fB--quiet\fP - Suppress logout acknowledgments and notes;
+revocation warnings remain; JSON still prints
 
 .PP
 \fBExamples and expected output\fP
 
 .EX
 user@host ~ % axilio logout
-.sp
-# Standard error:
 ✓ Signed out.
 .sp
 # Exit status: 0
 # Notes: Already-signed-out is also exit 0 and reports Already signed
-#        out.
+#        out. Revocation failures are warnings on stderr.
 .EE
 
 .SH orgs
@@ -1191,8 +1184,6 @@ SLUG         NAME          ID
 
 .EX
 user@host ~ % axilio orgs use example-org
-.sp
-# Standard error:
 Active organization set to example-org (Example Inc.).
 .sp
 # Exit status: 0
@@ -1214,8 +1205,6 @@ WORKFLOW ID   NAME      PLATFORM  STATUS  LAST RUN
 
 .EX
 user@host ~ % axilio orgs clear
-.sp
-# Standard error:
 Cleared the active organization; using your session default.
 .sp
 # Exit status: 0
@@ -1331,8 +1320,6 @@ still prints
 
 .EX
 user@host ~ % axilio orgs clear
-.sp
-# Standard error:
 Cleared the active organization; using your session default.
 .sp
 # Exit status: 0
@@ -1378,8 +1365,6 @@ JSON still prints
 
 .EX
 user@host ~ % axilio orgs use example-org
-.sp
-# Standard error:
 Active organization set to example-org (Example Inc.).
 .sp
 # Exit status: 0
@@ -1677,8 +1662,6 @@ action still runs; JSON still prints
 
 .EX
 user@host ~ % axilio phone key enter
-.sp
-# Standard error:
 Pressed enter
 .sp
 # Exit status: 0
@@ -1730,8 +1713,6 @@ action still runs; JSON still prints
 
 .EX
 user@host ~ % axilio phone long-press 540 1080
-.sp
-# Standard error:
 Long-pressed 540,1080 for 800ms
 .sp
 # Exit status: 0
@@ -1742,8 +1723,6 @@ Long-pressed 540,1080 for 800ms
 
 .EX
 user@host ~ % axilio phone long-press 540 1080 --duration-ms 1200
-.sp
-# Standard error:
 Long-pressed 540,1080 for 1200ms
 .sp
 # Exit status: 0
@@ -1912,8 +1891,6 @@ action still runs; JSON still prints
 
 .EX
 user@host ~ % axilio phone screenshot
-.sp
-# Standard error:
 Wrote screenshot.png (<bytes> bytes)
 .sp
 # Exit status: 0
@@ -1927,8 +1904,6 @@ Wrote screenshot.png (<bytes> bytes)
 
 .EX
 user@host ~ % axilio phone screenshot --out login.png
-.sp
-# Standard error:
 Wrote login.png (<bytes> bytes)
 .sp
 # Exit status: 0
@@ -2096,8 +2071,6 @@ action still runs; JSON still prints
 
 .EX
 user@host ~ % axilio phone swipe 540 1600 540 500
-.sp
-# Standard error:
 Swiped 540,1600 -> 540,500
 .sp
 # Exit status: 0
@@ -2108,8 +2081,6 @@ Swiped 540,1600 -> 540,500
 
 .EX
 user@host ~ % axilio phone swipe 200 800 900 800 --duration-ms 500
-.sp
-# Standard error:
 Swiped 200,800 -> 900,800
 .sp
 # Exit status: 0
@@ -2175,8 +2146,6 @@ still runs; JSON still prints
 
 .EX
 user@host ~ % axilio phone tap --query "the search box"
-.sp
-# Standard error:
 Tapped "the search box" at 540,620
 .sp
 # Exit status: 0
@@ -2187,8 +2156,6 @@ Tapped "the search box" at 540,620
 
 .EX
 user@host ~ % axilio phone tap 540 1200
-.sp
-# Standard error:
 Tapped 540,1200
 .sp
 # Exit status: 0
@@ -2199,8 +2166,6 @@ Tapped 540,1200
 
 .EX
 user@host ~ % axilio phone tap --session sess_123 --query "continue"
-.sp
-# Standard error:
 Tapped "continue" at 540,1120
 .sp
 # Exit status: 0
@@ -2246,8 +2211,6 @@ action still runs; JSON still prints
 
 .EX
 user@host ~ % axilio phone type "hello world"
-.sp
-# Standard error:
 Typed "hello world"
 .sp
 # Exit status: 0
@@ -2258,8 +2221,6 @@ Typed "hello world"
 
 .EX
 user@host ~ % axilio phone type 'user@example.com'
-.sp
-# Standard error:
 Typed "user@example.com"
 .sp
 # Exit status: 0
@@ -2270,8 +2231,6 @@ Typed "user@example.com"
 
 .EX
 user@host ~ % axilio phone type "don't split this text"
-.sp
-# Standard error:
 Typed "don't split this text"
 .sp
 # Exit status: 0
@@ -2346,8 +2305,6 @@ Source      ocr
 
 .EX
 user@host ~ % axilio phone wait-for "Loading" --gone
-.sp
-# Standard error:
 "Loading" gone
 .sp
 # Exit status: 0
@@ -2673,15 +2630,15 @@ axilio runs cancel <run-id> [flags]
 Cancel a queued or running run by an ID discovered with \fBruns list\fR\&.
 
 .PP
-Without --yes, table mode reads confirmation from stdin, including
-redirected input. JSON and quiet modes do not prompt and require --yes.
+Without --yes, table mode prompts only when stdin is a terminal.
+Redirected, JSON, and quiet execution do not prompt and require --yes.
 JSON success reports the canceled run ID.
 
 .PP
 \fBCommand options\fP
 .IP \(bu 2
-\fB-y\fP, \fB--yes\fP - Cancel without prompting; required in JSON or
-quiet mode
+\fB-y\fP, \fB--yes\fP - Cancel without prompting; required in JSON, quiet,
+or redirected execution
 
 .PP
 \fBGlobal-option behavior\fP
@@ -2711,13 +2668,14 @@ result; --yes is still required; JSON still prints
 
 .EX
 user@host ~ % axilio runs cancel run_123
+Canceled run_123
 .sp
 # Standard error:
-Cancel run run_123? [y/N] Canceled run_123
+Cancel run run_123? [y/N]
 .sp
 # Exit status: 0
-# Notes: Without --yes, table mode reads confirmation from stdin,
-#        including redirected input. JSON and quiet modes require --yes.
+# Notes: Without --yes, table mode prompts only when stdin is a
+#        terminal. Redirected, JSON, and quiet execution require --yes.
 .EE
 
 .PP
@@ -2725,8 +2683,6 @@ Cancel run run_123? [y/N] Canceled run_123
 
 .EX
 user@host ~ % axilio runs cancel run_123 --yes
-.sp
-# Standard error:
 Canceled run_123
 .sp
 # Exit status: 0
@@ -2872,8 +2828,6 @@ result remains on stdout
 
 .EX
 user@host ~ % axilio runs start wf_123
-.sp
-# Standard error:
 Started run <run-id>
 .sp
 # Exit status: 0
@@ -2886,8 +2840,6 @@ Started run <run-id>
 
 .EX
 user@host ~ % axilio runs start wf_123 --count 3
-.sp
-# Standard error:
 Started run <run-id-1>
 Started run <run-id-2>
 Started run <run-id-3>
@@ -2914,8 +2866,6 @@ user@host ~ % axilio runs start wf_123 --count 0
 
 .EX
 user@host ~ % axilio runs start wf_123 --phone-id ph_123
-.sp
-# Standard error:
 Started run <run-id>
 .sp
 # Exit status: 0
@@ -2926,8 +2876,6 @@ Started run <run-id>
 
 .EX
 user@host ~ % axilio runs start wf_123 --start-timeout 300
-.sp
-# Standard error:
 Started run <run-id>
 .sp
 # Exit status: 0
@@ -3156,7 +3104,7 @@ the CLI saves its connection information locally and marks it as the
 most recently started session. Pin a dedicated phone discovered through
 \fBphones mine\fR with --phone-id, or attach the session to a workflow with
 --workflow. --export prints only \fBexport AXILIO_SESSION=\\<id\\>\fR for
-shell eval; that shell syntax also wins when -o json is supplied.
+shell eval and cannot be combined with -o json.
 
 .PP
 \fBCommand options\fP
@@ -3189,7 +3137,7 @@ allocated-session result
 overrides AXILIO_ORG and the saved active org; API keys ignore it
 .IP \(bu 2
 \fB-o\fP, \fB--output\fP=\fIvalue\fP - Render the allocated session as table
-or json; --export always emits shell text (default "table")
+or json; --export emits shell text and rejects json (default "table")
 .IP \(bu 2
 \fB-q\fP, \fB--quiet\fP - Suppress session guidance; the result or
 --export text remains on stdout
@@ -3262,7 +3210,8 @@ user@host ~ % axilio sessions start --export
 export AXILIO_SESSION=<session-id>
 .sp
 # Exit status: 0
-# Notes: --export emits shell text even when -o json is also supplied.
+# Notes: --export is exact shell text; combining it with -o json is a
+#        usage error before allocation.
 .EE
 
 .PP
@@ -3288,15 +3237,15 @@ ID.
 .PP
 Discover IDs with \fBsessions list --remote\fR; matching locally saved
 session information and the most-recent-session marker are removed after
-release. Without --yes, table mode reads confirmation from stdin,
-including redirected input. JSON and quiet modes do not prompt and
+release. Without --yes, table mode prompts only when stdin is a
+terminal. Redirected, JSON, and quiet execution do not prompt and
 require --yes.
 
 .PP
 \fBCommand options\fP
 .IP \(bu 2
-\fB-y\fP, \fB--yes\fP - Release without prompting; required in JSON or
-quiet mode
+\fB-y\fP, \fB--yes\fP - Release without prompting; required in JSON,
+quiet, or redirected execution
 
 .PP
 \fBGlobal-option behavior\fP
@@ -3326,13 +3275,14 @@ result; --yes is still required; JSON still prints
 
 .EX
 user@host ~ % axilio sessions stop sess_123
+Released <phone-id>.
 .sp
 # Standard error:
-Release <phone-id>? [y/N] Released <phone-id>.
+Release <phone-id>? [y/N]
 .sp
 # Exit status: 0
-# Notes: Without --yes, table mode reads confirmation from stdin,
-#        including redirected input. JSON and quiet modes require --yes.
+# Notes: Without --yes, table mode prompts only when stdin is a
+#        terminal. Redirected, JSON, and quiet execution require --yes.
 .EE
 
 .PP
@@ -3340,8 +3290,6 @@ Release <phone-id>? [y/N] Released <phone-id>.
 
 .EX
 user@host ~ % axilio sessions stop ph_123 --yes
-.sp
-# Standard error:
 Released ph_123.
 .sp
 # Exit status: 0
@@ -3453,8 +3401,6 @@ still prints
 
 .EX
 user@host ~ % axilio upgrade --check
-.sp
-# Standard error:
 A newer release is available: <old> -> <new>. Run `axilio upgrade` to install.
 .sp
 # Exit status: 0
@@ -3469,10 +3415,10 @@ A newer release is available: <old> -> <new>. Run `axilio upgrade` to install.
 
 .EX
 user@host ~ % axilio upgrade
+Upgraded to <latest-version>.
 .sp
 # Standard error:
-Upgrading axilio <current-version> -> <latest-version>...
-Upgraded to <latest-version>.
+→ Upgrading axilio <current-version> -> <latest-version>...
 .sp
 # Exit status: 0
 # Notes: Standalone release only; development builds and
@@ -3754,15 +3700,15 @@ storage quota.
 .PP
 Use \fBuploads list\fR to discover the upload ID. Deletion also schedules
 removal from every phone holding or receiving a copy. Without --yes,
-table mode reads confirmation from stdin, including redirected input.
-JSON and quiet modes do not prompt and require --yes. The alias \fBuploads
-rm\fR performs the same operation.
+table mode prompts only when stdin is a terminal. Redirected, JSON, and
+quiet execution do not prompt and require --yes. The alias \fBuploads rm\fR
+performs the same operation.
 
 .PP
 \fBCommand options\fP
 .IP \(bu 2
-\fB-y\fP, \fB--yes\fP - Delete without prompting; required in JSON or
-quiet mode
+\fB-y\fP, \fB--yes\fP - Delete without prompting; required in JSON, quiet,
+or redirected execution
 
 .PP
 \fBGlobal-option behavior\fP
@@ -3792,14 +3738,14 @@ deletion result (default "table")
 
 .EX
 user@host ~ % axilio uploads delete upl_123
+Deleted upl_123
 .sp
 # Standard error:
-Delete upload upl_123? Also recall it from phones holding or receiving a copy?
+Delete upload upl_123? Also recall it from phones holding or receiving a copy? [y/N]
 .sp
 # Exit status: 0
-# Notes: The table-mode prompt continues with [y/N], then reports
-#        Deleted upl_123 after confirmation. Redirected stdin can
-#        answer; JSON and quiet modes require --yes.
+# Notes: Table mode prompts only when stdin is a terminal. Redirected,
+#        JSON, and quiet execution require --yes.
 .EE
 
 .PP
@@ -3807,8 +3753,6 @@ Delete upload upl_123? Also recall it from phones holding or receiving a copy?
 
 .EX
 user@host ~ % axilio uploads rm upl_123 --yes
-.sp
-# Standard error:
 Deleted upl_123
 .sp
 # Exit status: 0
@@ -4197,13 +4141,19 @@ the only locally saved session, the most recently started session, then
 an ambiguity error.
 
 .SS Output behavior
-Table output for human readability is the default. Every successful
-runnable application command emits valid JSON with -o json; action
-commands return a small acknowledgment. Built-in help, completion, and
-version output remains text. The sessions start --export command emits
-shell text for eval. Notes, prompts, and progress use stderr and are
-suppressed in JSON or quiet mode. Quiet and JSON modes do not confirm
-destructive actions; pass --yes where offered. API-key, base-URL, and
+Table output for human readability is the default. Primary results and
+action acknowledgments use stdout. Every successful runnable application
+command emits exactly one JSON document with -o json. Built-in help,
+completion, and version remain text. Sessions start --export emits shell
+text for eval and cannot be combined with -o json.
+
+.PP
+Notes, progress, and prompts use stderr and are suppressed in JSON or
+quiet mode. Warnings and errors also use stderr, but remain visible in
+every mode. Quiet preserves primary result data while suppressing action
+acknowledgments and other optional human output. Destructive commands
+prompt only when stdin is a terminal; JSON, quiet, and redirected
+execution require --yes where offered. API-key, base-URL, and
 organization flags affect API-backed commands; they do not select a
 local phone session.
 

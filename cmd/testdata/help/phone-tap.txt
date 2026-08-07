@@ -15,18 +15,18 @@ Perform a tap action on the selected phone.
   EXAMPLES
 
     axilio phone tap --query "the search box"
-    # stdout: none
-    # stderr: Tapped "the search box" at 540,620
+    # stdout: Tapped "the search box" at 540,620
+    # stderr: none
     # exit status: 0
 
     axilio phone tap 540 1200
-    # stdout: none
-    # stderr: Tapped 540,1200
+    # stdout: Tapped 540,1200
+    # stderr: none
     # exit status: 0
 
     axilio phone tap --session sess_123 --query "continue"
-    # stdout: none
-    # stderr: Tapped "continue" at 540,1120
+    # stdout: Tapped "continue" at 540,1120
+    # stderr: none
     # exit status: 0
 
   TAP FLAGS

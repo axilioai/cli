@@ -10,7 +10,6 @@ import (
 	"github.com/axilioai/cli/internal/config"
 	"github.com/axilioai/cli/internal/exit"
 	"github.com/axilioai/cli/internal/oauth"
-	"github.com/axilioai/cli/internal/output"
 	"github.com/axilioai/cli/internal/util"
 	"github.com/spf13/cobra"
 )
@@ -64,11 +63,12 @@ func runOrgList() error {
 		return err
 	}
 	active := resolvedOrg()
-	printer().Emit(
+	p := printer()
+	return p.Emit(
 		map[string]any{"organizations": orgs, "active": active},
 		func() {
 			if len(orgs) == 0 {
-				fmt.Println("You are not a member of any organizations.")
+				p.Result("You are not a member of any organizations.")
 				return
 			}
 			rows := [][]string{{"", "SLUG", "NAME", "ID"}}
@@ -79,13 +79,12 @@ func runOrgList() error {
 				}
 				rows = append(rows, []string{mark, o.Slug, o.Name, o.ID})
 			}
-			output.Table(rows)
+			p.Table(rows)
 			if active == "" {
-				printer().Note("\nNo active org set; using your session default. Set one with `axilio orgs use <slug>`.")
+				p.Note("\nNo active org set; using your session default. Set one with `axilio orgs use <slug>`.")
 			}
 		},
 	)
-	return nil
 }
 
 func orgUseCmd() *cobra.Command {
@@ -119,11 +118,10 @@ func orgUseCmd() *cobra.Command {
 				return err
 			}
 			p := printer()
-			p.Emit(
+			return p.Emit(
 				map[string]string{"active_org": match.Slug, "org_id": match.ID, "org_name": match.Name},
-				func() { p.Note("Active organization set to %s (%s).", match.Slug, match.Name) },
+				func() { p.Ack("Active organization set to %s (%s).", match.Slug, match.Name) },
 			)
-			return nil
 		},
 	}
 }
@@ -139,19 +137,17 @@ func orgClearCmd() *cobra.Command {
 			cfg := config.Load()
 			p := printer()
 			if cfg.ActiveOrg == "" {
-				p.Emit(map[string]any{"active_org": "", "cleared": false}, func() {
-					p.Note("No active organization set.")
+				return p.Emit(map[string]any{"active_org": "", "cleared": false}, func() {
+					p.Ack("No active organization set.")
 				})
-				return nil
 			}
 			cfg.ActiveOrg = ""
 			if err := config.Save(cfg); err != nil {
 				return err
 			}
-			p.Emit(map[string]any{"active_org": "", "cleared": true}, func() {
-				p.Note("Cleared the active organization; using your session default.")
+			return p.Emit(map[string]any{"active_org": "", "cleared": true}, func() {
+				p.Ack("Cleared the active organization; using your session default.")
 			})
-			return nil
 		},
 	}
 }

@@ -7,7 +7,6 @@ import (
 	"github.com/axilioai/cli/internal/config"
 	"github.com/axilioai/cli/internal/exit"
 	"github.com/axilioai/cli/internal/oauth"
-	"github.com/axilioai/cli/internal/output"
 	"github.com/axilioai/cli/internal/session"
 	"github.com/axilioai/cli/internal/util"
 	"github.com/spf13/cobra"
@@ -61,7 +60,8 @@ func showConfig() error {
 	}
 
 	activeOrg := resolvedOrg()
-	printer().Emit(
+	p := printer()
+	return p.Emit(
 		map[string]string{
 			"api_host":     apiHost,
 			"auth_method":  method,
@@ -71,7 +71,7 @@ func showConfig() error {
 			"sessions_dir": session.Dir(),
 		},
 		func() {
-			output.KV([][2]string{
+			p.KV([][2]string{
 				{"API host", apiHost},
 				{"Auth method", authMethodDisplay(method, source)},
 				{"Active org", orgDisplay(activeOrg)},
@@ -80,7 +80,6 @@ func showConfig() error {
 			})
 		},
 	)
-	return nil
 }
 
 func authMethodDisplay(method, source string) string {
@@ -119,10 +118,9 @@ func configSetCmd() *cobra.Command {
 				return err
 			}
 			p := printer()
-			p.Emit(map[string]string{"key": key, "value": val, "config_path": config.Path()}, func() {
-				p.Note("Set %s = %s in %s", key, val, config.Path())
+			return p.Emit(map[string]string{"key": key, "value": val, "config_path": config.Path()}, func() {
+				p.Ack("Set %s = %s in %s", key, val, config.Path())
 			})
-			return nil
 		},
 	}
 }
@@ -148,10 +146,9 @@ func configUnsetCmd() *cobra.Command {
 				return err
 			}
 			p := printer()
-			p.Emit(map[string]any{"key": key, "unset": true, "config_path": config.Path()}, func() {
-				p.Note("Unset %s in %s", key, config.Path())
+			return p.Emit(map[string]any{"key": key, "unset": true, "config_path": config.Path()}, func() {
+				p.Ack("Unset %s in %s", key, config.Path())
 			})
-			return nil
 		},
 	}
 }
