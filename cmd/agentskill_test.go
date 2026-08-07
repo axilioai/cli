@@ -2,11 +2,10 @@ package cmd
 
 import (
 	"context"
-	"fmt"
-	"os"
 	"reflect"
 	"regexp"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/axilioai/platform-go/drivers/mobile"
@@ -28,29 +27,32 @@ import (
 //
 // The skill itself is no longer a local file (AXI-1527): it's hosted at the
 // backend's /skill route, the same place init.go's fetchSkillBody and the
-// dashboard's "Get Agent Prompt" button read from. TestMain fetches it once
-// for the whole binary, so these tests check the copy that is actually live
-// rather than a local file that could have drifted from it.
+// dashboard's "Get Agent Prompt" button read from. These tests fetch the copy
+// that is actually live rather than a local file that could have drifted from
+// it.
 
-// agentSkillBody holds the fetched skill markdown for the duration of the
-// test binary.
-var agentSkillBody string
+var (
+	_agentSkillOnce sync.Once
+	_agentSkillBody string
+	_agentSkillErr  error
+)
 
-func TestMain(m *testing.M) {
-	body, err := fetchSkillBody(context.Background())
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "fetching the agent skill for TestSkill*: %v\n", err)
-		os.Exit(1)
+func hostedAgentSkill(t *testing.T) string {
+	t.Helper()
+	_agentSkillOnce.Do(func() {
+		_agentSkillBody, _agentSkillErr = fetchSkillBody(context.Background())
+	})
+	if _agentSkillErr != nil {
+		t.Fatalf("fetching hosted agent skill: %v", _agentSkillErr)
 	}
-	agentSkillBody = body
-	os.Exit(m.Run())
+	return _agentSkillBody
 }
 
 // langBlock extracts one <!-- lang:X --> ... <!-- /lang:X --> section.
 func langBlock(t *testing.T, lang string) string {
 	t.Helper()
 	re := regexp.MustCompile(`(?s)<!-- lang:` + lang + ` -->(.*?)<!-- /lang:` + lang + ` -->`)
-	m := re.FindStringSubmatch(agentSkillBody)
+	m := re.FindStringSubmatch(hostedAgentSkill(t))
 	if m == nil {
 		t.Fatalf("the hosted skill has no <!-- lang:%s --> block", lang)
 	}
@@ -137,16 +139,17 @@ func TestSkillGoErrorHelpersExist(t *testing.T) {
 // quality: coordinates are only true for the screen you explored on, and the
 // script runs later against a different phone from the pool.
 func TestSkillTeachesSemanticSelectors(t *testing.T) {
+	skill := hostedAgentSkill(t)
 	for _, want := range []string{
 		"semantic selectors",
 		"--query",
 	} {
-		if !strings.Contains(strings.ToLower(agentSkillBody), strings.ToLower(want)) {
+		if !strings.Contains(strings.ToLower(skill), strings.ToLower(want)) {
 			t.Errorf("the hosted skill no longer teaches %q", want)
 		}
 	}
 	// The rule needs its own section, not a passing mention buried in a list.
-	if !strings.Contains(agentSkillBody, "## Rule: always use semantic selectors, never raw coordinates") {
+	if !strings.Contains(skill, "## Rule: always use semantic selectors, never raw coordinates") {
 		t.Error("the semantic-selector rule lost its dedicated section")
 	}
 }
@@ -154,10 +157,33 @@ func TestSkillTeachesSemanticSelectors(t *testing.T) {
 // TestSkillAsksForLanguage pins the language-choice step: without it an agent
 // defaults to whichever SDK appears first and the user never gets a say.
 func TestSkillAsksForLanguage(t *testing.T) {
-	if !strings.Contains(agentSkillBody, "Which SDK should I write this in") {
+	skill := hostedAgentSkill(t)
+	if !strings.Contains(skill, "Which SDK should I write this in") {
 		t.Error("the hosted skill no longer tells the agent to ask which SDK to write")
 	}
 	for _, lang := range []string{"python", "go"} {
 		langBlock(t, lang) // fatals if the block is missing
+	}
+}
+
+func TestSkillCommandExamplesMatchCLI(t *testing.T) {
+	skill := hostedAgentSkill(t)
+	if !strings.Contains(skill, "axilio phone key enter") {
+		t.Error("agent skill must show the supported enter key")
+	}
+	for _, contradiction := range []string{"enter, back, home", "back, home, recents"} {
+		if strings.Contains(strings.ToLower(skill), contradiction) {
+			t.Errorf("agent skill advertises unsupported named keys: %q", contradiction)
+		}
+	}
+	for _, command := range []string{
+		"axilio sessions start --export",
+		"axilio phone tap --query",
+		"axilio phone send",
+		"axilio uploads list",
+	} {
+		if !strings.Contains(skill, command) {
+			t.Errorf("agent skill missing %q", command)
+		}
 	}
 }

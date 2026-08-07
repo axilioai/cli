@@ -231,6 +231,38 @@ func TestRunsStartJSON(t *testing.T) {
 	}
 }
 
+func TestRunsStartRejectsInvalidCountBeforeRequest(t *testing.T) {
+	requests := 0
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		requests++
+		http.Error(w, "unexpected request", http.StatusInternalServerError)
+	}))
+	t.Cleanup(srv.Close)
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	t.Setenv("AXILIO_API_KEY", "axl_test")
+	t.Setenv("AXILIO_BASE_URL", srv.URL)
+
+	for _, count := range []string{"-1", "0", "1001"} {
+		out, err := execRoot(t, "runs", "start", "w1", "--count", count)
+		if err == nil || exit.Classify(err) != exit.Usage {
+			t.Fatalf("--count %s: got %v, want usage error", count, err)
+		}
+		if out != "" {
+			t.Fatalf("--count %s wrote stdout on failure: %q", count, out)
+		}
+	}
+	if requests != 0 {
+		t.Fatalf("invalid counts made %d HTTP requests", requests)
+	}
+}
+
+func TestRunsStartAcceptsCountUpperBound(t *testing.T) {
+	srv := fakeAPI(t)
+	if _, err := run(t, srv, "runs", "start", "w1", "--count", "1000"); err != nil {
+		t.Fatalf("--count 1000: %v", err)
+	}
+}
+
 // A rejected key must surface as the Auth exit code, not a generic error.
 func TestAuthFailureExitCode(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {

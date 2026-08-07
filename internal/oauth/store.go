@@ -95,3 +95,11 @@ func HasSession() bool {
 	_, ok := Load()
 	return ok
 }
+
+// HasSessionForHost reports whether an OAuth session is stored for apiHost.
+// It deliberately does not refresh or otherwise validate the token; callers
+// that need a usable access token should use ValidAccessToken instead.
+func HasSessionForHost(apiHost string) bool {
+	t, ok := Load()
+	return ok && t.Host == apiHost
+}

@@ -6,6 +6,7 @@ import (
 
 	"github.com/axilioai/cli/internal/config"
 	"github.com/axilioai/cli/internal/exit"
+	"github.com/axilioai/cli/internal/oauth"
 	"github.com/axilioai/cli/internal/output"
 	"github.com/axilioai/cli/internal/session"
 	"github.com/axilioai/cli/internal/util"
@@ -21,10 +22,10 @@ func configCmd() *cobra.Command {
 		Short: "Show and edit CLI configuration (API host, paths, auth).",
 		Long: "Inspect and edit CLI configuration without hand-editing files. Bare " +
 			"`axilio config` reports the effective API host, API-key authentication " +
-			"summary, active organization, config path, and sessions directory. The " +
-			"current summary does not detect a stored OAuth session, so an OAuth-only " +
-			"login may be shown as auth method `none`; `status` verifies effective " +
-			"credentials. The only editable key is base-url.\n\n" +
+			"or matching browser-session authentication summary, active organization, " +
+			"config path, and sessions directory. This is a local summary; `status` " +
+			"verifies that the effective credentials are usable. The only editable key " +
+			"is base-url.\n\n" +
 			"Current ways to change these values are:\n" +
 			"  API host         axilio config set base-url [url]\n" +
 			"                   axilio config unset base-url\n" +
@@ -54,6 +55,9 @@ func showConfig() error {
 	method := "none"
 	if source != "" {
 		method = "api-key"
+	} else if oauth.HasSessionForHost(apiHost) {
+		method = "oauth"
+		source = "browser-session"
 	}
 
 	activeOrg := resolvedOrg()

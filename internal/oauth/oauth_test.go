@@ -48,6 +48,22 @@ func TestStoreRoundTrip(t *testing.T) {
 	}
 }
 
+func TestHasSessionForHost(t *testing.T) {
+	keyring.MockInit()
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	Clear()
+
+	if err := Save(Tokens{AccessToken: "a", Host: "https://api.axilio.ai"}); err != nil {
+		t.Fatalf("seed: %v", err)
+	}
+	if !HasSessionForHost("https://api.axilio.ai") {
+		t.Fatal("expected the matching host to report a stored session")
+	}
+	if HasSessionForHost("https://staging-api.axilio.ai") {
+		t.Fatal("session for one host must not match another host")
+	}
+}
+
 // tokenServer returns an httptest server that emits a fresh token pair for the
 // expected grant type, and 400s anything else.
 func tokenServer(t *testing.T, wantGrant string) *httptest.Server {

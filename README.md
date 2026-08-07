@@ -67,7 +67,8 @@ go install github.com/axilioai/cli/cmd/axilio@latest
 This puts only the `axilio` binary in `$(go env GOPATH)/bin` — make sure that's
 on your `PATH`. `go install` does not register the manual page.
 
-For Homebrew, run `brew upgrade axilio` (`axilio upgrade` prints that guidance).
+For Homebrew, run `brew upgrade axilio` (`axilio upgrade` prints that guidance,
+while `axilio upgrade --check` still checks GitHub for a newer release).
 For curl installs, rerun the curl installer to update both the executable and
 manual; the standalone `axilio upgrade` replaces only the executable. For
 `go install`, rerun the `go install` command.
@@ -316,6 +317,9 @@ axilio runs list
 axilio runs get <run-id>
 axilio runs cancel <run-id> --yes
 ```
+
+`runs start --count` accepts values from 1 through 1000, inclusive, and rejects
+out-of-range values before authentication or an API request.
 
 ### Manage API keys
 

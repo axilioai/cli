@@ -262,7 +262,7 @@ var commandDocumentationByKey = map[string]CommandDocumentation{
 		failedSample("AXILIO_API_KEY=axl_invalid axilio doctor", "CHECK          | STATUS | DETAIL\nAuthentication | ok     | method: api-key (source: env (AXILIO_API_KEY))\nCredentials    | ok     | API key present (axl_…)\nConnectivity   | ok     | https://api.axilio.ai/api/v1 reachable\nAuthentication | fail   | API key rejected (HTTP 401); run `axilio login`\n...", "doctor: API key rejected (HTTP 401); run `axilio login`", 3, "Missing or rejected credentials exit 3. When credentials are configured but the Axilio API cannot be reached, doctor exits 6."),
 	}},
 	"config": {Samples: []CommandSample{
-		sample("axilio config", "API host     https://api.axilio.ai\nAuth method  api-key (source: config)\nActive org   (session default)\nConfig file  <config-path>\nSessions dir <sessions-directory>", "none"),
+		sampleWithNote("axilio config", "API host     https://api.axilio.ai\nAuth method  oauth (source: browser-session)\nActive org   (session default)\nConfig file  <config-path>\nSessions dir <sessions-directory>", "none", "The effective method follows request precedence. API keys report flag, environment, or config as their source; a stored OAuth session is effective only for the selected API host."),
 		sample("axilio config set base-url https://api.axilio.ai", "none", "Set base-url = https://api.axilio.ai in <config-path>"),
 		sample("axilio config unset base-url", "none", "Unset base-url in <config-path>"),
 	}},
@@ -291,7 +291,7 @@ var commandDocumentationByKey = map[string]CommandDocumentation{
 		sampleWithNote("axilio orgs clear", "none", "Cleared the active organization; using your session default.", "If no organization is set, it reports that state and still exits 0."),
 	}},
 	"upgrade": {Samples: []CommandSample{
-		sampleWithNote("axilio upgrade --check", "none", "A newer release is available: <old> -> <new>. Run `axilio upgrade` to install.", "The version placeholders vary. This is the newer-release branch; up-to-date, no-release, development, and Homebrew-managed installations report their own state instead."),
+		sampleWithNote("axilio upgrade --check", "none", "A newer release is available: <old> -> <new>. Run `axilio upgrade` to install.", "The version placeholders vary. Homebrew installations perform the same release check but name `brew upgrade axilio` as the next command. Up-to-date, no-release, and development builds report their own state."),
 		sampleWithNote("axilio upgrade", "none", "Upgrading axilio <current-version> -> <latest-version>...\nUpgraded to <latest-version>.", "Standalone release only; development builds and Homebrew-managed installs print their own package-manager guidance."),
 		externalSample("brew upgrade axilio", "Output and exit status are owned by Homebrew, not the axilio CLI."),
 	}},
@@ -312,9 +312,9 @@ var commandDocumentationByKey = map[string]CommandDocumentation{
 		sampleWithNote("axilio sessions list -o json", "[\n  {\n    \"session_id\": \"<session-id>\",\n    \"phone_id\": \"<phone-id>\",\n    \"phone_type\": \"android\",\n    \"control_url\": \"<control-url>\",\n    \"created_at\": \"<timestamp>\"\n  }\n]", "none", "Locally saved session JSON includes the stored control URL; IDs and URLs vary."),
 	}},
 	"sessions current": {Samples: []CommandSample{
-		sampleWithNote("axilio sessions current", "Session  <session-id>\nPhone    <phone-id>\nType     android", "none", "No selected session is an exit-0 answer; JSON prints null."),
+		sampleWithNote("axilio sessions current", "Session  <session-id>\nPhone    <phone-id>\nType     android", "none", "When no session can be selected, all output modes leave stdout empty and exit with not-found status 4."),
 		sampleWithNote("AXILIO_SESSION=sess_123 axilio sessions current", "Session  sess_123\nPhone    <phone-id>\nType     android", "none", "The named session must be saved locally; AXILIO_SESSION takes precedence over automatic session selection."),
-		sampleWithNote("axilio sessions current -o json", "{\n  \"session_id\": \"<session-id>\",\n  \"phone_id\": \"<phone-id>\",\n  \"phone_type\": \"android\",\n  \"control_url\": \"<control-url>\",\n  \"created_at\": \"<timestamp>\"\n}", "none", "With no selected session, the successful JSON result is null."),
+		sampleWithNote("axilio sessions current -o json", "{\n  \"session_id\": \"<session-id>\",\n  \"phone_id\": \"<phone-id>\",\n  \"phone_type\": \"android\",\n  \"control_url\": \"<control-url>\",\n  \"created_at\": \"<timestamp>\"\n}", "none", "A selected session keeps the same JSON shape. With no selected session, stdout is empty and exit status is 4."),
 	}},
 	"sessions start": {Samples: []CommandSample{
 		sample("axilio sessions start", "Session      <session-id>\nPhone        <phone-id>\nRegion       us-central\nLive view    <live-view-url>\nControl URL  <control-url>", "Drive it:  axilio phone observe\nPin it to this shell (for parallel work):  export AXILIO_SESSION=<session-id>\nRelease it with:  axilio sessions stop <session-id>"),
@@ -418,8 +418,9 @@ var commandDocumentationByKey = map[string]CommandDocumentation{
 		sampleWithNote("axilio runs list -o json", "{\n  \"limit\": 20,\n  \"offset\": 0,\n  \"runs\": [\n    {\n      \"id\": \"<run-id>\",\n      \"status\": \"completed\",\n      \"trigger\": \"manual\",\n      \"workflow_id\": \"<workflow-id>\"\n    }\n  ],\n  \"total\": 1\n}", "none", "Shortened representative JSON output; run records may include additional fields."),
 	}},
 	"runs start": {Samples: []CommandSample{
-		sampleWithNote("axilio runs start wf_123", "none", "Started run <run-id>", "-o json emits the complete run_ids response on stdout."),
+		sampleWithNote("axilio runs start wf_123", "none", "Started run <run-id>", "-o json emits the complete run_ids response on stdout. --count accepts 1 through 1000, inclusive."),
 		sample("axilio runs start wf_123 --count 3", "none", "Started run <run-id-1>\nStarted run <run-id-2>\nStarted run <run-id-3>"),
+		failedSample("axilio runs start wf_123 --count 0", "none", "--count must be between 1 and 1000 (got 0)", 2, "The range is validated before credentials, allocation, or an API request."),
 		sample("axilio runs start wf_123 --phone-id ph_123", "none", "Started run <run-id>"),
 		sample("axilio runs start wf_123 --start-timeout 300", "none", "Started run <run-id>"),
 	}},
