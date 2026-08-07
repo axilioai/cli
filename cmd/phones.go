@@ -42,10 +42,13 @@ func phonesListCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			resp, err := cl.Phones.Available(context.Background(), &platformgo.PhonesAvailableRequest{})
+			resp, err := cl.Phones.Available(context.Background(), &platformgo.PhonesAvailableRequest{
+				PhoneType: platformgo.PhonesAvailableRequestPhoneTypeAndroid.Ptr(),
+			})
 			if err != nil {
 				return err
 			}
+			resp.SetPhones(resp.Phones)
 			printer().Emit(resp, func() {
 				if len(resp.Phones) == 0 {
 					fmt.Println("No phones available.")

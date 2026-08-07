@@ -1,5 +1,5 @@
 .nh
-.TH "AXILIO" "1" "2026-08-02" "axilio 0.6.1" "Axilio CLI Manual"
+.TH "AXILIO" "1" "2026-08-02" "axilio 0.7.0" "Axilio CLI Manual"
 
 .SH NAME
 axilio \- Acquire and drive Axilio phones from the command line
@@ -743,7 +743,7 @@ Credentials     | ok     | oauth session present
 Connectivity    | ok     | https://api.axilio.ai/api/v1 reachable
 Account         | ok     | balance: $5.00
 Plan            | ok     | Hobby (active, up to 1 concurrent)
-CLI version     | ok     | 0.6.1 (<commit>) <go-version> <build-date>
+CLI version     | ok     | 0.7.0 (<commit>) <go-version> <build-date>
 Config file     | ok     | <config-path>
 Sessions dir    | ok     | <sessions-directory>
 Current session | ok     | <session-id> (<phone-id>)
@@ -788,7 +788,7 @@ user@host ~ % axilio doctor -o json
     {
       "name": "CLI version",
       "status": "ok",
-      "detail": "0.6.1 (<commit>) <go-version> <build-date>"
+      "detail": "0.7.0 (<commit>) <go-version> <build-date>"
     },
     {
       "name": "Config file",
@@ -2469,7 +2469,6 @@ PHONE ID   TYPE     MODEL    STATUS
 user@host ~ % axilio phones list -o json
 {
   "android_count": 1,
-  "iphone_count": 0,
   "phones": [
     {
       "created_at": "<timestamp>",
@@ -3127,16 +3126,17 @@ axilio sessions start [flags]
 .EE
 
 .PP
-Acquire an Android phone by default.
+Acquire an Android phone.
 
 .PP
-The session remains active in Axilio until stopped; the CLI saves its
-connection information locally and marks it as the most recently started
-session. Select iphone with --phone-type, pin a dedicated phone
-discovered through \fBphones mine\fR with --phone-id, or attach the session
-to a workflow with --workflow. --export prints only \fBexport
-AXILIO_SESSION=\\<id\\>\fR for shell eval; that shell syntax also wins when
--o json is supplied.
+The CLI currently supports Android allocation only; --phone-type remains
+available for scripts that pass android explicitly, and any other value
+is a usage error. The session remains active in Axilio until stopped;
+the CLI saves its connection information locally and marks it as the
+most recently started session. Pin a dedicated phone discovered through
+\fBphones mine\fR with --phone-id, or attach the session to a workflow with
+--workflow. --export prints only \fBexport AXILIO_SESSION=\\<id\\>\fR for
+shell eval; that shell syntax also wins when -o json is supplied.
 
 .PP
 \fBCommand options\fP
@@ -3147,8 +3147,8 @@ eval
 \fB--phone-id\fP=\fIvalue\fP - Pin a dedicated phone ID from \fBphones mine\fR
 instead of pool allocation
 .IP \(bu 2
-\fB--phone-type\fP=\fIvalue\fP - Phone platform to allocate: android or
-iphone (default "android")
+\fB--phone-type\fP=\fIvalue\fP - Phone platform to allocate (currently only
+android) (default "android")
 .IP \(bu 2
 \fB--workflow\fP=\fIvalue\fP - Workflow ID to attach; omit for an
 interactive session
@@ -3200,25 +3200,6 @@ Release it with:  axilio sessions stop <session-id>
 \fBSample 2\fP
 
 .EX
-user@host ~ % axilio sessions start --phone-type iphone
-Session      <session-id>
-Phone        <phone-id>
-Region       us-central
-Live view    <live-view-url>
-Control URL  <control-url>
-.sp
-# Standard error:
-Drive it:  axilio phone observe
-Pin it to this shell (for parallel work):  export AXILIO_SESSION=<session-id>
-Release it with:  axilio sessions stop <session-id>
-.sp
-# Exit status: 0
-.EE
-
-.PP
-\fBSample 3\fP
-
-.EX
 user@host ~ % axilio sessions start --phone-id ph_123
 Session      <session-id>
 Phone        ph_123
@@ -3235,7 +3216,7 @@ Release it with:  axilio sessions stop <session-id>
 .EE
 
 .PP
-\fBSample 4\fP
+\fBSample 3\fP
 
 .EX
 user@host ~ % axilio sessions start --workflow wf_123
@@ -3254,7 +3235,7 @@ Release it with:  axilio sessions stop <session-id>
 .EE
 
 .PP
-\fBSample 5\fP
+\fBSample 4\fP
 
 .EX
 user@host ~ % axilio sessions start --export
@@ -3265,7 +3246,7 @@ export AXILIO_SESSION=<session-id>
 .EE
 
 .PP
-\fBSample 6\fP
+\fBSample 5\fP
 
 .EX
 user@host ~ % eval "$(axilio sessions start --export)"
