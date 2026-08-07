@@ -3237,9 +3237,10 @@ ID.
 .PP
 Discover IDs with \fBsessions list --remote\fR; matching locally saved
 session information and the most-recent-session marker are removed after
-release. Without --yes, table mode prompts only when stdin is a
-terminal. Redirected, JSON, and quiet execution do not prompt and
-require --yes.
+release. JSON output is the canonical API deallocation response,
+including the phone, session, workflow, and deallocation time. Without
+--yes, table mode prompts only when stdin is a terminal. Redirected,
+JSON, and quiet execution do not prompt and require --yes.
 
 .PP
 \fBCommand options\fP
@@ -3293,6 +3294,23 @@ user@host ~ % axilio sessions stop ph_123 --yes
 Released ph_123.
 .sp
 # Exit status: 0
+.EE
+
+.PP
+\fBSample 3\fP
+
+.EX
+user@host ~ % axilio sessions stop ph_123 --yes -o json
+{
+  "deallocated_at": "<timestamp>",
+  "phone_id": "ph_123",
+  "session_id": "<session-id>",
+  "workflow_id": "<workflow-id>"
+}
+.sp
+# Exit status: 0
+# Notes: JSON is the canonical API deallocation response; workflow_id
+#        may be empty for an interactive session.
 .EE
 
 .SH status

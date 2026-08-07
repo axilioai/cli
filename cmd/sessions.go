@@ -215,7 +215,9 @@ func sessionsStopCmd() *cobra.Command {
 		Long: "Release an active phone allocation using either its session ID or phone " +
 			"ID. Discover IDs with `sessions list --remote`; matching locally saved " +
 			"session information and the most-recent-session marker are removed after " +
-			"release. Without --yes, table mode prompts only when stdin is a terminal. " +
+			"release. JSON output is the canonical API deallocation response, including " +
+			"the phone, session, workflow, and deallocation time. Without --yes, table " +
+			"mode prompts only when stdin is a terminal. " +
 			"Redirected, JSON, and quiet execution do not prompt and require --yes.",
 		Args: cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
@@ -241,13 +243,14 @@ func sessionsStopCmd() *cobra.Command {
 				}
 				return exit.Usagef("aborted (pass --yes to release non-interactively)")
 			}
-			if _, err := cl.Phones.Deallocate(context.Background(), &platformgo.PhonesDeallocateRequest{PhoneID: phoneID}); err != nil {
+			deallocation, err := cl.Phones.Deallocate(context.Background(), &platformgo.PhonesDeallocateRequest{PhoneID: phoneID})
+			if err != nil {
 				return err
 			}
 			// Drop the lease from the registry (clears the current pointer if it was it).
 			_ = session.Remove(id)
-			return p.Emit(map[string]any{"phone_id": phoneID, "released": true}, func() {
-				p.Ack("Released %s.", phoneID)
+			return p.Emit(deallocation, func() {
+				p.Ack("Released %s.", deallocation.PhoneID)
 			})
 		},
 	}

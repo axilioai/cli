@@ -238,8 +238,8 @@ The CLI's output is a contract, not just cosmetics.
   Notes, progress, prompts, warnings, and errors use stderr. Warnings and errors
   remain visible in every output mode.
 - **`-o json`** writes exactly one structured result to stdout for every
-  successful runnable application command — data verbs emit the API response,
-  action verbs emit a small acknowledgment (e.g.
+  successful runnable application command — data verbs and `sessions stop`
+  emit the API response, action verbs emit a small acknowledgment (e.g.
   `{"action":"tap","x":540,"y":1200}`), and deletions emit
   `{"id":...,"deleted":true}` — so those successes pipe cleanly into `jq`.
   Optional human acknowledgments, notes, progress, and prompts are suppressed.
