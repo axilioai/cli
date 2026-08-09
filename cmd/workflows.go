@@ -3,10 +3,14 @@ package cmd
 import (
 	"context"
 
+	"github.com/axilioai/cli/internal/exit"
 	"github.com/axilioai/cli/internal/util"
 	platformgo "github.com/axilioai/platform-go"
 	"github.com/spf13/cobra"
 )
+
+// maxWorkflowsListLimit mirrors the backend's workflows-list page bound.
+const maxWorkflowsListLimit int64 = 500
 
 func workflowsCmd() *cobra.Command {
 	cmd := &cobra.Command{
@@ -37,6 +41,9 @@ func workflowsListCmd() *cobra.Command {
 			"--search for a name substring and --limit to control the number returned. " +
 			"A listed workflow ID can be passed directly to `runs start`.",
 		RunE: func(_ *cobra.Command, _ []string) error {
+			if limit < 1 || limit > maxWorkflowsListLimit {
+				return exit.Usagef("--limit must be between 1 and %d (got %d)", maxWorkflowsListLimit, limit)
+			}
 			cl, err := newClient()
 			if err != nil {
 				return err
@@ -69,7 +76,7 @@ func workflowsListCmd() *cobra.Command {
 			})
 		},
 	}
-	cmd.Flags().Int64Var(&limit, "limit", 20, "Maximum number of most-recent workflows to return")
+	cmd.Flags().Int64Var(&limit, "limit", 20, "Maximum number of most-recent workflows to return (1-500)")
 	cmd.Flags().StringVar(&search, "search", "", "Filter workflow names by substring")
 	return cmd
 }

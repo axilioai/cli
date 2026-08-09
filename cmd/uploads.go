@@ -12,6 +12,9 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// maxUploadsListLimit mirrors the backend's uploads-list page bound.
+const maxUploadsListLimit int64 = 100
+
 // uploadsCmd is `axilio uploads` (AXI-1447): the org file library, which until
 // now the CLI could only fill. `axilio phone send` uploads and pushes in one
 // shot, so a CLI user could consume the org's storage quota and had no
@@ -106,6 +109,12 @@ func uploadsListCmd() *cobra.Command {
 			"case-insensitive substring, and sort by created_at, filename, or " +
 			"size_bytes in asc or desc order. Omitting sort/order uses server defaults.",
 		RunE: func(cmd *cobra.Command, _ []string) error {
+			if limit < 1 || limit > maxUploadsListLimit {
+				return exit.Usagef("--limit must be between 1 and %d (got %d)", maxUploadsListLimit, limit)
+			}
+			if offset < 0 {
+				return exit.Usagef("--offset must be zero or positive (got %d)", offset)
+			}
 			cl, err := newClient()
 			if err != nil {
 				return err
@@ -161,7 +170,7 @@ func uploadsListCmd() *cobra.Command {
 			})
 		},
 	}
-	cmd.Flags().Int64Var(&limit, "limit", 50, "Maximum files in this page")
+	cmd.Flags().Int64Var(&limit, "limit", 50, "Maximum files in this page (1-100)")
 	cmd.Flags().Int64Var(&offset, "offset", 0, "Number of matching files to skip before this page")
 	cmd.Flags().StringVar(&search, "search", "", "Filter filenames by case-insensitive substring")
 	cmd.Flags().StringVar(&sortBy, "sort", "", "Sort key: created_at, filename, or size_bytes; omitted uses server default")

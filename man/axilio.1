@@ -2548,7 +2548,7 @@ returned run ID with \fBruns get\fR or \fBruns cancel\fR\&.
 \fBCommand options\fP
 .IP \(bu 2
 \fB--limit\fP=\fInumber\fP - Maximum number of most-recent runs to return
-(default "20")
+(1-500) (default "20")
 .IP \(bu 2
 \fB--workflow\fP=\fIvalue\fP - Return only runs for this workflow ID
 
@@ -2783,9 +2783,8 @@ Create runs for a workflow ID discovered with \fBworkflows list\fR\&.
 
 .PP
 --start-timeout is the number of whole seconds a queued run may wait for
-a phone before auto-cancel. Positive values are sent to the server,
-which may reject unsupported values; zero or negative values omit the
-field and use the server default.
+a phone before auto-cancel, between 60 and 86400 inclusive; zero or
+negative values omit the field and use the server default (300).
 
 .PP
 Successful output contains the created run IDs.
@@ -2800,8 +2799,8 @@ Successful output contains the created run IDs.
 run
 .IP \(bu 2
 \fB--start-timeout\fP=\fInumber\fP - Queued-phone wait in whole seconds,
-such as 30, 300, or 900; positive values are sent to the server, while 0
-or negative values use the server default
+60-86400, such as 300 or 900; 0 or negative values use the server
+default
 
 .PP
 \fBGlobal-option behavior\fP
@@ -3510,7 +3509,8 @@ defaults.
 .PP
 \fBCommand options\fP
 .IP \(bu 2
-\fB--limit\fP=\fInumber\fP - Maximum files in this page (default "50")
+\fB--limit\fP=\fInumber\fP - Maximum files in this page (1-100) (default
+"50")
 .IP \(bu 2
 \fB--offset\fP=\fInumber\fP - Number of matching files to skip before this
 page
@@ -3938,7 +3938,7 @@ returned. A listed workflow ID can be passed directly to \fBruns start\fR\&.
 \fBCommand options\fP
 .IP \(bu 2
 \fB--limit\fP=\fInumber\fP - Maximum number of most-recent workflows to
-return (default "20")
+return (1-500) (default "20")
 .IP \(bu 2
 \fB--search\fP=\fIvalue\fP - Filter workflow names by substring
 

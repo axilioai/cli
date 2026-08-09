@@ -11,7 +11,7 @@ const (
 	deliveryTimeoutHelp = "Maximum delivery wait, such as 30s, 1m30s, or 2m; applies only with --wait (default 1m). " + durationUnitsHelp
 	visionTimeoutHelp   = "Maximum vision search time, such as 500ms, 15s, or 1m (default 10s). " + durationUnitsHelp
 	ocrTimeoutHelp      = "Maximum OCR polling time, such as 500ms, 10s, or 1m; exceeding it exits 5 (default 10s). " + durationUnitsHelp
-	startTimeoutHelp    = "Queued-phone wait in whole seconds, such as 30, 300, or 900; positive values are sent to the server, while 0 or negative values use the server default"
+	startTimeoutHelp    = "Queued-phone wait in whole seconds, 60-86400, such as 300 or 900; 0 or negative values use the server default"
 )
 
 // documentedDurationVar registers a duration flag whose usage already states
