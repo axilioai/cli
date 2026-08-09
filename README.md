@@ -324,8 +324,12 @@ axilio runs get <run-id>
 axilio runs cancel <run-id> --yes
 ```
 
-`runs start --count` accepts values from 1 through 1000, inclusive, and rejects
-out-of-range values before authentication or an API request.
+`runs start --count` accepts values from 1 through 1000, inclusive, and
+`--start-timeout` accepts 60 through 86400 seconds (0 omits the field and uses
+the server default). The list commands bound their pagination the same way:
+`runs list`/`workflows list --limit` accept 1-500 and `uploads list --limit`
+accepts 1-100 with a non-negative `--offset`. All ranges are rejected with a
+usage error before authentication or an API request.
 
 ### Manage API keys
 

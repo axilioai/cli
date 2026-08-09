@@ -13,6 +13,14 @@ import (
 const (
 	minRunCount int64 = 1
 	maxRunCount int64 = 1000
+
+	// minListLimit/maxRunsListLimit mirror the backend's runs-list bounds.
+	minListLimit     int64 = 1
+	maxRunsListLimit int64 = 500
+
+	// min/maxStartTimeout mirror the backend's start_timeout_seconds bounds.
+	minStartTimeout int64 = 60
+	maxStartTimeout int64 = 86400
 )
 
 func runsCmd() *cobra.Command {
@@ -45,6 +53,9 @@ func runsListCmd() *cobra.Command {
 			"run ID, status, trigger, workflow ID, and creation time; use a returned " +
 			"run ID with `runs get` or `runs cancel`.",
 		RunE: func(_ *cobra.Command, _ []string) error {
+			if limit < minListLimit || limit > maxRunsListLimit {
+				return exit.Usagef("--limit must be between %d and %d (got %d)", minListLimit, maxRunsListLimit, limit)
+			}
 			cl, err := newClient()
 			if err != nil {
 				return err
@@ -73,7 +84,7 @@ func runsListCmd() *cobra.Command {
 			})
 		},
 	}
-	cmd.Flags().Int64Var(&limit, "limit", 20, "Maximum number of most-recent runs to return")
+	cmd.Flags().Int64Var(&limit, "limit", 20, "Maximum number of most-recent runs to return (1-500)")
 	cmd.Flags().StringVar(&workflowID, "workflow", "", "Return only runs for this workflow ID")
 	return cmd
 }
@@ -92,15 +103,18 @@ func runsStartCmd() *cobra.Command {
 			"1000, inclusive.\n\n" +
 			"--phone-id pins every created run to a specific dedicated phone.\n\n" +
 			"--start-timeout is the number " +
-			"of whole seconds a queued run may wait for a phone before auto-cancel. " +
-			"Positive values are sent to the server, which may reject unsupported " +
-			"values; zero or negative values omit the field and use the server default.\n\n" +
+			"of whole seconds a queued run may wait for a phone before auto-cancel, " +
+			"between 60 and 86400 inclusive; zero or negative values omit the field " +
+			"and use the server default (300).\n\n" +
 			"Successful output contains the " +
 			"created run IDs.",
 		Args: cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
 			if count < minRunCount || count > maxRunCount {
 				return exit.Usagef("--count must be between %d and %d (got %d)", minRunCount, maxRunCount, count)
+			}
+			if startTimeout > 0 && (startTimeout < minStartTimeout || startTimeout > maxStartTimeout) {
+				return exit.Usagef("--start-timeout must be between %d and %d seconds (got %d)", minStartTimeout, maxStartTimeout, startTimeout)
 			}
 			cl, err := newClient()
 			if err != nil {
