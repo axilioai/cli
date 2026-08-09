@@ -1,5 +1,5 @@
 .nh
-.TH "AXILIO" "1" "2026-08-03" "axilio 0.7.0" "Axilio CLI Manual"
+.TH "AXILIO" "1" "2026-08-03" "axilio 0.7.1" "Axilio CLI Manual"
 
 .SH NAME
 axilio \- Acquire and drive Axilio phones from the command line
@@ -1925,11 +1925,14 @@ media library so it appears in the gallery.
 Targets the current session's phone (override with --session). Supported
 images are jpg, jpeg, png, webp, gif, and heic; supported videos are
 mp4, webm, mov, 3gp, and mkv. The target collection is inferred by media
-type unless DCIM, Pictures, or Movies is selected. Phones accept
-deliveries up to 100 MiB. By default the command returns after dispatch;
---wait blocks for delivered or failed, and --timeout applies only with
---wait. This combines \fBuploads add\fR and \fBuploads push\fR and therefore
-retains the upload in the org library.
+type unless DCIM, Pictures, or Movies is selected. Phone delivery is
+limited to 100 MiB per file, and larger files are rejected before
+anything is uploaded; the org library itself stores files up to 1 GiB
+(\fBaxilio uploads add\fR), including files too large to deliver to a phone.
+By default the command returns after dispatch; --wait blocks for
+delivered or failed, and --timeout applies only with --wait. This
+combines \fBuploads add\fR and \fBuploads push\fR and therefore retains the
+upload in the org library.
 
 .PP
 \fBCommand options\fP
@@ -3635,7 +3638,9 @@ ready file in the library.
 Use \fBaxilio uploads push\fR to send it to a phone, or \fBaxilio phone send\fR
 to do both in one step. The stored filename defaults to the local
 basename and MIME type is inferred from the extension; --filename and
---mime-type override those values.
+--mime-type override those values. The library stores files up to 1 GiB,
+including files too large to deliver to a phone (phone delivery is
+limited to 100 MiB per file).
 
 .PP
 \fBCommand options\fP
@@ -3789,9 +3794,10 @@ Unlike \fBaxilio phone send\fR this uploads nothing, so the same file can be
 pushed to many phones without re-uploading it or consuming more quota.
 --phone-id is required and can be discovered with \fBphones mine\fR or
 \fBsessions list --remote\fR\&. The collection is inferred unless DCIM,
-Pictures, or Movies is selected. By default the command returns after
-dispatch; --wait blocks for delivered or failed, and --timeout applies
-only with --wait.
+Pictures, or Movies is selected. Phone delivery is limited to 100 MiB
+per file; the server rejects a stored file above that even though the
+library holds it. By default the command returns after dispatch; --wait
+blocks for delivered or failed, and --timeout applies only with --wait.
 
 .PP
 \fBCommand options\fP

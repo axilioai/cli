@@ -49,7 +49,9 @@ func uploadsAddCmd() *cobra.Command {
 			"file in the library. Use `axilio uploads push` to send it to a phone, or " +
 			"`axilio phone send` to do both in one step. The stored filename defaults " +
 			"to the local basename and MIME type is inferred from the extension; " +
-			"--filename and --mime-type override those values.",
+			"--filename and --mime-type override those values. The library stores " +
+			"files up to 1 GiB, including files too large to deliver to a phone " +
+			"(phone delivery is limited to 100 MiB per file).",
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cl, err := newClient()
@@ -182,7 +184,9 @@ func uploadsPushCmd() *cobra.Command {
 			"pushed to many phones without re-uploading it or consuming more quota. " +
 			"--phone-id is required and can be discovered with `phones mine` or " +
 			"`sessions list --remote`. The collection is inferred unless DCIM, " +
-			"Pictures, or Movies is selected. By default the command returns after " +
+			"Pictures, or Movies is selected. Phone delivery is limited to 100 MiB " +
+			"per file; the server rejects a stored file above that even though the " +
+			"library holds it. By default the command returns after " +
 			"dispatch; --wait blocks for delivered or failed, and --timeout applies " +
 			"only with --wait.",
 		Args: cobra.ExactArgs(1),
