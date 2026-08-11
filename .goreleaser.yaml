@@ -16,6 +16,10 @@ before:
     # The HTML manual renders from the same command tree here at package time;
     # it is not checked in.
     - go run ./cmd/manpage --html man/axilio.1.html
+    # Shell completion scripts also derive from the command tree at package
+    # time; they ship in every archive and install via the cask's completion
+    # stanzas below.
+    - sh scripts/gen_completions.sh
 
 builds:
   - id: axilio
@@ -45,6 +49,9 @@ archives:
       - README.md
       - man/axilio.1
       - man/axilio.1.html
+      - completions/axilio.bash
+      - completions/_axilio
+      - completions/axilio.fish
 
 checksum:
   name_template: checksums.txt
@@ -78,6 +85,15 @@ homebrew_casks:
       - axilio
     manpages:
       - man/axilio.1
+    # Pre-generated scripts from the archive, not
+    # generate_completions_from_executable: that stanza runs the staged binary
+    # during the install phase, before the postflight hook below strips the
+    # quarantine attribute, so on a default setup Gatekeeper blocks the
+    # unsigned binary and Homebrew skips completions with a warning.
+    completions:
+      bash: completions/axilio.bash
+      zsh: completions/_axilio
+      fish: completions/axilio.fish
     repository:
       owner: axilioai
       name: homebrew-tap
