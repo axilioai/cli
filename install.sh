@@ -11,6 +11,11 @@
 #   INSTALL_DIR   target directory (default: /usr/local/bin, else ~/.local/bin)
 #   MAN_DIR       manual directory (default: <prefix>/share/man/man1 when
 #                 INSTALL_DIR ends in /bin or /sbin)
+#   BASH_COMPLETION_DIR / ZSH_COMPLETION_DIR / FISH_COMPLETION_DIR
+#                 completion directories. Defaults are inferred from the same
+#                 prefix, per shell present on the system; set one explicitly
+#                 to force it, or set it empty to skip that shell. Shell rc
+#                 files are never touched.
 set -eu
 
 REPO="axilioai/cli"
@@ -173,6 +178,94 @@ if [ -n "$man_dir" ]; then
 		else
 			warn "cannot install $man_dir/$BIN.1.html $(sudo_note); the terminal manual remains installed"
 		fi
+	fi
+fi
+
+# --- install completions (best effort; never undoes the installed binary) --
+# Release archives carry completions/ since AXI-1578. The same rules as the
+# manuals apply: an explicit *_COMPLETION_DIR is authoritative (empty skips
+# that shell), otherwise a directory is inferred from the executable prefix
+# for each shell actually present on the system. Failures warn and continue;
+# shell startup files are never modified.
+
+# install_completion SHELL SRC DEST_DIR NAME -> 0 installed, 1 skipped/failed
+install_completion() {
+	ic_shell=$1
+	ic_src=$2
+	ic_dir=$3
+	ic_name=$4
+	if [ ! -f "$ic_src" ]; then
+		warn "$archive does not contain completions/${ic_src##*/}; skipping $ic_shell completion"
+		return 1
+	fi
+	if ! ensure_dir "$ic_dir"; then
+		warn "cannot create $ic_shell completion directory $ic_dir $(sudo_note); the binary remains installed"
+		return 1
+	fi
+	if put_file 0644 "$ic_src" "$ic_dir" "$ic_name"; then
+		info "Installed $ic_shell completion to $ic_dir/$ic_name"
+		return 0
+	fi
+	warn "cannot install $ic_dir/$ic_name $(sudo_note); the binary remains installed"
+	return 1
+}
+
+comp_src_dir="$tmp/completions"
+comp_prefix=""
+case "$dir" in
+/*/bin) comp_prefix="${dir%/bin}" ;;
+/*/sbin) comp_prefix="${dir%/sbin}" ;;
+esac
+
+if [ ! -d "$comp_src_dir" ]; then
+	warn "$archive does not contain completions/; the binary is installed without shell completions"
+else
+	comp_any_override=""
+	if [ "${BASH_COMPLETION_DIR+x}" = x ] || [ "${ZSH_COMPLETION_DIR+x}" = x ] || [ "${FISH_COMPLETION_DIR+x}" = x ]; then
+		comp_any_override=1
+	fi
+	if [ -z "$comp_prefix" ] && [ -z "$comp_any_override" ]; then
+		warn "cannot infer completion directories from INSTALL_DIR '$dir'; set BASH_COMPLETION_DIR, ZSH_COMPLETION_DIR, or FISH_COMPLETION_DIR explicitly"
+	fi
+
+	# bash: bash-completion v2 loads on demand from the prefix's
+	# share/bash-completion/completions (the ~/.local prefix is its XDG path).
+	if [ "${BASH_COMPLETION_DIR+x}" = x ]; then
+		if [ -n "$BASH_COMPLETION_DIR" ]; then
+			install_completion bash "$comp_src_dir/$BIN.bash" "$(trim_slashes "$BASH_COMPLETION_DIR")" "$BIN" || true
+		fi
+	elif [ -n "$comp_prefix" ] && command -v bash >/dev/null 2>&1; then
+		install_completion bash "$comp_src_dir/$BIN.bash" "$comp_prefix/share/bash-completion/completions" "$BIN" || true
+	fi
+
+	# zsh: site-functions under the prefix. /usr and /usr/local are on the
+	# default fpath; any other prefix gets a hint (we never edit rc files).
+	if [ "${ZSH_COMPLETION_DIR+x}" = x ]; then
+		if [ -n "$ZSH_COMPLETION_DIR" ]; then
+			install_completion zsh "$comp_src_dir/_$BIN" "$(trim_slashes "$ZSH_COMPLETION_DIR")" "_$BIN" || true
+		fi
+	elif [ -n "$comp_prefix" ] && command -v zsh >/dev/null 2>&1; then
+		if install_completion zsh "$comp_src_dir/_$BIN" "$comp_prefix/share/zsh/site-functions" "_$BIN"; then
+			case "$comp_prefix" in
+			/usr | /usr/local) ;;
+			*) info "note: ensure $comp_prefix/share/zsh/site-functions is on your zsh fpath (before compinit)" ;;
+			esac
+		fi
+	fi
+
+	# fish: the user config dir for a home-prefix install (always auto-loaded);
+	# vendor_completions.d under the prefix otherwise.
+	if [ "${FISH_COMPLETION_DIR+x}" = x ]; then
+		if [ -n "$FISH_COMPLETION_DIR" ]; then
+			install_completion fish "$comp_src_dir/$BIN.fish" "$(trim_slashes "$FISH_COMPLETION_DIR")" "$BIN.fish" || true
+		fi
+	elif [ -n "$comp_prefix" ] && command -v fish >/dev/null 2>&1; then
+		if [ "$comp_prefix" = "$HOME/.local" ]; then
+			fish_dir="$HOME/.config/fish/completions"
+		else
+			fish_dir="$comp_prefix/share/fish/vendor_completions.d"
+		fi
+		install_completion fish "$comp_src_dir/$BIN.fish" "$fish_dir" "$BIN.fish" || true
 	fi
 fi
 

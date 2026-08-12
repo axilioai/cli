@@ -28,9 +28,10 @@ case "$url" in
 	[ -n "$output" ] || exit 2
 	cp "${INSTALL_TEST_CHECKSUMS:-$INSTALL_TEST_FIXTURES/checksums.txt}" "$output"
 	;;
-*/axilio_0.0.0_linux_amd64.tar.gz)
+*/axilio_*_linux_amd64.tar.gz)
 	[ -n "$output" ] || exit 2
-	cp "$INSTALL_TEST_FIXTURES/axilio_0.0.0_linux_amd64.tar.gz" "$output"
+	[ -f "$INSTALL_TEST_FIXTURES/${url##*/}" ] || exit 22
+	cp "$INSTALL_TEST_FIXTURES/${url##*/}" "$output"
 	;;
 *)
 	printf 'unexpected test URL: %s\n' "$url" >&2
