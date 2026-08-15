@@ -39,6 +39,11 @@ jobs:
   bump:
     name: Bump platform-go pin
     runs-on: ubuntu-latest
+    # The sdk-bump environment pins the GitHub OIDC subject the Infisical
+    # SDK-publisher identity trusts (repo:axilioai/cli:environment:sdk-bump),
+    # matching its repo:axilioai/*:environment:* glob. The environment carries
+    # no protection rules, so this automated job is never gated on approval.
+    environment: sdk-bump
     steps:
       - uses: actions/checkout@v4
 
