@@ -90,20 +90,6 @@ jobs:
             echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Debug OIDC subject
-        if: steps.diff.outputs.changed == 'true'
-        run: |
-          tok=$(curl -sS -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
-            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=https://github.com/axilioai" | jq -r .value)
-          payload=$(echo "$tok" | cut -d. -f2)
-          # base64url -> base64 padding
-          pad=$(( (4 - ${#payload} % 4) % 4 )); payload="$payload$(printf '=%.0s' $(seq 1 $pad))"
-          claims=$(echo "$payload" | tr '_-' '/+' | base64 -d 2>/dev/null)
-          echo "OIDC sub         = $(echo "$claims" | jq -r .sub)"
-          echo "OIDC aud         = $(echo "$claims" | jq -r '.aud')"
-          echo "OIDC repository  = $(echo "$claims" | jq -r '.repository')"
-          echo "OIDC environment = $(echo "$claims" | jq -r '.environment')"
-
       - name: Mint SDK publisher token
         id: token
         if: steps.diff.outputs.changed == 'true'
@@ -120,6 +106,12 @@ jobs:
           # The axilio-sdk-publisher App token (minted above) — an App-token PR
           # triggers ci.yml, unlike a GITHUB_TOKEN one. No fallback by design.
           token: ${{ steps.token.outputs.token }}
+          # Commit as the App bot, deterministically — otherwise the author is
+          # the trigger's actor (a human on workflow_dispatch, the dispatch PAT's
+          # user on repository_dispatch), which is non-deterministic and trips
+          # the git-identity inventory. One stable, inventoried identity instead.
+          committer: "axilio-sdk-publisher[bot] <313650391+axilio-sdk-publisher[bot]@users.noreply.github.com>"
+          author: "axilio-sdk-publisher[bot] <313650391+axilio-sdk-publisher[bot]@users.noreply.github.com>"
           branch: bump/platform-go
           base: main
           add-paths: |
