@@ -1,0 +1,62 @@
+name: Mint SDK publisher token
+description: Load the SDK publisher identity from Infisical and mint an installation token
+
+# Mirrors axilioai/axilio's .github/actions/sdk-publisher-token so the cli's
+# auto-bump uses the same short-lived axilio-sdk-publisher App token the rest
+# of the SDK release chain does (AXI-1634), instead of a raw PAT / GITHUB_TOKEN.
+# The only difference from the monorepo copy is permission-pull-requests: write
+# — the monorepo only pushes + dispatches (contents), whereas the cli bump job
+# opens a PR, which needs pull-requests too.
+
+inputs:
+  identity-id:
+    description: Infisical GitHub OIDC identity ID
+    required: true
+  project-slug:
+    description: Infisical project slug
+    required: true
+  repositories:
+    description: Newline-separated repositories to include in the installation token
+    required: true
+
+outputs:
+  token:
+    description: Short-lived SDK publisher GitHub App installation token
+    value: ${{ steps.sdk-publisher.outputs.token }}
+
+runs:
+  using: composite
+  steps:
+    - name: Load SDK publisher credentials from Infisical
+      uses: Infisical/secrets-action@v1.0.16
+      with:
+        method: oidc
+        identity-id: ${{ inputs.identity-id }}
+        oidc-audience: https://github.com/axilioai
+        project-slug: ${{ inputs.project-slug }}
+        env-slug: prod
+        secret-path: /GITHUB/SDK_PUBLISHER
+        include-imports: false
+
+    - name: Validate SDK publisher credentials
+      shell: bash
+      run: |
+        if [[ -z "${SDK_PUBLISHER_CLIENT_ID:-}" || -z "${SDK_PUBLISHER_PRIVATE_KEY:-}" ]]; then
+          echo "::error title=SDK publisher credentials missing::Infisical /GITHUB/SDK_PUBLISHER must provide SDK_PUBLISHER_CLIENT_ID and SDK_PUBLISHER_PRIVATE_KEY."
+          exit 1
+        fi
+
+    - name: Mint SDK publisher token
+      id: sdk-publisher
+      uses: actions/create-github-app-token@v3.2.0
+      with:
+        client-id: ${{ env.SDK_PUBLISHER_CLIENT_ID }}
+        private-key: ${{ env.SDK_PUBLISHER_PRIVATE_KEY }}
+        owner: axilioai
+        repositories: ${{ inputs.repositories }}
+        permission-contents: write
+        permission-pull-requests: write
+
+    - name: Clear long-lived SDK publisher credentials
+      shell: bash
+      run: printf '%s\n' 'SDK_PUBLISHER_CLIENT_ID=' 'SDK_PUBLISHER_PRIVATE_KEY=' >> "$GITHUB_ENV"
