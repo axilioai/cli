@@ -90,6 +90,17 @@ jobs:
             echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Debug OIDC subject
+        if: steps.diff.outputs.changed == 'true'
+        run: |
+          tok=$(curl -sS -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=https://github.com/axilioai" | jq -r .value)
+          payload=$(echo "$tok" | cut -d. -f2)
+          # base64url -> base64 padding
+          pad=$(( (4 - ${#payload} % 4) % 4 )); payload="$payload$(printf '=%.0s' $(seq 1 $pad))"
+          echo "OIDC sub  = $(echo "$payload" | tr '_-' '/+' | base64 -d 2>/dev/null | jq -r .sub)"
+          echo "OIDC aud  = $(echo "$payload" | tr '_-' '/+' | base64 -d 2>/dev/null | jq -r '.aud')"
+
       - name: Mint SDK publisher token
         id: token
         if: steps.diff.outputs.changed == 'true'
