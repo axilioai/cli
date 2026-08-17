@@ -60,7 +60,7 @@ func runsListCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			req := &platformgo.RunListRequest{Limit: &limit}
+			req := &platformgo.RunsListRequest{Limit: &limit}
 			if workflowID != "" {
 				req.WorkflowID = &workflowID
 			}

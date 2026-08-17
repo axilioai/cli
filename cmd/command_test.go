@@ -28,29 +28,26 @@ func fakeAPI(t *testing.T) *httptest.Server {
 			body = `{"balance_display":"$5.00","balance_microdollars":5000000}`
 		case strings.Contains(p, "/phones/sessions/active"):
 			body = `{"sessions":[]}`
-		case strings.Contains(p, "/phones/deallocate"):
+		case strings.Contains(p, ":deallocate"):
 			body = `{"phone_id":"p1","session_id":"s1","workflow_id":"w1","deallocated_at":"2026-08-05T20:00:00Z"}`
-		case strings.Contains(p, "/phones/available"):
-			if got := r.URL.Query().Get("phone_type"); got != "android" {
-				t.Errorf("phones list requested phone_type %q, want android", got)
+		case strings.HasSuffix(p, "/phones"):
+			if got := r.URL.Query().Get("ownership"); got != "dedicated" {
+				t.Errorf("phones list requested ownership %q, want dedicated", got)
 			}
-			body = `{"android_count":1,"phones":[
-				{"phone_id":"p1","phone_type":"android","model_name":"Pixel 8","status":"active"}]}`
+			body = `{"phones":[
+				{"phone_id":"p1","nickname":"ci-phone","phone_type":"android","model_name":"Pixel 8","status":"active","ownership_type":"dedicated","created_at":"2026-08-05T20:00:00Z"}],
+				"total":1,"limit":50,"offset":0}`
 		case strings.Contains(p, "/api-keys"):
 			body = `{"api_keys":[
 				{"id":"k1","name":"ci","key_preview":"axl_ci…","created_at":"2026-07-14T00:00:00Z"}],
 				"total":1,"limit":50,"offset":0}`
-		case strings.HasSuffix(p, "/runs"):
-			body = `{"runs":[
-				{"id":"r1","status":"completed","trigger":"manual","workflow_id":"w1","success":true}],
-				"total":1,"limit":20,"offset":0}`
-		case strings.Contains(p, "/runs/") && r.Method == http.MethodPatch:
-			// run cancel: PATCH /runs/{run_id}.
+		case strings.Contains(p, ":cancel"):
+			// run cancel: POST /runs/{run_id}:cancel (custom method, 0.72 API).
 			body = `{"success":true}`
-		case strings.Contains(p, "/runs/") && r.Method == http.MethodPost:
-			// run creation: POST /runs/{workflow_id}. The backend requires a
-			// non-empty `runs` array (one config per run); reject its absence
-			// so this test stays faithful to the real contract.
+		case strings.HasSuffix(p, "/runs") && r.Method == http.MethodPost:
+			// run creation: POST /workflows/{workflow_id}/runs (0.72 API). The
+			// backend requires a non-empty `runs` array (one config per run);
+			// reject its absence so this test stays faithful to the real contract.
 			var reqBody struct {
 				Runs []map[string]any `json:"runs"`
 			}
@@ -64,6 +61,10 @@ func fakeAPI(t *testing.T) *httptest.Server {
 				return
 			}
 			body = `{"run_ids":["r1"]}`
+		case strings.HasSuffix(p, "/runs") && r.Method == http.MethodGet:
+			body = `{"runs":[
+				{"id":"r1","status":"completed","trigger":"manual","workflow_id":"w1","success":true}],
+				"total":1,"limit":20,"offset":0}`
 		case strings.Contains(p, "/workflows"):
 			body = `{"workflows":[
 				{"workflow":{"id":"w1","name":"demo","platform":"android","status":"active"}}],
@@ -115,7 +116,7 @@ func TestStatusJSON(t *testing.T) {
 	}
 }
 
-func TestPhonesListJSONUsesAndroidOnlyContract(t *testing.T) {
+func TestPhonesListJSONUsesDedicatedContract(t *testing.T) {
 	srv := fakeAPI(t)
 	out, err := run(t, srv, "-o", "json", "phones", "list")
 	if err != nil {
@@ -125,22 +126,27 @@ func TestPhonesListJSONUsesAndroidOnlyContract(t *testing.T) {
 	if err := json.Unmarshal([]byte(out), &got); err != nil {
 		t.Fatalf("decode phones list JSON: %v", err)
 	}
+	// The 0.72 API dropped the shared-pool availability shape: no iphone_count
+	// and no android_count. `phones list` now returns the dedicated inventory.
 	if _, ok := got["iphone_count"]; ok {
 		t.Error("phones list exposed the removed iphone_count field")
 	}
-	if got["android_count"] == nil || got["phones"] == nil {
-		t.Fatalf("phones list omitted its Android inventory fields: %s", out)
+	if _, ok := got["android_count"]; ok {
+		t.Error("phones list still exposes the removed android_count field")
+	}
+	if got["phones"] == nil {
+		t.Fatalf("phones list omitted its phones inventory: %s", out)
 	}
 }
 
 func TestPhonesListJSONPreservesEmptyPhonesArray(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if !strings.Contains(r.URL.Path, "/phones/available") {
+		if !strings.HasSuffix(r.URL.Path, "/phones") {
 			http.NotFound(w, r)
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = io.WriteString(w, `{"android_count":0,"phones":[]}`)
+		_, _ = io.WriteString(w, `{"phones":[],"total":0,"limit":50,"offset":0}`)
 	}))
 	t.Cleanup(srv.Close)
 
@@ -174,7 +180,7 @@ func TestSessionsStartRejectsUnsupportedPhoneTypeBeforeAuth(t *testing.T) {
 func TestSessionsStartNormalizesAndroidPhoneType(t *testing.T) {
 	var gotPhoneType string
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if !strings.Contains(r.URL.Path, "/phones/allocate") {
+		if !strings.Contains(r.URL.Path, ":allocate") {
 			http.NotFound(w, r)
 			return
 		}

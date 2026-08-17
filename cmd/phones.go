@@ -11,12 +11,13 @@ import (
 func phonesCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "phones",
-		Short: "Discover shared and dedicated phones.",
-		Long: "Discover phones before starting a session. `phones list` shows shared " +
-			"phones and currently free dedicated phones that can be allocated now. " +
+		Short: "Discover your dedicated phones.",
+		Long: "Discover phones before starting a session. `phones list` shows the " +
+			"dedicated phones that are free to start a session on right now. " +
 			"`phones mine` shows the organization's complete dedicated inventory, " +
 			"including busy and offline phones, and is the place to find a phone ID " +
-			"for `sessions start --phone-id`.\n\n" +
+			"for `sessions start --phone-id`. The shared pool is not listed; it is " +
+			"drawn from automatically when you start a session without a phone ID.\n\n" +
 			"Running `axilio phones` without a subcommand is equivalent to " +
 			"`axilio phones --help`: it only displays this help and does not list or " +
 			"change phones. Global flags shown here therefore have no effect. Pass " +
@@ -30,33 +31,43 @@ func phonesCmd() *cobra.Command {
 func phonesListCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "list",
-		Short: "List phones you can start a session on right now (shared pool + your free dedicated phones).",
-		Long: "List the phones available to start a session on immediately: every active phone in the shared " +
-			"pool, plus your org's own dedicated phones that are currently free. Busy or offline dedicated " +
-			"phones do not appear here; use `axilio phones mine` to see the full dedicated inventory. " +
-			"Results include phone ID, type, model, and status.",
+		Short: "List your dedicated phones that are free to start a session on right now.",
+		Long: "List your org's dedicated phones that are ready to start a session on immediately: active " +
+			"and not currently held by a session. Busy, offline, or maintenance phones do not appear here; " +
+			"use `axilio phones mine` to see the full dedicated inventory. The shared pool is not listed - it " +
+			"is drawn from automatically when you start a session without a phone ID. Results include phone " +
+			"ID, nickname, type, and model.",
 		RunE: func(_ *cobra.Command, _ []string) error {
 			cl, err := newClient()
 			if err != nil {
 				return err
 			}
-			resp, err := cl.Phones.Available(context.Background(), &platformgo.PhonesAvailableRequest{
-				PhoneType: platformgo.PhonesAvailableRequestPhoneTypeAndroid.Ptr(),
+			resp, err := cl.Phones.List(context.Background(), &platformgo.PhonesListRequest{
+				Ownership: platformgo.PhonesListRequestOwnershipDedicated,
 			})
 			if err != nil {
 				return err
 			}
-			resp.SetPhones(resp.Phones)
+			// Startable now = an active dedicated phone not currently held by a
+			// session. (The shared pool is not enumerable; it auto-allocates.)
+			// Non-nil so an empty result still serializes as [] in JSON output.
+			free := []*platformgo.PhoneSummary{}
+			for _, ph := range resp.Phones {
+				if ph.Status == "active" && ph.CurrentSessionID == nil {
+					free = append(free, ph)
+				}
+			}
+			resp.SetPhones(free)
 			p := printer()
 			return p.Emit(resp, func() {
 				if len(resp.Phones) == 0 {
-					p.Result("No phones available.")
+					p.Result("No free dedicated phones. Start a session without --phone-id to draw from the shared pool.")
 					return
 				}
-				rows := [][]string{{"PHONE ID", "TYPE", "MODEL", "STATUS"}}
+				rows := [][]string{{"PHONE ID", "NICKNAME", "TYPE", "MODEL"}}
 				for _, ph := range resp.Phones {
 					rows = append(rows, []string{
-						ph.PhoneID, util.OrDash(enumv(ph.PhoneType)), util.OrDash(strv(ph.ModelName)), string(ph.Status),
+						ph.PhoneID, util.OrDash(strv(ph.Nickname)), util.OrDash(enumv(ph.PhoneType)), util.OrDash(strv(ph.ModelName)),
 					})
 				}
 				p.Table(rows)
@@ -78,7 +89,9 @@ func phonesMineCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			resp, err := cl.Phones.Mine(context.Background(), &platformgo.PhonesMineRequest{})
+			resp, err := cl.Phones.List(context.Background(), &platformgo.PhonesListRequest{
+				Ownership: platformgo.PhonesListRequestOwnershipDedicated,
+			})
 			if err != nil {
 				return err
 			}
