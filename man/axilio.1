@@ -2347,11 +2347,12 @@ axilio phones
 .EE
 
 .PP
-Discover phones before starting a session. \fBphones list\fR shows shared
-phones and currently free dedicated phones that can be allocated now.
-\fBphones mine\fR shows the organization's complete dedicated inventory,
-including busy and offline phones, and is the place to find a phone ID
-for \fBsessions start --phone-id\fR\&.
+Discover phones before starting a session. \fBphones list\fR shows the
+dedicated phones that are free to start a session on right now. \fBphones
+mine\fR shows the organization's complete dedicated inventory, including
+busy and offline phones, and is the place to find a phone ID for
+\fBsessions start --phone-id\fR\&. The shared pool is not listed; it is drawn
+from automatically when you start a session without a phone ID.
 
 .PP
 Running \fBaxilio phones\fR without a subcommand is equivalent to \fBaxilio
@@ -2380,14 +2381,14 @@ axilio phones list
 .EE
 
 .PP
-List the phones available to start a session on immediately: every
-active phone in the shared pool, plus your org's own dedicated phones
-that are currently free.
+List your org's dedicated phones that are ready to start a session on
+immediately: active and not currently held by a session.
 
 .PP
-Busy or offline dedicated phones do not appear here; use \fBaxilio phones
-mine\fR to see the full dedicated inventory. Results include phone ID,
-type, model, and status.
+Busy, offline, or maintenance phones do not appear here; use \fBaxilio
+phones mine\fR to see the full dedicated inventory. The shared pool is not
+listed - it is drawn from automatically when you start a session without
+a phone ID. Results include phone ID, nickname, type, and model.
 
 .PP
 \fBGlobal-option behavior\fP
