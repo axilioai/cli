@@ -43,17 +43,25 @@ while IFS= read -r archive; do
 		tar -tzf "$archive" >"$inventory.raw"
 		tar -xOzf "$archive" man/axilio.1 >"$tmp/archived-manpage"
 		tar -xOzf "$archive" man/axilio.1.html >"$tmp/archived-html-manpage"
+		for completion in axilio.bash _axilio axilio.fish; do
+			tar -xOzf "$archive" "completions/$completion" >"$tmp/archived-$completion"
+		done
 		binary=axilio
 		;;
 	*.zip)
 		unzip -Z1 "$archive" >"$inventory.raw"
 		unzip -p "$archive" man/axilio.1 >"$tmp/archived-manpage"
 		unzip -p "$archive" man/axilio.1.html >"$tmp/archived-html-manpage"
+		for completion in axilio.bash _axilio axilio.fish; do
+			unzip -p "$archive" "completions/$completion" >"$tmp/archived-$completion"
+		done
 		binary=axilio.exe
 		;;
 	esac
 	sed -e '/\/$/d' -e 's#^\./##' "$inventory.raw" | LC_ALL=C sort >"$inventory"
-	printf '%s\n' README.md "$binary" man/axilio.1 man/axilio.1.html | LC_ALL=C sort >"$expected"
+	printf '%s\n' README.md "$binary" man/axilio.1 man/axilio.1.html \
+		completions/axilio.bash completions/_axilio completions/axilio.fish |
+		LC_ALL=C sort >"$expected"
 	if ! diff -u "$expected" "$inventory"; then
 		printf 'FAIL: unexpected archive inventory: %s\n' "$archive" >&2
 		exit 1
@@ -66,6 +74,14 @@ while IFS= read -r archive; do
 		printf 'FAIL: archived HTML manual differs from man/axilio.1.html: %s\n' "$archive" >&2
 		exit 1
 	fi
+	# The completions/ tree in the workspace is the goreleaser before-hook
+	# output (scripts/gen_completions.sh), same as the HTML manual above.
+	for completion in axilio.bash _axilio axilio.fish; do
+		if ! cmp "completions/$completion" "$tmp/archived-$completion"; then
+			printf 'FAIL: archived completion differs from completions/%s: %s\n' "$completion" "$archive" >&2
+			exit 1
+		fi
+	done
 done <"$archives"
 
 cask="$dist/homebrew/Casks/axilio.rb"
@@ -83,6 +99,16 @@ manpage_count=$(grep -Fxc '  manpage "man/axilio.1"' "$cask" || true)
 	printf 'FAIL: generated cask does not contain exactly one axilio manpage stanza\n' >&2
 	exit 1
 }
+for stanza in \
+	'  bash_completion "completions/axilio.bash"' \
+	'  zsh_completion "completions/_axilio"' \
+	'  fish_completion "completions/axilio.fish"'; do
+	stanza_count=$(grep -Fxc "$stanza" "$cask" || true)
+	[ "$stanza_count" = 1 ] || {
+		printf 'FAIL: generated cask does not contain exactly one stanza:%s\n' "$stanza" >&2
+		exit 1
+	}
+done
 binary_line=$(grep -Fn '  binary "axilio"' "$cask" | cut -d: -f1)
 manpage_line=$(grep -Fn '  manpage "man/axilio.1"' "$cask" | cut -d: -f1)
 [ "$binary_line" -lt "$manpage_line" ] || {
