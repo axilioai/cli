@@ -39,6 +39,10 @@ jobs:
   bump:
     name: Bump platform-go pin
     runs-on: ubuntu-latest
+    env:
+      SDK_PUBLISHER_LOGIN: 'axilio-sdk-publisher[bot]'
+      SDK_PUBLISHER_USER_ID: '313650391'
+      SDK_PUBLISHER_EMAIL: '313650391+axilio-sdk-publisher[bot]@users.noreply.github.com'
     # The sdk-bump environment pins the GitHub OIDC subject the Infisical
     # SDK-publisher identity trusts (repo:axilioai/cli:environment:sdk-bump),
     # matching its repo:axilioai/*:environment:* glob. The environment carries
@@ -99,6 +103,35 @@ jobs:
           project-slug: ${{ vars.INFISICAL_PROJECT_SLUG }}
           repositories: cli
 
+      - name: Verify SDK publisher identity
+        if: steps.diff.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ steps.token.outputs.token }}
+        run: |
+          actual_id="$(gh api "users/${SDK_PUBLISHER_LOGIN}" --jq .id)"
+          if [[ "$actual_id" != "$SDK_PUBLISHER_USER_ID" ]]; then
+            echo "::error::${SDK_PUBLISHER_LOGIN} has GitHub user ID ${actual_id}; expected ${SDK_PUBLISHER_USER_ID}"
+            exit 1
+          fi
+
+          expected_email="${SDK_PUBLISHER_USER_ID}+${SDK_PUBLISHER_LOGIN}@users.noreply.github.com"
+          if [[ "$SDK_PUBLISHER_EMAIL" != "$expected_email" ]]; then
+            echo "::error::SDK publisher email does not match its durable GitHub user ID and login"
+            exit 1
+          fi
+
+          if ! awk -F '\t' -v email="$SDK_PUBLISHER_EMAIL" '
+            NR > 1 && $1 == email { found = 1 }
+            END { exit found ? 0 : 1 }
+          ' .github/git-identity-inventory.tsv; then
+            echo "::error::SDK publisher email is missing from the reviewed identity inventory"
+            exit 1
+          fi
+
+          .github/scripts/check-git-identities.sh \
+            --policy .github/git-identity-allowlist.txt \
+            --active-email "$SDK_PUBLISHER_EMAIL"
+
       - name: Open bump PR
         if: steps.diff.outputs.changed == 'true'
         uses: peter-evans/create-pull-request@v6
@@ -110,8 +143,8 @@ jobs:
           # the trigger's actor (a human on workflow_dispatch, the dispatch PAT's
           # user on repository_dispatch), which is non-deterministic and trips
           # the git-identity inventory. One stable, inventoried identity instead.
-          committer: "axilio-sdk-publisher[bot] <313650391+axilio-sdk-publisher[bot]@users.noreply.github.com>"
-          author: "axilio-sdk-publisher[bot] <313650391+axilio-sdk-publisher[bot]@users.noreply.github.com>"
+          committer: "${{ env.SDK_PUBLISHER_LOGIN }} <${{ env.SDK_PUBLISHER_EMAIL }}>"
+          author: "${{ env.SDK_PUBLISHER_LOGIN }} <${{ env.SDK_PUBLISHER_EMAIL }}>"
           branch: bump/platform-go
           base: main
           add-paths: |
