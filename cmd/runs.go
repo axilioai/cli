@@ -90,6 +90,24 @@ func runsListCmd() *cobra.Command {
 	return cmd
 }
 
+// parseRunVariables validates the --variables flag value: one JSON object,
+// applied to every created run. An empty flag means "no variables set" and
+// yields the empty object the wire shape requires. Anything that is not a
+// JSON object (arrays, scalars, null, malformed input) is a usage error.
+func parseRunVariables(raw string) (map[string]any, error) {
+	variables := map[string]any{}
+	if raw == "" {
+		return variables, nil
+	}
+	if err := json.Unmarshal([]byte(raw), &variables); err != nil {
+		return nil, exit.Usagef("--variables must be a JSON object: %v", err)
+	}
+	if variables == nil {
+		return nil, exit.Usagef("--variables must be a JSON object (got null)")
+	}
+	return variables, nil
+}
+
 func runsStartCmd() *cobra.Command {
 	var (
 		count         int64
@@ -122,14 +140,9 @@ func runsStartCmd() *cobra.Command {
 			if startTimeout > 0 && (startTimeout < minStartTimeout || startTimeout > maxStartTimeout) {
 				return exit.Usagef("--start-timeout must be between %d and %d seconds (got %d)", minStartTimeout, maxStartTimeout, startTimeout)
 			}
-			variables := map[string]any{}
-			if variablesJSON != "" {
-				if err := json.Unmarshal([]byte(variablesJSON), &variables); err != nil {
-					return exit.Usagef("--variables must be a JSON object: %v", err)
-				}
-				if variables == nil {
-					return exit.Usagef("--variables must be a JSON object (got null)")
-				}
+			variables, err := parseRunVariables(variablesJSON)
+			if err != nil {
+				return err
 			}
 			cl, err := newClient()
 			if err != nil {
