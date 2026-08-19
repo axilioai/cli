@@ -2783,6 +2783,11 @@ Create runs for a workflow ID discovered with \fBworkflows list\fR\&.
 --phone-id pins every created run to a specific dedicated phone.
 
 .PP
+--variables is a JSON object of run variables, exposed to workflow code
+as the \fBvariables\fR dict; every created run receives the same object.
+Values are stored and delivered in plaintext - do not put secrets here.
+
+.PP
 --start-timeout is the number of whole seconds a queued run may wait for
 a phone before auto-cancel, between 60 and 86400 inclusive; zero or
 negative values omit the field and use the server default (300).
@@ -2802,6 +2807,9 @@ run
 \fB--start-timeout\fP=\fInumber\fP - Queued-phone wait in whole seconds,
 60-86400, such as 300 or 900; 0 or negative values use the server
 default
+.IP \(bu 2
+\fB--variables\fP=\fIvalue\fP - JSON object of run variables applied to
+every created run (plaintext; no secrets)
 
 .PP
 \fBGlobal-option behavior\fP

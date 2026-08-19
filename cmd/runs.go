@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/axilioai/cli/internal/exit"
@@ -89,11 +90,30 @@ func runsListCmd() *cobra.Command {
 	return cmd
 }
 
+// parseRunVariables validates the --variables flag value: one JSON object,
+// applied to every created run. An empty flag means "no variables set" and
+// yields the empty object the wire shape requires. Anything that is not a
+// JSON object (arrays, scalars, null, malformed input) is a usage error.
+func parseRunVariables(raw string) (map[string]any, error) {
+	variables := map[string]any{}
+	if raw == "" {
+		return variables, nil
+	}
+	if err := json.Unmarshal([]byte(raw), &variables); err != nil {
+		return nil, exit.Usagef("--variables must be a JSON object: %v", err)
+	}
+	if variables == nil {
+		return nil, exit.Usagef("--variables must be a JSON object (got null)")
+	}
+	return variables, nil
+}
+
 func runsStartCmd() *cobra.Command {
 	var (
-		count        int64
-		startTimeout int64
-		phoneID      string
+		count         int64
+		startTimeout  int64
+		phoneID       string
+		variablesJSON string
 	)
 	cmd := &cobra.Command{
 		Use:   "start <workflow-id>",
@@ -102,6 +122,10 @@ func runsStartCmd() *cobra.Command {
 			"--count creates that many run configurations and must be between 1 and " +
 			"1000, inclusive.\n\n" +
 			"--phone-id pins every created run to a specific dedicated phone.\n\n" +
+			"--variables is a JSON object of run variables, exposed to workflow " +
+			"code as the `variables` dict; every created run receives the same " +
+			"object. Values are stored and delivered in plaintext - do not put " +
+			"secrets here.\n\n" +
 			"--start-timeout is the number " +
 			"of whole seconds a queued run may wait for a phone before auto-cancel, " +
 			"between 60 and 86400 inclusive; zero or negative values omit the field " +
@@ -116,18 +140,24 @@ func runsStartCmd() *cobra.Command {
 			if startTimeout > 0 && (startTimeout < minStartTimeout || startTimeout > maxStartTimeout) {
 				return exit.Usagef("--start-timeout must be between %d and %d seconds (got %d)", minStartTimeout, maxStartTimeout, startTimeout)
 			}
+			variables, err := parseRunVariables(variablesJSON)
+			if err != nil {
+				return err
+			}
 			cl, err := newClient()
 			if err != nil {
 				return err
 			}
 			// The backend requires a per-run config for each run (`runs` is
-			// required, and it creates one run per entry). Send `count` empty
-			// configs, optionally pinning each to a dedicated phone.
+			// required, and it creates one run per entry). Send `count` configs,
+			// each carrying the same variables, optionally pinning each to a
+			// dedicated phone.
 			runs := make([]*platformgo.RunConfig, count)
 			for i := range runs {
-				// `variables` is required on each run config; a single empty
+				// `variables` is required on each run config; a single-element
+				// array wrapping one JSON object is the wire shape, and an empty
 				// map means "run with no variables set".
-				rc := &platformgo.RunConfig{Variables: []map[string]any{{}}}
+				rc := &platformgo.RunConfig{Variables: []map[string]any{variables}}
 				if phoneID != "" {
 					rc.PhoneID = &phoneID
 				}
@@ -157,6 +187,7 @@ func runsStartCmd() *cobra.Command {
 	}
 	cmd.Flags().Int64Var(&count, "count", 1, "Number of run configurations to create (1-1000)")
 	cmd.Flags().StringVar(&phoneID, "phone-id", "", "Dedicated phone ID to pin to every created run")
+	cmd.Flags().StringVar(&variablesJSON, "variables", "", "JSON object of run variables applied to every created run (plaintext; no secrets)")
 	cmd.Flags().Int64Var(&startTimeout, "start-timeout", 0, startTimeoutHelp)
 	return cmd
 }
