@@ -328,6 +328,167 @@ Deleted key_123
 # Exit status: 0
 .EE
 
+.SH billing
+.EX
+axilio billing
+.EE
+
+.PP
+Read-only billing visibility: \fBbilling balance\fR shows remaining credit
+and \fBbilling plan\fR shows the subscription. The CLI deliberately has no
+billing writes — adding funds, checkout, and plan changes stay in the
+dashboard.
+
+.PP
+Running \fBaxilio billing\fR without a subcommand only displays this help.
+
+.PP
+\fBGlobal-option behavior\fP
+.IP \(bu 2
+\fB--api-key\fP, \fB--base-url\fP, \fB--no-color\fP, \fB--org\fP, \fB--output\fP
+/ \fB-o\fP, \fB--quiet\fP / \fB-q\fP - No effect on billing command; bare
+axilio billing only displays this help
+
+.PP
+\fBWorkflow examples\fP
+
+.EX
+axilio billing balance
+axilio billing plan
+.EE
+
+.SS balance
+.EX
+axilio billing balance
+.EE
+
+.PP
+Show the organization's credit balance: the total, the plan-included
+portion (spent first, resets at renewal), and the purchased portion
+(spent after included credit, expires a year after purchase).
+
+.PP
+Includes the active plan and its renewal date when the organization has
+one. Useful before allocating: a session that fails on insufficient
+funds is better preempted than debugged.
+
+.PP
+\fBGlobal-option behavior\fP
+.IP \(bu 2
+\fB--api-key\fP=\fIvalue\fP - API key for the balance request; overrides
+AXILIO_API_KEY and the saved key
+.IP \(bu 2
+\fB--base-url\fP=\fIvalue\fP - API host for the balance request; overrides
+AXILIO_BASE_URL and saved base-url
+.IP \(bu 2
+\fB--no-color\fP - Disable ANSI color in the human-readable form of the
+balance result
+.IP \(bu 2
+\fB--org\fP=\fIvalue\fP - OAuth org for the balance request; overrides
+AXILIO_ORG and the saved active org; API keys ignore it
+.IP \(bu 2
+\fB-o\fP, \fB--output\fP=\fIvalue\fP - Render the balance result as table or
+json (default "table")
+.IP \(bu 2
+\fB-q\fP, \fB--quiet\fP - Suppress stderr notes for the balance request;
+the balance result remains on stdout
+
+.PP
+\fBExamples and expected output\fP
+
+.PP
+\fBSample 1\fP
+
+.EX
+user@host ~ % axilio billing balance
+Balance    $12.50
+Included   $10.00 (resets at renewal)
+Purchased  $2.50 (next expiry <timestamp>)
+Plan       Pro (monthly, renews <timestamp>)
+.sp
+# Exit status: 0
+# Notes: Amounts vary by account; Plan reads (none) when the
+#        organization has no active subscription.
+.EE
+
+.PP
+\fBSample 2\fP
+
+.EX
+user@host ~ % axilio billing balance -o json
+{
+  "balance": {
+    "balance_display": "$12.50",
+    "balance_microdollars": 12500000,
+    "included_microdollars": 10000000,
+    "purchased_microdollars": 2500000
+  },
+  "plan": {
+    "plan_id": "pro",
+    "plan_name": "Pro",
+    "billing_cycle": "monthly",
+    "current_period_end": "<timestamp>"
+  }
+}
+.sp
+# Exit status: 0
+# Notes: plan is null when the organization has no active subscription.
+.EE
+
+.SS plan
+.EX
+axilio billing plan
+.EE
+
+.PP
+Show the organization's active subscription: plan, status, billing
+cycle, price, per-cycle included credit, concurrent-run limit, and the
+current period.
+
+.PP
+Fails with not-found when the organization has no active subscription.
+JSON output returns the full subscription object.
+
+.PP
+\fBGlobal-option behavior\fP
+.IP \(bu 2
+\fB--api-key\fP=\fIvalue\fP - API key for the subscription request;
+overrides AXILIO_API_KEY and the saved key
+.IP \(bu 2
+\fB--base-url\fP=\fIvalue\fP - API host for the subscription request;
+overrides AXILIO_BASE_URL and saved base-url
+.IP \(bu 2
+\fB--no-color\fP - Disable ANSI color in the human-readable form of the
+plan result
+.IP \(bu 2
+\fB--org\fP=\fIvalue\fP - OAuth org for the subscription request; overrides
+AXILIO_ORG and the saved active org; API keys ignore it
+.IP \(bu 2
+\fB-o\fP, \fB--output\fP=\fIvalue\fP - Render the plan result as table or json
+(default "table")
+.IP \(bu 2
+\fB-q\fP, \fB--quiet\fP - Suppress stderr notes for the subscription
+request; the plan result remains on stdout
+
+.PP
+\fBExamples and expected output\fP
+
+.EX
+user@host ~ % axilio billing plan
+Plan                 Pro (pro)
+Status               active
+Billing cycle        monthly
+Price                $20.00/mo
+Included / cycle     $10.00
+Max concurrent runs  5
+Current period       <timestamp> → <timestamp>
+.sp
+# Exit status: 0
+# Notes: Cancellation, pending-downgrade, and trial rows appear only
+#        when set; without an active subscription the command fails with
+#        the API's not-found error.
+.EE
+
 .SH completion
 .EX
 axilio completion

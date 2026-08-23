@@ -61,6 +61,7 @@ Acquire Axilio phones, drive live sessions, run workflows, and manage
   COMMANDS
 
     api-keys [command]            List, create, and delete organization API keys.
+    billing [command]             Read your organization's balance and plan.
     completion [command]          Generate the autocompletion script for the specified shell
     config [command]              Show and edit CLI configuration (API host, paths, auth).
     doctor                        Check that your setup is sane: auth, connectivity, and environment.

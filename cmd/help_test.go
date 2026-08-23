@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	applicationCommandCount = 50
+	applicationCommandCount = 53
 	applicationFlagCount    = 55
 )
 
