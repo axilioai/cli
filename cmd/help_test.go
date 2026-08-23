@@ -18,8 +18,8 @@ import (
 )
 
 const (
-	applicationCommandCount = 55
-	applicationFlagCount    = 77
+	applicationCommandCount = 65
+	applicationFlagCount    = 102
 )
 
 func TestApplicationHelpMetadata(t *testing.T) {
