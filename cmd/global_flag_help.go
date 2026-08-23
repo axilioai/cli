@@ -262,6 +262,7 @@ func buildGlobalFlagHelp() map[string]commandGlobalFlagHelp {
 		"phone":     helpOnlyCommandHelp("phone"),
 		"workflows": helpOnlyCommandHelp("workflows"),
 		"runs":      helpOnlyCommandHelp("runs"),
+		"usage":     helpOnlyCommandHelp("usage"),
 		"api-keys":  helpOnlyCommandHelp("api-keys"),
 		"uploads":   helpOnlyCommandHelp("uploads"),
 		"downloads": helpOnlyCommandHelp("downloads"),
@@ -348,6 +349,12 @@ func buildGlobalFlagHelp() map[string]commandGlobalFlagHelp {
 	help["runs watch"] = withOutput(help["runs watch"],
 		"Stream frames as human lines or newline-delimited JSON",
 		"Suppress stderr progress notes; the frame stream remains on stdout")
+
+	help["runs history"] = apiResultHelp("the run-history request", "the run-history result")
+	help["runs stats"] = apiResultHelp("the run-stats request", "the run-stats result")
+
+	help["usage metrics"] = apiResultHelp("the usage-metrics request", "the usage summary")
+	help["usage inferences"] = apiResultHelp("the inference-list request", "the inference-list result")
 
 	help["api-keys list"] = apiResultHelp("the API-key list request", "the API-key list")
 	help["api-keys create"] = apiResultHelp("the API-key create request", "the created API key")

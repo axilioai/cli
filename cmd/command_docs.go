@@ -499,6 +499,27 @@ var commandDocumentationByKey = map[string]CommandDocumentation{
 		sampleWithNote("axilio runs cancel run_123", "Canceled run_123", "Cancel run run_123? [y/N]", "Without --yes, table mode prompts only when stdin is a terminal. Redirected, JSON, and quiet execution require --yes."),
 		sample("axilio runs cancel run_123 --yes", "Canceled run_123", "none"),
 	}},
+	"runs history": {Samples: []CommandSample{
+		sampleWithNote("axilio runs history --from 2026-08-01", "RUN ID   STATUS     TRIGGER  WORKFLOW      STARTED      COMPLETED\n<run-id> completed  manual   <workflow-id> <timestamp>  <timestamp>", "none", "--from is required; an omitted --to means now. Bare dates read as midnight UTC. An empty successful result prints No runs found."),
+		sample("axilio runs history --from 2026-08-01 --to 2026-08-22 --workflow wf_123 --status failed", "RUN ID   STATUS  TRIGGER  WORKFLOW  STARTED      COMPLETED\n<run-id> failed  manual   wf_123    <timestamp>  <timestamp>", "none"),
+		failedSample("axilio runs history", "none", "--from is required. Accepts an RFC 3339 timestamp (2026-08-01T00:00:00Z) or a bare YYYY-MM-DD date, which reads as midnight UTC of that day.", 2, "The window is validated before credentials or an API request."),
+	}},
+	"runs stats": {Samples: []CommandSample{
+		sampleWithNote("axilio runs stats wf_123", "Workflow      wf_123\nTotal runs    8\nSuccess rate  87.5% of finished runs", "none", "The rate's denominator is completed plus failed runs; total runs counts every state."),
+		sample("axilio runs stats wf_123 -o json", "{\n  \"total_runs\": 8,\n  \"success_rate\": 0.875\n}", "none"),
+	}},
+	"usage": workflow(
+		"axilio usage metrics --from 2026-08-01",
+		"axilio usage inferences --from 2026-08-01 --endpoint locate",
+	),
+	"usage metrics": {Samples: []CommandSample{
+		sampleWithNote("axilio usage metrics --from 2026-08-01", "Period           <start> - <end> (daily)\nCompute minutes  42.5 (+10.0%)\nSession spend    $1.25\nInference spend  $0.75\nOther spend      $0.00\nInfra cost       $2.00 total, $2.00 this period (-5.0%)", "none", "--from is required; an omitted --to means now. Bare dates read as midnight UTC. The per-period chart series are only in -o json."),
+		sample("axilio usage metrics --from 2026-08-01 --to 2026-08-22 --granularity daily", "Period           <start> - <end> (daily)\nCompute minutes  42.5 (+10.0%)\nSession spend    $1.25\nInference spend  $0.75\nOther spend      $0.00\nInfra cost       $2.00 total, $2.00 this period (-5.0%)", "none"),
+	}},
+	"usage inferences": {Samples: []CommandSample{
+		sampleWithNote("axilio usage inferences --from 2026-08-01", "TIME        INFERENCE ID   ENDPOINT  MODEL            COST     LATENCY  SESSION\n<timestamp> <inference-id> locate    axilio-ground-1  $0.0012  321 ms   -", "none", "Costs render in dollars from the API's microdollar amounts. An empty successful result prints No inferences found."),
+		sample("axilio usage inferences --from 2026-08-01 --endpoint locate --session ses_123", "TIME        INFERENCE ID   ENDPOINT  MODEL            COST     LATENCY  SESSION\n<timestamp> <inference-id> locate    axilio-ground-1  $0.0012  321 ms   ses_123", "none"),
+	}},
 	"api-keys": workflow(
 		"axilio api-keys list",
 		"axilio api-keys create ci",
