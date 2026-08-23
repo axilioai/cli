@@ -304,12 +304,22 @@ var commandDocumentationByKey = map[string]CommandDocumentation{
 		"axilio sessions list",
 		"axilio sessions start",
 		"axilio sessions current",
+		"axilio sessions get sess_123",
+		"axilio sessions trace sess_123",
 		"axilio sessions stop sess_123",
 	),
 	"sessions list": {Samples: []CommandSample{
 		sampleWithNote("axilio sessions list", "   SESSION       PHONE       TYPE\n*  <session-id>  <phone-id>  android", "none", "With no sessions saved locally, stdout explains how to start one and exit status is 0."),
 		sampleWithNote("axilio sessions list --remote", "SESSION       PHONE       TYPE     MODEL\n<session-id>  <phone-id>  android  Pixel 8", "none", "Remote results come from the API and do not mark the session selected by this CLI."),
 		sampleWithNote("axilio sessions list -o json", "[\n  {\n    \"session_id\": \"<session-id>\",\n    \"phone_id\": \"<phone-id>\",\n    \"phone_type\": \"android\",\n    \"control_url\": \"<control-url>\",\n    \"created_at\": \"<timestamp>\"\n  }\n]", "none", "Locally saved session JSON includes the stored control URL; IDs and URLs vary."),
+	}},
+	"sessions get": {Samples: []CommandSample{
+		sampleWithNote("axilio sessions get sess_123", "Session        sess_123\nName           -\nStatus         completed\nSource         workflow\nAllocated by   api_run\nPhone          <phone-id>\nPhone name     -\nNickname       -\nModel          Pixel 8\nType           android\nLocation       us-central\nDedicated      false\nWorkflow       <workflow-id>\nWorkflow name  demo\nAllocated      2026-08-05 20:00\nReleased       2026-08-05 20:12\nDuration       12m00s\nTags           team=qa\nCapture        true\nTelemetry      true\nRecording      ready\nRecording URL  <recording-url>\nThumbnail URL  -", "none", "Works for active and released sessions; the thumbnail URL is present on active sessions only."),
+		sampleWithNote("axilio sessions get sess_123 -o json", "{\n  \"session_id\": \"sess_123\",\n  \"status\": \"active\",\n  \"source\": \"interactive\",\n  \"phone_id\": \"<phone-id>\",\n  \"allocated_at\": \"<timestamp>\",\n  \"recording_status\": \"pending\",\n  \"thumbnail_status\": \"ready\",\n  \"thumbnail_url\": \"<thumbnail-url>\"\n}", "none", "Excerpt: JSON is the canonical session detail response plus thumbnail_status/thumbnail_url enrichment on active sessions."),
+	}},
+	"sessions trace": {Samples: []CommandSample{
+		sampleWithNote("axilio sessions trace sess_123", "TIME          KIND      NAME            DURATION  STATUS  COST\n20:00:01.000  session   session         12m00s    ok      -\n20:00:02.000  sdk_call  Screen.observe  1.0s      ok      $0.0031\n20:00:02.100  inference inference       800ms     ok      $0.0020\n20:00:03.500  log:output_log  hello     -         INFO    -", "1204 frames; billed sdk_call cost $0.0311", "Costs are billed microdollars: sdk_call spans price by span ID, inference spans by inference ID. Frames with an unknown kind are listed generically, never dropped."),
+		sampleWithNote("axilio sessions trace sess_123 -o json", "{\n  \"frames\": [\n    {\n      \"kind\": \"span\",\n      \"span_id\": \"<span-id>\",\n      \"span_type\": \"sdk_call\",\n      \"name\": \"Screen.observe\",\n      \"start_time_unix_nano\": 0,\n      \"end_time_unix_nano\": 0\n    }\n  ],\n  \"sdk_call_costs\": {\"<span-id>\": 3100},\n  \"inference_costs\": {\"<inference-id>\": 2000},\n  \"total\": 1204,\n  \"retention_expired\": false\n}", "none", "Excerpt: the canonical frames response merged across all pages, so the document is the complete archived trace."),
 	}},
 	"sessions current": {Samples: []CommandSample{
 		sampleWithNote("axilio sessions current", "Session  <session-id>\nPhone    <phone-id>\nType     android", "none", "When no session can be selected, all output modes leave stdout empty and exit with not-found status 4."),

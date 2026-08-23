@@ -287,6 +287,8 @@ func buildGlobalFlagHelp() map[string]commandGlobalFlagHelp {
 		output:  "Render local or remote sessions as table or json",
 		quiet:   "Suppress stderr notes; the session listing remains on stdout",
 	}
+	help["sessions get"] = apiResultHelp("the session-detail request", "the session-detail result")
+	help["sessions trace"] = apiResultHelp("the telemetry-frames requests", "the trace result")
 	help["sessions current"] = localResultHelp("sessions current", "session resolution", "the current-session result")
 	help["sessions start"] = apiResultHelp("the phone-allocation request", "the allocated-session result")
 	help["sessions start"] = withOutput(help["sessions start"],
