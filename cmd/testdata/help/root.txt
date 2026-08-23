@@ -70,7 +70,7 @@ Acquire Axilio phones, drive live sessions, run workflows, and manage
     logout                        Remove stored credentials (API key and OAuth session).
     orgs [command]                List and switch the active organization (OAuth sessions).
     phone [command] [--flags]     Observe and control the selected session's phone.
-    phones [command]              Discover your dedicated phones.
+    phones [command]              Discover and manage your dedicated phones.
     runs [command]                Start, inspect, and cancel workflow runs.
     sessions [command] [--flags]  Acquire, list, select, and release phone sessions.
     status                        Check your credentials and reach the API.
