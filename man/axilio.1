@@ -3853,6 +3853,13 @@ exit with the run's outcome. Watching an already-finished run replays
 its recorded telemetry and exits the same way.
 
 .PP
+While the session is active the stream attaches to the live telemetry
+WebSocket for push delivery; when the attach is refused or lost it
+follows the durable frame archive instead. Frames render exactly once
+either way, and spans appear on completion (in-flight span starts are
+not shown).
+
+.PP
 The exit code reflects the outcome: 0 when the run completed, 1 when it
 failed (the error message is printed), 7 when it was canceled or the
 watch was interrupted. Interrupting the watch does not affect the run;
@@ -4569,21 +4576,35 @@ user@host ~ % axilio sessions stop ph_123 --yes -o json
 
 .SS trace
 .EX
-axilio sessions trace <session-id>
+axilio sessions trace <session-id> [flags]
 .EE
 
 .PP
 Fetch the durable telemetry frames for a session and render them as an
-ordered listing of spans and logs with durations and billed costs.
+ordered listing of spans and logs with durations and billed costs. Costs
+join at read time: sdk_call spans price by span ID and inference spans
+by inference ID, in microdollars as billed. All pages are fetched, so
+the output is the complete archived trace; frames with an unrecognized
+kind are listed generically rather than dropped. JSON output is the
+canonical frames response (frames, sdk_call_costs, inference_costs,
+totals) merged across pages.
 
 .PP
-Costs join at read time: sdk_call spans price by span ID and inference
-spans by inference ID, in microdollars as billed. All pages are fetched,
-so the output is the complete archived trace; frames with an
-unrecognized kind are listed generically rather than dropped. JSON
-output is the canonical frames response (frames, sdk_call_costs,
-inference_costs, totals) merged across pages. A live --follow mode is
-planned to arrive with the SDK's telemetry transport.
+--follow keeps the trace open on an active session: after the archived
+listing, new frames stream live (attaching to the telemetry WebSocket,
+with the archive as fallback) until the session-end frame. Live rows
+show COST as "-"; billing joins at read time, so live totals settle in
+the closing summary. With JSON output the follow contract becomes
+newline-delimited JSON: one object per frame (archived first, then
+live), then a final \fB{"trace_end": true, ...}\fR object carrying the
+merged cost maps. If the session is no longer active, the archive prints
+and the command exits cleanly.
+
+.PP
+\fBCommand options\fP
+.IP \(bu 2
+\fB-f\fP, \fB--follow\fP - After the archived trace, stream new frames
+until the session ends
 
 .PP
 \fBGlobal-option behavior\fP
@@ -4654,6 +4675,25 @@ user@host ~ % axilio sessions trace sess_123 -o json
 # Exit status: 0
 # Notes: Excerpt: the canonical frames response merged across all pages,
 #        so the document is the complete archived trace.
+.EE
+
+.PP
+\fBSample 3\fP
+
+.EX
+user@host ~ % axilio sessions trace sess_123 --follow
+<archived trace table>
+<live rows as they arrive, COST "-">
+.sp
+# Standard error:
+→ attached to live telemetry — Ctrl-C to stop
+.sp
+# Exit status: 0
+# Notes: Streams until the session-end frame; frames render exactly once
+#        across the archive/live seam. On an inactive session the
+#        archive prints and the command exits cleanly. With -o json the
+#        follow contract is newline-delimited JSON ending in a trace_end
+#        summary that carries the merged cost maps.
 .EE
 
 .SH status

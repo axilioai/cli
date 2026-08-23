@@ -5,6 +5,7 @@ go 1.26.6
 require (
 	github.com/axilioai/platform-go v0.11.0
 	github.com/charmbracelet/fang v1.0.0
+	github.com/coder/websocket v1.8.15
 	github.com/cpuguy83/go-md2man/v2 v2.0.6
 	github.com/minio/selfupdate v0.6.0
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c
@@ -33,7 +34,6 @@ require (
 	github.com/clipperhouse/displaywidth v0.4.1 // indirect
 	github.com/clipperhouse/stringish v0.1.1 // indirect
 	github.com/clipperhouse/uax29/v2 v2.7.0 // indirect
-	github.com/coder/websocket v1.8.15 // indirect
 	github.com/containerd/console v1.0.5 // indirect
 	github.com/danieljoos/wincred v1.2.3 // indirect
 	github.com/godbus/dbus/v5 v5.2.2 // indirect

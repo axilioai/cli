@@ -4,12 +4,18 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 	"time"
 
+	"github.com/axilioai/cli/internal/exit"
+	"github.com/axilioai/cli/internal/output"
 	"github.com/axilioai/cli/internal/util"
 	platformgo "github.com/axilioai/platform-go"
 	"github.com/axilioai/platform-go/client"
+	"github.com/axilioai/platform-go/drivers/telemetry"
 	"github.com/spf13/cobra"
 )
 
@@ -166,7 +172,8 @@ func costMicro(micro int64) string {
 }
 
 func sessionsTraceCmd() *cobra.Command {
-	return &cobra.Command{
+	var follow bool
+	cmd := &cobra.Command{
 		Use:   "trace <session-id>",
 		Short: "Show a session's telemetry trace: spans, logs, and billed costs.",
 		Long: "Fetch the durable telemetry frames for a session and render them as an " +
@@ -176,13 +183,24 @@ func sessionsTraceCmd() *cobra.Command {
 			"output is the complete archived trace; frames with an unrecognized kind " +
 			"are listed generically rather than dropped. JSON output is the canonical " +
 			"frames response (frames, sdk_call_costs, inference_costs, totals) merged " +
-			"across pages. A live --follow mode is planned to arrive with the SDK's " +
-			"telemetry transport.",
+			"across pages.\n\n" +
+			"--follow keeps the trace open on an active session: after the archived " +
+			"listing, new frames stream live (attaching to the telemetry WebSocket, " +
+			"with the archive as fallback) until the session-end frame. Live rows " +
+			"show COST as \"-\"; billing joins at read time, so live totals settle " +
+			"in the closing summary. With JSON output the follow contract becomes " +
+			"newline-delimited JSON: one object per frame (archived first, then " +
+			"live), then a final `{\"trace_end\": true, ...}` object carrying the " +
+			"merged cost maps. If the session is no longer active, the archive " +
+			"prints and the command exits cleanly.",
 		Args: cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
 			cl, err := newClient()
 			if err != nil {
 				return err
+			}
+			if follow {
+				return traceFollow(cl, printer(), args[0])
 			}
 			merged, err := fetchAllFrames(context.Background(), cl, args[0])
 			if err != nil {
@@ -211,6 +229,176 @@ func sessionsTraceCmd() *cobra.Command {
 			})
 		},
 	}
+	cmd.Flags().BoolVarP(&follow, "follow", "f", false, "After the archived trace, stream new frames until the session ends")
+	return cmd
+}
+
+// traceFollow renders the archived trace, then follows the session live until
+// its end frame: the live telemetry leg when the session accepts an attach,
+// the archive otherwise. The deduper guarantees each frame appears once
+// across the seam; a mint refusal is the "nothing left to follow" signal (an
+// ended session's telemetry is served entirely by the archive).
+func traceFollow(cl *client.Client, p *output.Printer, sessionID string) error {
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	merged, err := fetchAllFrames(ctx, cl, sessionID)
+	if err != nil {
+		return err
+	}
+	sdkCosts := merged.SdkCallCosts
+	infCosts := merged.InferenceCosts
+
+	dedupe := newFrameDeduper(func(f *platformgo.RunSessionFramesResponseFramesItem) error {
+		if p.JSON {
+			return p.JSONLine(f)
+		}
+		p.Result("%s", joinTraceRow(traceRow(f, sdkCosts, infCosts)))
+		return p.Err()
+	})
+
+	// The archived prefix: JSON mode streams it through the deduper (NDJSON
+	// contract), table mode renders today's table and seeds the deduper so
+	// live delivery skips what the table already showed.
+	if p.JSON {
+		for _, f := range merged.Frames {
+			if err := dedupe.deliver(f); err != nil {
+				return err
+			}
+		}
+	} else {
+		switch {
+		case merged.RetentionExpired:
+			p.Result("Trace is past the org's retention window; frames are no longer available.")
+		case len(merged.Frames) == 0:
+			p.Result("No telemetry frames for this session yet.")
+		default:
+			rows := [][]string{{"TIME", "KIND", "NAME", "DURATION", "STATUS", "COST"}}
+			for _, f := range merged.Frames {
+				rows = append(rows, traceRow(f, sdkCosts, infCosts))
+			}
+			p.Table(rows)
+		}
+		for _, f := range merged.Frames {
+			dedupe.seed(f)
+		}
+		if err := p.Err(); err != nil {
+			return err
+		}
+	}
+	fetched := int64(len(merged.Frames))
+
+	for !dedupe.endSeen {
+		tok, mintErr := cl.Phones.SessionTelemetryToken(ctx, &platformgo.PhonesSessionTelemetryTokenRequest{SessionID: sessionID})
+		if ctx.Err() != nil {
+			return traceFollowInterrupted(p, sessionID)
+		}
+		if mintErr == nil {
+			if stream, dialErr := telemetry.Tail(ctx, tok.TelemetryURL); dialErr == nil {
+				p.Step("attached to live telemetry — Ctrl-C to stop")
+				if _, err := streamLive(ctx, stream, dedupe); err != nil {
+					if ctx.Err() != nil {
+						return traceFollowInterrupted(p, sessionID)
+					}
+					return err
+				}
+			}
+			if ctx.Err() != nil {
+				return traceFollowInterrupted(p, sessionID)
+			}
+		}
+		// Backfill what the live window missed — and, when live is
+		// unavailable, the polling leg itself.
+		n, err := traceDrainFrames(ctx, cl, p, dedupe, sessionID, fetched, sdkCosts, infCosts)
+		if err != nil {
+			if ctx.Err() != nil {
+				return traceFollowInterrupted(p, sessionID)
+			}
+			return err
+		}
+		fetched += n
+		if dedupe.endSeen {
+			break
+		}
+		if mintErr != nil {
+			p.Note("session is not active — the archived trace above is complete")
+			break
+		}
+		select {
+		case <-ctx.Done():
+			return traceFollowInterrupted(p, sessionID)
+		case <-time.After(watchPollInterval):
+		}
+	}
+
+	if p.JSON {
+		return p.JSONLine(map[string]any{
+			"trace_end":       true,
+			"session_id":      sessionID,
+			"frames":          len(dedupe.seen),
+			"session_ended":   dedupe.endSeen,
+			"sdk_call_costs":  sdkCosts,
+			"inference_costs": infCosts,
+		})
+	}
+	var billed int64
+	for _, micro := range sdkCosts {
+		billed += micro
+	}
+	p.Note("%d frames; billed sdk_call cost %s", len(dedupe.seen), costMicro(billed))
+	return p.Err()
+}
+
+// traceDrainFrames delivers archived frames from offset onward through the
+// deduper, folding each page's read-time cost maps into the accumulators so
+// late-billed spans price correctly in the closing summary.
+func traceDrainFrames(ctx context.Context, cl *client.Client, p *output.Printer, d *frameDeduper, sessionID string, offset int64, sdkCosts, infCosts map[string]int64) (int64, error) {
+	var fetched int64
+	limit := framesPageLimit
+	for {
+		off := offset + fetched
+		resp, err := cl.Runs.SessionsListFrames(ctx, &platformgo.SessionsListFramesRequest{
+			SessionID: sessionID,
+			Limit:     &limit,
+			Offset:    &off,
+		})
+		if err != nil {
+			return fetched, err
+		}
+		if resp.RetentionExpired {
+			p.Warn("trace is past the org's retention window; frames withheld")
+			return fetched, nil
+		}
+		for k, v := range resp.SdkCallCosts {
+			sdkCosts[k] = v
+		}
+		for k, v := range resp.InferenceCosts {
+			infCosts[k] = v
+		}
+		for _, f := range resp.Frames {
+			if err := d.deliver(f); err != nil {
+				return fetched, err
+			}
+			fetched++
+		}
+		if len(resp.Frames) == 0 || offset+fetched >= resp.Total {
+			return fetched, nil
+		}
+	}
+}
+
+// traceFollowInterrupted maps Ctrl-C during --follow onto the canceled exit
+// code, with the resume hint.
+func traceFollowInterrupted(p *output.Printer, sessionID string) error {
+	p.Note("follow interrupted — `axilio sessions trace %s --follow` replays and resumes", sessionID)
+	return exit.With(exit.Canceled, fmt.Errorf("follow interrupted"))
+}
+
+// joinTraceRow lays a trace row out as one streamed line, approximating the
+// archived table's columns.
+func joinTraceRow(row []string) string {
+	return strings.TrimRight(fmt.Sprintf("%-13s %-10s %-34s %-9s %-8s %s",
+		row[0], row[1], row[2], row[3], row[4], util.OrDash(row[5])), " ")
 }
 
 // fetchAllFrames pages through the frames archive until every frame is
