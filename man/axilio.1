@@ -2929,7 +2929,7 @@ its recorded telemetry and exits the same way.
 
 .PP
 The exit code reflects the outcome: 0 when the run completed, 1 when it
-failed (the error message is printed), 7 when it was cancelled or the
+failed (the error message is printed), 7 when it was canceled or the
 watch was interrupted. Interrupting the watch does not affect the run;
 re-run \fBruns watch\fR to replay and resume following.
 
@@ -2978,7 +2978,7 @@ user@host ~ % axilio runs watch run_123
 # Exit status: 0
 # Notes: Streams the session's telemetry — logs and completed spans —
 #        until the session ends. Exit 0 on completed, 1 on failed (with
-#        the run's error message), 7 on cancelled or interrupt. Watching
+#        the run's error message), 7 on canceled or interrupt. Watching
 #        a finished run replays its telemetry.
 .EE
 

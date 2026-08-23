@@ -47,7 +47,7 @@ func runsWatchCmd() *cobra.Command {
 			"and exit with the run's outcome. Watching an already-finished run " +
 			"replays its recorded telemetry and exits the same way.\n\n" +
 			"The exit code reflects the outcome: 0 when the run completed, 1 when " +
-			"it failed (the error message is printed), 7 when it was cancelled or " +
+			"it failed (the error message is printed), 7 when it was canceled or " +
 			"the watch was interrupted. Interrupting the watch does not affect the " +
 			"run; re-run `runs watch` to replay and resume following.\n\n" +
 			"JSON mode streams newline-delimited JSON rather than a single " +
@@ -206,7 +206,7 @@ func watchOutcome(p *output.Printer, run *platformgo.RunResponse) error {
 		p.Success("Run %s completed", run.ID)
 		return p.Err()
 	case platformgo.RunResponseStatusCancelled:
-		return exit.With(exit.Canceled, fmt.Errorf("run %s was cancelled", run.ID))
+		return exit.With(exit.Canceled, fmt.Errorf("run %s was canceled", run.ID))
 	default: // failed
 		msg := strv(run.ErrorMessage)
 		if msg == "" {

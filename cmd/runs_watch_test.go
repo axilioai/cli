@@ -146,8 +146,14 @@ func TestRunsWatchJSONLinesContract(t *testing.T) {
 	}
 }
 
+// runStatusCancelled is the wire value of the run's canceled terminal status
+// (RunResponseStatusCancelled): the API spells it with the double L, so the
+// US-locale spell check is suppressed for this one literal.
+const runStatusCancelled = "cancelled" //nolint:misspell
+
 // Terminal run states map onto the published exit-code contract: failed is a
-// generic error carrying the run's message, cancelled is the canceled code.
+// generic error carrying the run's message, a canceled run is the canceled
+// code.
 func TestRunsWatchOutcomeExitCodes(t *testing.T) {
 	cases := []struct {
 		terminal string
@@ -155,7 +161,7 @@ func TestRunsWatchOutcomeExitCodes(t *testing.T) {
 		want     exit.Code
 	}{
 		{"failed", "phone rebooted mid-run", exit.Err},
-		{"cancelled", "", exit.Canceled},
+		{runStatusCancelled, "", exit.Canceled},
 	}
 	for _, tc := range cases {
 		t.Run(tc.terminal, func(t *testing.T) {
