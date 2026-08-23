@@ -42,7 +42,8 @@ const (
 )
 
 var (
-	sessionStatusValues = []string{"ACTIVE", "COMPLETED", "CANCELLED", "EXPIRED"}
+	// The API spells the canceled status with a doubled L on the wire; keep it verbatim.
+	sessionStatusValues = []string{"ACTIVE", "COMPLETED", "CANCELLED", "EXPIRED"} //nolint:misspell
 	sessionSourceValues = []string{"workflow", "interactive"}
 	sessionTypeValues   = []string{"shared", "dedicated"}
 	sessionSortValues   = []string{"started", "ended", "status", "duration", "source"}
@@ -283,7 +284,7 @@ func sessionsListCmd() *cobra.Command {
 	}
 	cmd.Flags().BoolVar(&remote, "remote", false, "List all active Axilio sessions instead of sessions saved locally")
 	cmd.Flags().BoolVar(&h.history, "history", false, "List the org's session history, active and released")
-	cmd.Flags().StringSliceVar(&h.status, "status", nil, "Filter history by status: active|completed|cancelled|expired (repeatable)")
+	cmd.Flags().StringSliceVar(&h.status, "status", nil, "Filter history by status: active|completed|cancelled|expired (repeatable)") //nolint:misspell // wire spelling
 	cmd.Flags().StringSliceVar(&h.source, "source", nil, "Filter history by source: workflow|interactive (repeatable)")
 	cmd.Flags().StringSliceVar(&h.phoneKind, "type", nil, "Filter history by phone type: shared|dedicated (repeatable)")
 	cmd.Flags().StringVar(&h.search, "search", "", "Case-insensitive match on phone, session, or workflow")
