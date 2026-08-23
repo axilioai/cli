@@ -30,7 +30,7 @@ func sessionsCmd() *cobra.Command {
 			"effect. Pass flags to a sessions subcommand instead.",
 	}
 	cmd.AddCommand(sessionsListCmd(), sessionsStartCmd(), sessionsStopCmd(), sessionsCurrentCmd(),
-		sessionsGetCmd(), sessionsTraceCmd())
+		sessionsGetCmd(), sessionsTraceCmd(), sessionsDownloadsCmd())
 	return cmd
 }
 

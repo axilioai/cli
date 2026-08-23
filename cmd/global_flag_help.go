@@ -264,6 +264,7 @@ func buildGlobalFlagHelp() map[string]commandGlobalFlagHelp {
 		"runs":      helpOnlyCommandHelp("runs"),
 		"api-keys":  helpOnlyCommandHelp("api-keys"),
 		"uploads":   helpOnlyCommandHelp("uploads"),
+		"downloads": helpOnlyCommandHelp("downloads"),
 		"help": {
 			apiKey:          "No effect on help command or the help content it renders",
 			baseURL:         "No effect on help command or the help content it renders",
@@ -363,6 +364,18 @@ func buildGlobalFlagHelp() map[string]commandGlobalFlagHelp {
 		"Suppress the prompt and human confirmation; --yes is required; JSON still prints")
 	help["uploads delete"] = withNoColor(help["uploads delete"],
 		"No effect on uploads delete command; its human confirmation is unstyled")
+
+	help["downloads list"] = apiResultHelp("the download-list request", "the download-list result")
+	help["sessions downloads"] = apiResultHelp("the session-download request", "the session-download result")
+	help["downloads get"] = apiResultHelp("the download-list and signed-URL requests", "the saved-file result")
+	help["downloads get"] = withQuiet(help["downloads get"],
+		"Suppress save progress; the saved-file result remains on stdout")
+	help["downloads delete"] = apiResultHelp("the download-delete request", "the deletion result")
+	help["downloads delete"] = withOutput(help["downloads delete"],
+		"Emit a human confirmation or JSON deletion result",
+		"Suppress the prompt and human confirmation; --yes is required; JSON still prints")
+	help["downloads delete"] = withNoColor(help["downloads delete"],
+		"No effect on downloads delete command; its human confirmation is unstyled")
 
 	for _, shell := range []string{"bash", "zsh", "fish", "powershell"} {
 		key := "completion " + shell

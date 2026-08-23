@@ -832,6 +832,311 @@ doctor: API key rejected (HTTP 401); run `axilio login`
 #        6.
 .EE
 
+.SH downloads
+.EX
+axilio downloads
+.EE
+
+.PP
+Manage captured downloads: files that came off phones during sessions.
+Captures land in the org library next to uploads and share its storage
+quota; a ready capture can be delivered to any phone by its id with
+\fBuploads push\fR\&. \fBlist\fR discovers captures across sessions, \fBget\fR saves a
+capture's bytes to a local file, and \fBdelete\fR removes it everywhere. For
+one session's captures, \fBsessions downloads \\<session-id\\>\fR answers
+directly.
+
+.PP
+Running \fBaxilio downloads\fR without a subcommand is equivalent to \fBaxilio
+downloads --help\fR: it only displays this help. Global flags shown here
+therefore have no effect. Pass flags to a downloads subcommand instead.
+
+.PP
+\fBGlobal-option behavior\fP
+.IP \(bu 2
+\fB--api-key\fP, \fB--base-url\fP, \fB--no-color\fP, \fB--org\fP, \fB--output\fP
+/ \fB-o\fP, \fB--quiet\fP / \fB-q\fP - No effect on downloads command; bare
+axilio downloads only displays this help
+
+.PP
+\fBWorkflow examples\fP
+
+.EX
+axilio downloads list
+axilio downloads get dl_123
+axilio downloads delete dl_123 --yes
+.EE
+
+.SS list
+.EX
+axilio downloads list [flags]
+.EE
+
+.PP
+List captured downloads for the active organization.
+
+.PP
+Each row carries its capture state: a skipped or failed capture is a
+visible entry with a reason, not an absence. Results include capture ID,
+filename, size, MIME type, state, source session, and creation time.
+Page with --limit and --offset, narrow by --session, --mime, size and
+time bounds, and sort by created_at, filename, or size_bytes in asc or
+desc order. Omitting sort/order uses server defaults (newest first).
+
+.PP
+\fBCommand options\fP
+.IP \(bu 2
+\fB--created-after\fP=\fIvalue\fP - Only captures registered at or after
+this RFC 3339 time
+.IP \(bu 2
+\fB--created-before\fP=\fIvalue\fP - Only captures registered at or before
+this RFC 3339 time
+.IP \(bu 2
+\fB--limit\fP=\fInumber\fP - Maximum captures in this page (1-100) (default
+"50")
+.IP \(bu 2
+\fB--max-size\fP=\fInumber\fP - Only captures at most this many bytes; 0
+means no bound
+.IP \(bu 2
+\fB--mime\fP=\fIvalue\fP - Only captures of exactly this media type, e.g.
+image/png
+.IP \(bu 2
+\fB--min-size\fP=\fInumber\fP - Only captures at least this many bytes; 0
+means no bound
+.IP \(bu 2
+\fB--offset\fP=\fInumber\fP - Number of matching captures to skip before
+this page
+.IP \(bu 2
+\fB--order\fP=\fIvalue\fP - Sort direction: asc or desc; omitted uses server
+default
+.IP \(bu 2
+\fB--search\fP=\fIvalue\fP - Filter filenames by case-insensitive substring
+.IP \(bu 2
+\fB--session\fP=\fIvalue\fP - Only captures produced by this session ID
+.IP \(bu 2
+\fB--sort\fP=\fIvalue\fP - Sort key: created_at, filename, or size_bytes;
+omitted uses server default
+
+.PP
+\fBGlobal-option behavior\fP
+.IP \(bu 2
+\fB--api-key\fP=\fIvalue\fP - API key for the download-list request;
+overrides AXILIO_API_KEY and the saved key
+.IP \(bu 2
+\fB--base-url\fP=\fIvalue\fP - API host for the download-list request;
+overrides AXILIO_BASE_URL and saved base-url
+.IP \(bu 2
+\fB--no-color\fP - Disable ANSI color in the human-readable form of the
+download-list result
+.IP \(bu 2
+\fB--org\fP=\fIvalue\fP - OAuth org for the download-list request; overrides
+AXILIO_ORG and the saved active org; API keys ignore it
+.IP \(bu 2
+\fB-o\fP, \fB--output\fP=\fIvalue\fP - Render the download-list result as
+table or json (default "table")
+.IP \(bu 2
+\fB-q\fP, \fB--quiet\fP - Suppress stderr notes for the download-list
+request; the download-list result remains on stdout
+
+.PP
+\fBExamples and expected output\fP
+
+.PP
+\fBSample 1\fP
+
+.EX
+user@host ~ % axilio downloads list
+ID       FILENAME     SIZE     TYPE       STATE  SESSION      CREATED
+<dl-id>  receipt.png  2.0 KiB  image/png  ready  <session-id> <timestamp>
+.sp
+# Exit status: 0
+# Notes: A skipped or failed capture is a visible row with its reason in
+#        STATE, not an absence.
+.EE
+
+.PP
+\fBSample 2\fP
+
+.EX
+user@host ~ % axilio downloads list --session ses_123 --mime image/png --sort size_bytes --order desc
+ID       FILENAME     SIZE     TYPE       STATE  SESSION      CREATED
+<dl-id>  receipt.png  2.0 KiB  image/png  ready  ses_123      <timestamp>
+.sp
+# Exit status: 0
+.EE
+
+.PP
+\fBSample 3\fP
+
+.EX
+user@host ~ % axilio downloads list -o json
+{
+  "downloads": [
+    {
+      "id": "<dl-id>",
+      "filename": "receipt.png",
+      "size_bytes": 2048,
+      "mime_type": "image/png",
+      "capture_state": "ready",
+      "session_id": "<session-id>",
+      "download_url": "<signed-url>",
+      "created_at": "<timestamp>"
+    }
+  ],
+  "total": 1
+}
+.sp
+# Exit status: 0
+# Notes: Representative response; signed URLs are short-lived, re-list
+#        to refresh an expired one.
+.EE
+
+.SS delete
+.EX
+axilio downloads delete <download-id> [flags]
+.EE
+
+.PP
+Delete a capture from the org library and free its storage quota.
+
+.PP
+Deletion also recalls every copy delivered to phones; the source phone's
+own copy from the capture session is outside the recall. Use \fBdownloads
+list\fR to discover the capture ID. Without --yes, table mode prompts only
+when stdin is a terminal. Redirected, JSON, and quiet execution do not
+prompt and require --yes. The alias \fBdownloads rm\fR performs the same
+operation.
+
+.PP
+\fBCommand options\fP
+.IP \(bu 2
+\fB-y\fP, \fB--yes\fP - Delete without prompting; required in JSON, quiet,
+or redirected execution
+
+.PP
+\fBGlobal-option behavior\fP
+.IP \(bu 2
+\fB--no-color\fP - No effect on downloads delete command
+.IP \(bu 2
+\fB--api-key\fP=\fIvalue\fP - API key for the download-delete request;
+overrides AXILIO_API_KEY and the saved key
+.IP \(bu 2
+\fB--base-url\fP=\fIvalue\fP - API host for the download-delete request;
+overrides AXILIO_BASE_URL and saved base-url
+.IP \(bu 2
+\fB--org\fP=\fIvalue\fP - OAuth org for the download-delete request;
+overrides AXILIO_ORG and the saved active org; API keys ignore it
+.IP \(bu 2
+\fB-o\fP, \fB--output\fP=\fIvalue\fP - Emit a human confirmation or JSON
+deletion result (default "table")
+.IP \(bu 2
+\fB-q\fP, \fB--quiet\fP - Suppress the prompt and human confirmation;
+--yes is required; JSON still prints
+
+.PP
+\fBExamples and expected output\fP
+
+.PP
+\fBSample 1\fP
+
+.EX
+user@host ~ % axilio downloads delete dl_123
+Deleted dl_123
+.sp
+# Standard error:
+Delete download dl_123? Also recall it from phones holding or receiving a copy? [y/N]
+.sp
+# Exit status: 0
+# Notes: Table mode prompts only when stdin is a terminal. Redirected,
+#        JSON, and quiet execution require --yes.
+.EE
+
+.PP
+\fBSample 2\fP
+
+.EX
+user@host ~ % axilio downloads rm dl_123 --yes
+Deleted dl_123
+.sp
+# Exit status: 0
+.EE
+
+.SS get
+.EX
+axilio downloads get <download-id> [flags]
+.EE
+
+.PP
+Fetch a ready capture through its short-lived signed URL and write the
+bytes to a local file.
+
+.PP
+The destination defaults to the capture's own filename in the current
+directory; -o overrides it. An existing destination is refused unless
+--force is passed. Captures still in flight or terminally skipped have
+no bytes to fetch and are refused with their capture state. Use
+\fBdownloads list\fR to discover capture IDs and states.
+
+.PP
+\fBCommand options\fP
+.IP \(bu 2
+\fB--force\fP - Overwrite the destination if it already exists
+.IP \(bu 2
+\fB--out\fP=\fIvalue\fP - Destination path; omitted uses the capture's
+filename in the current directory
+
+.PP
+\fBGlobal-option behavior\fP
+.IP \(bu 2
+\fB--api-key\fP=\fIvalue\fP - API key for the download-list and signed-URL
+requests; overrides AXILIO_API_KEY and the saved key
+.IP \(bu 2
+\fB--base-url\fP=\fIvalue\fP - API host for the download-list and signed-URL
+requests; overrides AXILIO_BASE_URL and saved base-url
+.IP \(bu 2
+\fB--no-color\fP - Disable ANSI color in the human-readable form of the
+saved-file result
+.IP \(bu 2
+\fB--org\fP=\fIvalue\fP - OAuth org for the download-list and signed-URL
+requests; overrides AXILIO_ORG and the saved active org; API keys ignore
+it
+.IP \(bu 2
+\fB-o\fP, \fB--output\fP=\fIvalue\fP - Render the saved-file result as table
+or json (default "table")
+.IP \(bu 2
+\fB-q\fP, \fB--quiet\fP - Suppress save progress; the saved-file result
+remains on stdout
+
+.PP
+\fBExamples and expected output\fP
+
+.PP
+\fBSample 1\fP
+
+.EX
+user@host ~ % axilio downloads get dl_123
+Saved receipt.png (2.0 KiB)
+.sp
+# Standard error:
+→ Saving receipt.png to receipt.png
+.sp
+# Exit status: 0
+.EE
+
+.PP
+\fBSample 2\fP
+
+.EX
+user@host ~ % axilio downloads get dl_123 --out ./captures/receipt.png --force
+Saved ./captures/receipt.png (2.0 KiB)
+.sp
+# Standard error:
+→ Saving receipt.png to ./captures/receipt.png
+.sp
+# Exit status: 0
+# Notes: Without --force an existing destination is refused.
+.EE
+
 .SH help
 .EX
 axilio help [command] [flags]
@@ -3032,6 +3337,7 @@ axilio sessions start
 axilio sessions current
 axilio sessions get sess_123
 axilio sessions trace sess_123
+axilio sessions downloads sess_123
 axilio sessions stop sess_123
 .EE
 
@@ -3245,6 +3551,81 @@ user@host ~ % axilio sessions current -o json
 # Exit status: 0
 # Notes: A selected session keeps the same JSON shape. With no selected
 #        session, stdout is empty and exit status is 4.
+.EE
+
+.SS downloads
+.EX
+axilio sessions downloads <session-id> [flags]
+.EE
+
+.PP
+List one session's captured downloads, newest first — the direct answer
+to "what did this session download".
+
+.PP
+Rows appear at detection, before the bytes finish moving, so a caller
+waiting on a file watches its capture state progress rather than an
+empty list. Save a ready capture with \fBdownloads get\fR\&. Filters and
+paging match \fBdownloads list\fR\&.
+
+.PP
+\fBCommand options\fP
+.IP \(bu 2
+\fB--created-after\fP=\fIvalue\fP - Only captures registered at or after
+this RFC 3339 time
+.IP \(bu 2
+\fB--created-before\fP=\fIvalue\fP - Only captures registered at or before
+this RFC 3339 time
+.IP \(bu 2
+\fB--limit\fP=\fInumber\fP - Maximum captures in this page (1-100) (default
+"50")
+.IP \(bu 2
+\fB--max-size\fP=\fInumber\fP - Only captures at most this many bytes; 0
+means no bound
+.IP \(bu 2
+\fB--mime\fP=\fIvalue\fP - Only captures of exactly this media type, e.g.
+image/png
+.IP \(bu 2
+\fB--min-size\fP=\fInumber\fP - Only captures at least this many bytes; 0
+means no bound
+.IP \(bu 2
+\fB--offset\fP=\fInumber\fP - Number of matching captures to skip before
+this page
+.IP \(bu 2
+\fB--search\fP=\fIvalue\fP - Filter filenames by case-insensitive substring
+
+.PP
+\fBGlobal-option behavior\fP
+.IP \(bu 2
+\fB--api-key\fP=\fIvalue\fP - API key for the session-download request;
+overrides AXILIO_API_KEY and the saved key
+.IP \(bu 2
+\fB--base-url\fP=\fIvalue\fP - API host for the session-download request;
+overrides AXILIO_BASE_URL and saved base-url
+.IP \(bu 2
+\fB--no-color\fP - Disable ANSI color in the human-readable form of the
+session-download result
+.IP \(bu 2
+\fB--org\fP=\fIvalue\fP - OAuth org for the session-download request;
+overrides AXILIO_ORG and the saved active org; API keys ignore it
+.IP \(bu 2
+\fB-o\fP, \fB--output\fP=\fIvalue\fP - Render the session-download result as
+table or json (default "table")
+.IP \(bu 2
+\fB-q\fP, \fB--quiet\fP - Suppress stderr notes for the session-download
+request; the session-download result remains on stdout
+
+.PP
+\fBExamples and expected output\fP
+
+.EX
+user@host ~ % axilio sessions downloads sess_123
+ID       FILENAME     SIZE     TYPE       STATE  SESSION  CREATED
+<dl-id>  receipt.png  2.0 KiB  image/png  ready  sess_123 <timestamp>
+.sp
+# Exit status: 0
+# Notes: Rows appear at detection, before the bytes finish moving; watch
+#        STATE progress to ready, then save with `downloads get`.
 .EE
 
 .SS get
