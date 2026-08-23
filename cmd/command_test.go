@@ -65,6 +65,58 @@ func fakeAPI(t *testing.T) *httptest.Server {
 			body = `{"runs":[
 				{"id":"r1","status":"completed","trigger":"manual","workflow_id":"w1","success":true}],
 				"total":1,"limit":20,"offset":0}`
+		case strings.HasSuffix(p, "/code/restore") && r.Method == http.MethodPost:
+			// workflow code restore: POST /workflows/{id}/code/restore.
+			var reqBody struct {
+				RevisionID string `json:"revision_id"`
+			}
+			_ = json.NewDecoder(r.Body).Decode(&reqBody)
+			if reqBody.RevisionID == "" {
+				http.Error(w, `{"title":"Unprocessable Entity","status":422,"detail":"expected required property revision_id to be present"}`, http.StatusUnprocessableEntity)
+				return
+			}
+			body = `{"no_op":false,"revision":4,"revision_id":"rev4"}`
+		case strings.HasSuffix(p, "/code") && r.Method == http.MethodGet:
+			body = `{"revision":2,"revision_id":"rev2","source":"print('hello')\n","updated_at":"2026-08-05T20:00:00Z"}`
+		case strings.HasSuffix(p, "/code") && r.Method == http.MethodPost:
+			// workflow code save: POST /workflows/{id}/code. The backend
+			// requires source; reject its absence so the test seam stays
+			// faithful to the real contract.
+			var reqBody struct {
+				Source *string `json:"source"`
+			}
+			_ = json.NewDecoder(r.Body).Decode(&reqBody)
+			if reqBody.Source == nil {
+				http.Error(w, `{"title":"Unprocessable Entity","status":422,"detail":"expected required property source to be present"}`, http.StatusUnprocessableEntity)
+				return
+			}
+			body = `{"no_op":false,"revision":3,"revision_id":"rev3"}`
+		case strings.HasSuffix(p, "/revisions") && r.Method == http.MethodGet:
+			body = `{"revisions":[
+				{"id":"rev2","revision":2,"author_user_id":"u1","bytes":14,"sha256":"abc","message":"tweak","created_at":"2026-08-05T20:00:00Z"},
+				{"id":"rev1","revision":1,"author_user_id":"u1","bytes":12,"sha256":"def","created_at":"2026-08-04T20:00:00Z"}]}`
+		case strings.HasSuffix(p, "/workflows") && r.Method == http.MethodPost:
+			// workflow create: POST /workflows. Echo back a first revision only
+			// when code was provided, like the real endpoint.
+			var reqBody struct {
+				Name string  `json:"name"`
+				Code *string `json:"code"`
+			}
+			_ = json.NewDecoder(r.Body).Decode(&reqBody)
+			if reqBody.Name == "" {
+				http.Error(w, `{"title":"Unprocessable Entity","status":422,"detail":"expected required property name to be present"}`, http.StatusUnprocessableEntity)
+				return
+			}
+			if reqBody.Code != nil {
+				body = `{"workflow_id":"w2","revision":1,"revision_id":"rev1"}`
+			} else {
+				body = `{"workflow_id":"w2"}`
+			}
+		case strings.Contains(p, "/workflows/") && r.Method == http.MethodDelete:
+			body = `{"message":"deleted"}`
+		case strings.Contains(p, "/workflows/") && r.Method == http.MethodGet:
+			body = `{"workflow":{"id":"w1","name":"demo","platform":"android","status":"active","ocr_engine":"free","recording":true,"telemetry":true,"capture":false,"created_at":"2026-08-01T00:00:00Z","updated_at":"2026-08-05T00:00:00Z","user_id":"u1"},
+				"stats":{"total_runs":4,"success_rate":0.75}}`
 		case strings.Contains(p, "/workflows"):
 			body = `{"workflows":[
 				{"workflow":{"id":"w1","name":"demo","platform":"android","status":"active"}}],
