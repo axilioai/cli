@@ -211,6 +211,8 @@ Precedence rules:
 | `phone observe` / `find` / `find-text` / `tap` / `long-press` / `swipe` / `type` / `key` / `screenshot` / `wait-for` | Observe and control the selected phone session. |
 | `phone send` | Upload a local image/video and push it to the selected session's phone. |
 | `workflows list` | Discover workflow IDs by recency or name search. |
+| `workflows create` / `get` / `delete` | Create a workflow (optionally seeding its first code revision from a file), inspect its details and run statistics, or delete it. |
+| `workflows pull` / `push` / `revisions` / `restore` | Round-trip workflow code: pull the current source, push a local file back as a new revision with an optional message, list revision history, and restore an earlier revision. |
 | `runs list` / `runs start` / `runs get` / `runs cancel` | Start, inspect, and cancel workflow runs. |
 | `api-keys list` / `create` / `delete` | Manage your organization's API keys. |
 | `uploads add` / `uploads list` / `uploads push` / `uploads delete` | Store files, inspect quota, deliver uploads, and free library quota. |
@@ -327,9 +329,29 @@ axilio runs cancel <run-id> --yes
 `runs start --count` accepts values from 1 through 1000, inclusive, and
 `--start-timeout` accepts 60 through 86400 seconds (0 omits the field and uses
 the server default). The list commands bound their pagination the same way:
-`runs list`/`workflows list --limit` accept 1-500 and `uploads list --limit`
-accepts 1-100 with a non-negative `--offset`. All ranges are rejected with a
-usage error before authentication or an API request.
+`runs list`/`workflows list --limit` accept 1-500, `workflows revisions
+--limit` accepts 1-200, and `uploads list --limit` accepts 1-100 with a
+non-negative `--offset`. All ranges are rejected with a usage error before
+authentication or an API request.
+
+### Author and version workflow code
+
+```bash
+axilio workflows create checkout-flow --platform android --code checkout.py
+axilio workflows pull <workflow-id> --out checkout.py
+axilio workflows push <workflow-id> checkout.py -m "handle 2FA"
+axilio workflows revisions <workflow-id>
+axilio workflows restore <workflow-id> <revision-id>
+axilio workflows get <workflow-id>
+axilio workflows delete <workflow-id> --yes
+```
+
+`pull` prints the current revision's source to stdout (pipe or redirect it), or
+writes it to `--out`. `push` saves a local file as a new revision; the server
+deduplicates by content hash, so pushing unchanged source is a reported no-op.
+`restore` copies an earlier revision's source into a new revision, keeping the
+action visible in history. Source files are capped at 256 KiB, preflighted
+before any request.
 
 ### Manage API keys
 
