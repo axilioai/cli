@@ -464,6 +464,11 @@ var commandDocumentationByKey = map[string]CommandDocumentation{
 		failedSample("axilio runs start wf_123 --count 0", "none", "--count must be between 1 and 1000 (got 0)", 2, "The range is validated before credentials, allocation, or an API request."),
 		sample("axilio runs start wf_123 --phone-id ph_123", "Started run <run-id>", "none"),
 		sample("axilio runs start wf_123 --start-timeout 300", "Started run <run-id>", "none"),
+		sampleWithNote("axilio runs start wf_123 --watch", "Started run <run-id>\n<frame stream>\n✓ Run <run-id> completed", "→ Run <run-id> queued — waiting for a phone", "Follows the created run exactly like `runs watch`; requires --count 1."),
+	}},
+	"runs watch": {Samples: []CommandSample{
+		sampleWithNote("axilio runs watch run_123", "<time>  span  sdk_call    Screen.observe  250ms\n<time>  INFO  output_log  <workflow output>\n✓ Run run_123 completed", "→ Run run_123 running — streaming session <session-id>", "Streams the session's telemetry — logs and completed spans — until the session ends. Exit 0 on completed, 1 on failed (with the run's error message), 7 on canceled or interrupt. Watching a finished run replays its telemetry."),
+		sampleWithNote("axilio runs watch run_123 -o json", "{\"watch_end\":true,\"run_id\":\"run_123\",\"status\":\"completed\"}", "none", "JSON mode is newline-delimited, not a single document: one object per telemetry frame in archive order (unknown kinds pass through verbatim), then the watch_end summary — carrying status and error_message — as the final line."),
 	}},
 	"runs get": {Samples: []CommandSample{
 		sample("axilio runs get run_123", "Run        run_123\nStatus     completed\nTrigger    manual\nWorkflow   <workflow-id>\nSession    <session-id>\nPhone      <phone-id>\nCreated    <created-at>\nStarted    <started-at>\nCompleted  <completed-at>\nError      -\nVideo      <video-url>", "none"),

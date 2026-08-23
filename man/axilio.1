@@ -2793,6 +2793,10 @@ a phone before auto-cancel, between 60 and 86400 inclusive; zero or
 negative values omit the field and use the server default (300).
 
 .PP
+--watch follows the single created run to completion exactly like \fBruns
+watch\fR, and requires --count 1.
+
+.PP
 Successful output contains the created run IDs.
 
 .PP
@@ -2810,6 +2814,9 @@ default
 .IP \(bu 2
 \fB--variables\fP=\fIvalue\fP - JSON object of run variables applied to
 every created run (plaintext; no secrets)
+.IP \(bu 2
+\fB--watch\fP - Follow the created run to completion (requires --count
+1)
 
 .PP
 \fBGlobal-option behavior\fP
@@ -2890,6 +2897,103 @@ user@host ~ % axilio runs start wf_123 --start-timeout 300
 Started run <run-id>
 .sp
 # Exit status: 0
+.EE
+
+.PP
+\fBSample 6\fP
+
+.EX
+user@host ~ % axilio runs start wf_123 --watch
+Started run <run-id>
+<frame stream>
+✓ Run <run-id> completed
+.sp
+# Standard error:
+→ Run <run-id> queued — waiting for a phone
+.sp
+# Exit status: 0
+# Notes: Follows the created run exactly like `runs watch`; requires
+#        --count 1.
+.EE
+
+.SS watch
+.EX
+axilio runs watch <run-id>
+.EE
+
+.PP
+Follow a run live: wait for it to start, then stream its session's
+telemetry (output logs and completed spans) until the session ends, and
+exit with the run's outcome. Watching an already-finished run replays
+its recorded telemetry and exits the same way.
+
+.PP
+The exit code reflects the outcome: 0 when the run completed, 1 when it
+failed (the error message is printed), 7 when it was canceled or the
+watch was interrupted. Interrupting the watch does not affect the run;
+re-run \fBruns watch\fR to replay and resume following.
+
+.PP
+JSON mode streams newline-delimited JSON rather than a single document:
+one object per telemetry frame in archive order, then a final
+\fB{"watch_end": true, ...}\fR object carrying the run's status and error
+message.
+
+.PP
+\fBGlobal-option behavior\fP
+.IP \(bu 2
+\fB--api-key\fP=\fIvalue\fP - API key for the run polling and frame reads;
+overrides AXILIO_API_KEY and the saved key
+.IP \(bu 2
+\fB--base-url\fP=\fIvalue\fP - API host for the run polling and frame reads;
+overrides AXILIO_BASE_URL and saved base-url
+.IP \(bu 2
+\fB--no-color\fP - Disable ANSI color in the human-readable form of the
+telemetry stream
+.IP \(bu 2
+\fB--org\fP=\fIvalue\fP - OAuth org for the run polling and frame reads;
+overrides AXILIO_ORG and the saved active org; API keys ignore it
+.IP \(bu 2
+\fB-o\fP, \fB--output\fP=\fIvalue\fP - Stream frames as human lines or
+newline-delimited JSON (default "table")
+.IP \(bu 2
+\fB-q\fP, \fB--quiet\fP - Suppress stderr progress notes; the frame stream
+remains on stdout
+
+.PP
+\fBExamples and expected output\fP
+
+.PP
+\fBSample 1\fP
+
+.EX
+user@host ~ % axilio runs watch run_123
+<time>  span  sdk_call    Screen.observe  250ms
+<time>  INFO  output_log  <workflow output>
+✓ Run run_123 completed
+.sp
+# Standard error:
+→ Run run_123 running — streaming session <session-id>
+.sp
+# Exit status: 0
+# Notes: Streams the session's telemetry — logs and completed spans —
+#        until the session ends. Exit 0 on completed, 1 on failed (with
+#        the run's error message), 7 on canceled or interrupt. Watching
+#        a finished run replays its telemetry.
+.EE
+
+.PP
+\fBSample 2\fP
+
+.EX
+user@host ~ % axilio runs watch run_123 -o json
+{"watch_end":true,"run_id":"run_123","status":"completed"}
+.sp
+# Exit status: 0
+# Notes: JSON mode is newline-delimited, not a single document: one
+#        object per telemetry frame in archive order (unknown kinds pass
+#        through verbatim), then the watch_end summary — carrying status
+#        and error_message — as the final line.
 .EE
 
 .SH sessions

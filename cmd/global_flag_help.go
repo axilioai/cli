@@ -339,6 +339,10 @@ func buildGlobalFlagHelp() map[string]commandGlobalFlagHelp {
 		"No effect on runs start command; its human messages are unstyled")
 	help["runs get"] = apiResultHelp("the run-detail request", "the run-detail result")
 	help["runs cancel"] = apiActionHelp("run cancellation", true)
+	help["runs watch"] = apiResultHelp("the run polling and frame reads", "the telemetry stream")
+	help["runs watch"] = withOutput(help["runs watch"],
+		"Stream frames as human lines or newline-delimited JSON",
+		"Suppress stderr progress notes; the frame stream remains on stdout")
 
 	help["api-keys list"] = apiResultHelp("the API-key list request", "the API-key list")
 	help["api-keys create"] = apiResultHelp("the API-key create request", "the created API key")
