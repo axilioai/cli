@@ -46,6 +46,11 @@ func runsWatchCmd() *cobra.Command {
 			"telemetry (output logs and completed spans) until the session ends, " +
 			"and exit with the run's outcome. Watching an already-finished run " +
 			"replays its recorded telemetry and exits the same way.\n\n" +
+			"While the session is active the stream attaches to the live " +
+			"telemetry WebSocket for push delivery; when the attach is refused " +
+			"or lost it follows the durable frame archive instead. Frames render " +
+			"exactly once either way, and spans appear on completion (in-flight " +
+			"span starts are not shown).\n\n" +
 			"The exit code reflects the outcome: 0 when the run completed, 1 when " +
 			"it failed (the error message is printed), 7 when it was canceled or " +
 			"the watch was interrupted. Interrupting the watch does not affect the " +
@@ -66,16 +71,22 @@ func runsWatchCmd() *cobra.Command {
 }
 
 // watchRun follows runID until it reaches a terminal status and its session's
-// terminal frame has been rendered (or the bounded grace expires). It renders
-// every frame exactly once, in archive order, resuming by offset.
+// terminal frame has been rendered (or the bounded grace expires). Frames
+// stream from the live telemetry leg when the session accepts an attach, with
+// the durable archive as catch-up before the attach, backfill after it, and
+// the full fallback when live is unavailable; the deduper guarantees each
+// frame renders exactly once regardless of which legs delivered it.
 func watchRun(cl *client.Client, p *output.Printer, runID string) error {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
+	dedupe := newFrameDeduper(func(f *platformgo.RunSessionFramesResponseFramesItem) error {
+		return renderWatchFrame(p, f)
+	})
 	var (
 		sessionID string
-		rendered  int64 // frames already rendered = next archive offset
-		endSeen   bool  // session-root end frame rendered
+		fetched   int64 // archive frames consumed = next archive offset
+		liveTried bool
 		waitNoted bool
 		graceUsed int
 		run       *platformgo.RunResponse
@@ -96,13 +107,33 @@ func watchRun(cl *client.Client, p *output.Printer, runID string) error {
 			p.Step("Run %s is %s — waiting for a phone", runID, r.Status)
 		}
 
-		if sessionID != "" && !endSeen {
-			n, sawEnd, err := watchDrainFrames(ctx, cl, p, sessionID, rendered)
+		if sessionID != "" && !dedupe.endSeen {
+			// Archive first: it reaches back to the session start, which
+			// the live window may no longer cover.
+			n, err := watchDrainFrames(ctx, cl, p, dedupe, sessionID, fetched)
 			if err != nil {
 				return watchInterrupted(ctx, p, runID, err)
 			}
-			rendered += n
-			endSeen = sawEnd
+			fetched += n
+
+			if !liveTried && !dedupe.endSeen {
+				liveTried = true
+				if stream := tryLiveAttach(ctx, cl, p, sessionID); stream != nil {
+					_, err := streamLive(ctx, stream, dedupe)
+					if err != nil {
+						return watchInterrupted(ctx, p, runID, err)
+					}
+					// Clean end or live failure both land here: one
+					// archive backfill covers frames the live window
+					// missed (and the terminal frame, if live lost it);
+					// on failure the poll loop below keeps following.
+					n, err := watchDrainFrames(ctx, cl, p, dedupe, sessionID, fetched)
+					if err != nil {
+						return watchInterrupted(ctx, p, runID, err)
+					}
+					fetched += n
+				}
+			}
 		}
 
 		terminal := r.Status == platformgo.RunResponseStatusCompleted ||
@@ -111,7 +142,7 @@ func watchRun(cl *client.Client, p *output.Printer, runID string) error {
 		if terminal {
 			// The archive can flush a beat behind the run status; give the
 			// terminal frame a bounded grace, then trust the run status.
-			if endSeen || sessionID == "" || graceUsed >= watchEndGraceRounds {
+			if dedupe.endSeen || sessionID == "" || graceUsed >= watchEndGraceRounds {
 				return watchOutcome(p, run)
 			}
 			graceUsed++
@@ -125,38 +156,34 @@ func watchRun(cl *client.Client, p *output.Printer, runID string) error {
 	}
 }
 
-// watchDrainFrames renders every archived frame from offset onward and
-// reports how many it rendered and whether the session-root end frame was
-// among them.
-func watchDrainFrames(ctx context.Context, cl *client.Client, p *output.Printer, sessionID string, offset int64) (int64, bool, error) {
-	var rendered int64
-	sawEnd := false
+// watchDrainFrames delivers every archived frame from offset onward through
+// the deduper and reports how many archive rows it consumed (the offset
+// advance — rendered or deduped alike).
+func watchDrainFrames(ctx context.Context, cl *client.Client, p *output.Printer, d *frameDeduper, sessionID string, offset int64) (int64, error) {
+	var fetched int64
 	for {
 		limit := watchPageLimit
-		off := offset + rendered
+		off := offset + fetched
 		resp, err := cl.Runs.SessionsListFrames(ctx, &platformgo.SessionsListFramesRequest{
 			SessionID: sessionID,
 			Limit:     &limit,
 			Offset:    &off,
 		})
 		if err != nil {
-			return rendered, sawEnd, err
+			return fetched, err
 		}
 		if resp.RetentionExpired {
 			p.Warn("trace is past the org's retention window; frames withheld")
-			return rendered, sawEnd, nil
+			return fetched, nil
 		}
 		for _, f := range resp.Frames {
-			if err := renderWatchFrame(p, f); err != nil {
-				return rendered, sawEnd, err
+			if err := d.deliver(f); err != nil {
+				return fetched, err
 			}
-			rendered++
-			if isSessionEndFrame(f) {
-				sawEnd = true
-			}
+			fetched++
 		}
-		if len(resp.Frames) == 0 || offset+rendered >= resp.Total {
-			return rendered, sawEnd, nil
+		if len(resp.Frames) == 0 || offset+fetched >= resp.Total {
+			return fetched, nil
 		}
 	}
 }
@@ -236,7 +263,9 @@ func isSessionEndFrame(f *platformgo.RunSessionFramesResponseFramesItem) bool {
 	if f.Span.SpanType != spanTypeSession && f.Span.SpanType != spanTypeSessionLegacy {
 		return false
 	}
-	return f.Span.Phase == spanPhaseEnd
+	// Same recognition as the SDK transport: an explicit end phase, or a
+	// closed root span (the archive's completed copy).
+	return f.Span.Phase == spanPhaseEnd || spanEndNano(f.Span) > 0
 }
 
 // frameClock renders a frame timestamp as a UTC wall-clock instant. Frames
