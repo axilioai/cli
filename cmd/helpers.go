@@ -37,6 +37,17 @@ func enumv[T ~string](e *T) string {
 	return string(*e)
 }
 
+// usd renders a microdollar amount as dollars with enough precision for
+// per-call inference costs, which are routinely fractions of a cent.
+func usd(microdollars int64) string {
+	return fmt.Sprintf("$%.4f", float64(microdollars)/1e6)
+}
+
+// dollars renders an already-dollar-denominated amount for summary rows.
+func dollars(v float64) string {
+	return fmt.Sprintf("$%.2f", v)
+}
+
 // humanBytes renders a byte count the way a storage quota should read. The
 // library's limits are stated in MiB and GiB, so the units are binary.
 func humanBytes(n int64) string {

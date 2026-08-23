@@ -262,6 +262,7 @@ func buildGlobalFlagHelp() map[string]commandGlobalFlagHelp {
 		"phone":     helpOnlyCommandHelp("phone"),
 		"workflows": helpOnlyCommandHelp("workflows"),
 		"runs":      helpOnlyCommandHelp("runs"),
+		"usage":     helpOnlyCommandHelp("usage"),
 		"api-keys":  helpOnlyCommandHelp("api-keys"),
 		"uploads":   helpOnlyCommandHelp("uploads"),
 		"help": {
@@ -324,6 +325,11 @@ func buildGlobalFlagHelp() map[string]commandGlobalFlagHelp {
 		"No effect on runs start command; its human messages are unstyled")
 	help["runs get"] = apiResultHelp("the run-detail request", "the run-detail result")
 	help["runs cancel"] = apiActionHelp("run cancellation", true)
+	help["runs history"] = apiResultHelp("the run-history request", "the run-history result")
+	help["runs stats"] = apiResultHelp("the run-stats request", "the run-stats result")
+
+	help["usage metrics"] = apiResultHelp("the usage-metrics request", "the usage summary")
+	help["usage inferences"] = apiResultHelp("the inference-list request", "the inference-list result")
 
 	help["api-keys list"] = apiResultHelp("the API-key list request", "the API-key list")
 	help["api-keys create"] = apiResultHelp("the API-key create request", "the created API key")

@@ -2767,6 +2767,103 @@ user@host ~ % axilio runs get run_123 -o json
 #        video URL appear when available.
 .EE
 
+.SS history
+.EX
+axilio runs history [flags]
+.EE
+
+.PP
+List the caller's historic runs between --from and --to, including
+archived runs that \fBruns list\fR no longer returns. Filter by workflow,
+final status (repeatable), or a run/workflow ID substring with --search.
+
+.PP
+Page with --limit and --offset. Accepts an RFC 3339 timestamp
+(2026-08-01T00:00:00Z) or a bare YYYY-MM-DD date, which reads as
+midnight UTC of that day.
+
+.PP
+\fBCommand options\fP
+.IP \(bu 2
+\fB--from\fP=\fIvalue\fP - Start of the query window (required)
+.IP \(bu 2
+\fB--limit\fP=\fInumber\fP - Maximum runs in this page (1-500) (default
+"50")
+.IP \(bu 2
+\fB--offset\fP=\fInumber\fP - Number of matching runs to skip before this
+page
+.IP \(bu 2
+\fB--search\fP=\fIvalue\fP - Filter by run or workflow ID substring
+.IP \(bu 2
+\fB--status\fP=\fIstringSlice\fP - Restrict to run statuses: queued,
+running, completed, failed, cancelled (repeatable) (default "[]")
+.IP \(bu 2
+\fB--to\fP=\fIvalue\fP - End of the query window (default: now)
+.IP \(bu 2
+\fB--workflow\fP=\fIvalue\fP - Return only runs for this workflow ID
+
+.PP
+\fBGlobal-option behavior\fP
+.IP \(bu 2
+\fB--api-key\fP=\fIvalue\fP - API key for the run-history request; overrides
+AXILIO_API_KEY and the saved key
+.IP \(bu 2
+\fB--base-url\fP=\fIvalue\fP - API host for the run-history request;
+overrides AXILIO_BASE_URL and saved base-url
+.IP \(bu 2
+\fB--no-color\fP - Disable ANSI color in the human-readable form of the
+run-history result
+.IP \(bu 2
+\fB--org\fP=\fIvalue\fP - OAuth org for the run-history request; overrides
+AXILIO_ORG and the saved active org; API keys ignore it
+.IP \(bu 2
+\fB-o\fP, \fB--output\fP=\fIvalue\fP - Render the run-history result as table
+or json (default "table")
+.IP \(bu 2
+\fB-q\fP, \fB--quiet\fP - Suppress stderr notes for the run-history
+request; the run-history result remains on stdout
+
+.PP
+\fBExamples and expected output\fP
+
+.PP
+\fBSample 1\fP
+
+.EX
+user@host ~ % axilio runs history --from 2026-08-01
+RUN ID   STATUS     TRIGGER  WORKFLOW      STARTED      COMPLETED
+<run-id> completed  manual   <workflow-id> <timestamp>  <timestamp>
+.sp
+# Exit status: 0
+# Notes: --from is required; an omitted --to means now. Bare dates read
+#        as midnight UTC. An empty successful result prints No runs
+#        found.
+.EE
+
+.PP
+\fBSample 2\fP
+
+.EX
+user@host ~ % axilio runs history --from 2026-08-01 --to 2026-08-22 --workflow wf_123 --status failed
+RUN ID   STATUS  TRIGGER  WORKFLOW  STARTED      COMPLETED
+<run-id> failed  manual   wf_123    <timestamp>  <timestamp>
+.sp
+# Exit status: 0
+.EE
+
+.PP
+\fBSample 3\fP
+
+.EX
+user@host ~ % axilio runs history
+.sp
+# Standard error:
+--from is required. Accepts an RFC 3339 timestamp (2026-08-01T00:00:00Z) or a bare YYYY-MM-DD date, which reads as midnight UTC of that day.
+.sp
+# Exit status: 2
+# Notes: The window is validated before credentials or an API request.
+.EE
+
 .SS start
 .EX
 axilio runs start <workflow-id> [flags]
@@ -2888,6 +2985,68 @@ Started run <run-id>
 .EX
 user@host ~ % axilio runs start wf_123 --start-timeout 300
 Started run <run-id>
+.sp
+# Exit status: 0
+.EE
+
+.SS stats
+.EX
+axilio runs stats <workflow-id>
+.EE
+
+.PP
+Report how a workflow has performed for the caller: total runs across
+all states, plus the success rate among runs that finished (completed or
+failed - queued, running, and cancelled runs are not in the rate's
+denominator).
+
+.PP
+\fBGlobal-option behavior\fP
+.IP \(bu 2
+\fB--api-key\fP=\fIvalue\fP - API key for the run-stats request; overrides
+AXILIO_API_KEY and the saved key
+.IP \(bu 2
+\fB--base-url\fP=\fIvalue\fP - API host for the run-stats request; overrides
+AXILIO_BASE_URL and saved base-url
+.IP \(bu 2
+\fB--no-color\fP - Disable ANSI color in the human-readable form of the
+run-stats result
+.IP \(bu 2
+\fB--org\fP=\fIvalue\fP - OAuth org for the run-stats request; overrides
+AXILIO_ORG and the saved active org; API keys ignore it
+.IP \(bu 2
+\fB-o\fP, \fB--output\fP=\fIvalue\fP - Render the run-stats result as table or
+json (default "table")
+.IP \(bu 2
+\fB-q\fP, \fB--quiet\fP - Suppress stderr notes for the run-stats request;
+the run-stats result remains on stdout
+
+.PP
+\fBExamples and expected output\fP
+
+.PP
+\fBSample 1\fP
+
+.EX
+user@host ~ % axilio runs stats wf_123
+Workflow      wf_123
+Total runs    8
+Success rate  87.5% of finished runs
+.sp
+# Exit status: 0
+# Notes: The rate's denominator is completed plus failed runs; total
+#        runs counts every state.
+.EE
+
+.PP
+\fBSample 2\fP
+
+.EX
+user@host ~ % axilio runs stats wf_123 -o json
+{
+  "total_runs": 8,
+  "success_rate": 0.875
+}
 .sp
 # Exit status: 0
 .EE
@@ -3896,6 +4055,224 @@ Status    delivered
 # Exit status: 0
 # Notes: With --wait, the command returns only after delivered, failed,
 #        or the two-minute deadline.
+.EE
+
+.SH usage
+.EX
+axilio usage
+.EE
+
+.PP
+Read the active organization's usage: aggregate spend and compute
+metrics over a reporting window, or the individual billed inference
+calls behind the inference line item.
+
+.PP
+Running \fBaxilio usage\fR without a subcommand only displays this help.
+
+.PP
+\fBGlobal-option behavior\fP
+.IP \(bu 2
+\fB--api-key\fP, \fB--base-url\fP, \fB--no-color\fP, \fB--org\fP, \fB--output\fP
+/ \fB-o\fP, \fB--quiet\fP / \fB-q\fP - No effect on usage command; bare axilio
+usage only displays this help
+
+.PP
+\fBWorkflow examples\fP
+
+.EX
+axilio usage metrics --from 2026-08-01
+axilio usage inferences --from 2026-08-01 --endpoint locate
+.EE
+
+.SS inferences
+.EX
+axilio usage inferences [flags]
+.EE
+
+.PP
+List the billed vision inference calls between --from and --to, most
+recent first, with the cost and latency of each. Filter by endpoint
+(detect or locate, repeatable), model, or session; --search matches
+inference-ID substrings.
+
+.PP
+--order-by is a '<field> <asc|desc>\&' expression; the field is one of
+created_at, cost_microdollars, latency_ms, endpoint, model, or
+inference_id.
+
+.PP
+Page with --limit and --offset.
+
+.PP
+Accepts an RFC 3339 timestamp (2026-08-01T00:00:00Z) or a bare
+YYYY-MM-DD date, which reads as midnight UTC of that day.
+
+.PP
+\fBCommand options\fP
+.IP \(bu 2
+\fB--endpoint\fP=\fIstringSlice\fP - Restrict to a vision endpoint: detect
+or locate (repeatable) (default "[]")
+.IP \(bu 2
+\fB--from\fP=\fIvalue\fP - Start of the query window (required)
+.IP \(bu 2
+\fB--limit\fP=\fInumber\fP - Maximum inference calls in this page (1-100)
+(default "50")
+.IP \(bu 2
+\fB--model\fP=\fIvalue\fP - Restrict to a single model name
+.IP \(bu 2
+\fB--offset\fP=\fInumber\fP - Number of matching calls to skip before this
+page
+.IP \(bu 2
+\fB--order-by\fP=\fIvalue\fP - Sort expression '<field> <asc|desc>\&'
+(default: created_at desc)
+.IP \(bu 2
+\fB--search\fP=\fIvalue\fP - Filter by inference-ID substring
+.IP \(bu 2
+\fB--session\fP=\fIvalue\fP - Restrict to inferences that ran under one
+phone session
+.IP \(bu 2
+\fB--to\fP=\fIvalue\fP - End of the query window (default: now)
+
+.PP
+\fBGlobal-option behavior\fP
+.IP \(bu 2
+\fB--api-key\fP=\fIvalue\fP - API key for the inference-list request;
+overrides AXILIO_API_KEY and the saved key
+.IP \(bu 2
+\fB--base-url\fP=\fIvalue\fP - API host for the inference-list request;
+overrides AXILIO_BASE_URL and saved base-url
+.IP \(bu 2
+\fB--no-color\fP - Disable ANSI color in the human-readable form of the
+inference-list result
+.IP \(bu 2
+\fB--org\fP=\fIvalue\fP - OAuth org for the inference-list request;
+overrides AXILIO_ORG and the saved active org; API keys ignore it
+.IP \(bu 2
+\fB-o\fP, \fB--output\fP=\fIvalue\fP - Render the inference-list result as
+table or json (default "table")
+.IP \(bu 2
+\fB-q\fP, \fB--quiet\fP - Suppress stderr notes for the inference-list
+request; the inference-list result remains on stdout
+
+.PP
+\fBExamples and expected output\fP
+
+.PP
+\fBSample 1\fP
+
+.EX
+user@host ~ % axilio usage inferences --from 2026-08-01
+TIME        INFERENCE ID   ENDPOINT  MODEL            COST     LATENCY  SESSION
+<timestamp> <inference-id> locate    axilio-ground-1  $0.0012  321 ms   -
+.sp
+# Exit status: 0
+# Notes: Costs render in dollars from the API's microdollar amounts. An
+#        empty successful result prints No inferences found.
+.EE
+
+.PP
+\fBSample 2\fP
+
+.EX
+user@host ~ % axilio usage inferences --from 2026-08-01 --endpoint locate --session ses_123
+TIME        INFERENCE ID   ENDPOINT  MODEL            COST     LATENCY  SESSION
+<timestamp> <inference-id> locate    axilio-ground-1  $0.0012  321 ms   ses_123
+.sp
+# Exit status: 0
+.EE
+
+.SS metrics
+.EX
+axilio usage metrics [flags]
+.EE
+
+.PP
+Summarize the organization's usage between --from and --to: total
+compute minutes, spend split by product (sessions, inference, other),
+and infrastructure costs, each with the change from the previous period.
+
+.PP
+--granularity picks the bucket resolution (hourly or daily); the server
+chooses when omitted. --tz names an IANA timezone (e.g.
+America/Los_Angeles) for bucketing periods.
+
+.PP
+Table mode prints the summary numbers; the per-period chart series are
+available in --output json.
+
+.PP
+Accepts an RFC 3339 timestamp (2026-08-01T00:00:00Z) or a bare
+YYYY-MM-DD date, which reads as midnight UTC of that day.
+
+.PP
+\fBCommand options\fP
+.IP \(bu 2
+\fB--from\fP=\fIvalue\fP - Start of the reporting window (required)
+.IP \(bu 2
+\fB--granularity\fP=\fIvalue\fP - Bucket resolution: hourly or daily
+(default: server-chosen)
+.IP \(bu 2
+\fB--to\fP=\fIvalue\fP - End of the reporting window (default: now)
+.IP \(bu 2
+\fB--tz\fP=\fIvalue\fP - IANA timezone for bucketing periods, such as
+America/Los_Angeles
+
+.PP
+\fBGlobal-option behavior\fP
+.IP \(bu 2
+\fB--api-key\fP=\fIvalue\fP - API key for the usage-metrics request;
+overrides AXILIO_API_KEY and the saved key
+.IP \(bu 2
+\fB--base-url\fP=\fIvalue\fP - API host for the usage-metrics request;
+overrides AXILIO_BASE_URL and saved base-url
+.IP \(bu 2
+\fB--no-color\fP - Disable ANSI color in the human-readable form of the
+usage summary
+.IP \(bu 2
+\fB--org\fP=\fIvalue\fP - OAuth org for the usage-metrics request; overrides
+AXILIO_ORG and the saved active org; API keys ignore it
+.IP \(bu 2
+\fB-o\fP, \fB--output\fP=\fIvalue\fP - Render the usage summary as table or
+json (default "table")
+.IP \(bu 2
+\fB-q\fP, \fB--quiet\fP - Suppress stderr notes for the usage-metrics
+request; the usage summary remains on stdout
+
+.PP
+\fBExamples and expected output\fP
+
+.PP
+\fBSample 1\fP
+
+.EX
+user@host ~ % axilio usage metrics --from 2026-08-01
+Period           <start> - <end> (daily)
+Compute minutes  42.5 (+10.0%)
+Session spend    $1.25
+Inference spend  $0.75
+Other spend      $0.00
+Infra cost       $2.00 total, $2.00 this period (-5.0%)
+.sp
+# Exit status: 0
+# Notes: --from is required; an omitted --to means now. Bare dates read
+#        as midnight UTC. The per-period chart series are only in -o
+#        json.
+.EE
+
+.PP
+\fBSample 2\fP
+
+.EX
+user@host ~ % axilio usage metrics --from 2026-08-01 --to 2026-08-22 --granularity daily
+Period           <start> - <end> (daily)
+Compute minutes  42.5 (+10.0%)
+Session spend    $1.25
+Inference spend  $0.75
+Other spend      $0.00
+Infra cost       $2.00 total, $2.00 this period (-5.0%)
+.sp
+# Exit status: 0
 .EE
 
 .SH workflows

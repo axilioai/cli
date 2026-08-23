@@ -41,6 +41,21 @@ func fakeAPI(t *testing.T) *httptest.Server {
 			body = `{"api_keys":[
 				{"id":"k1","name":"ci","key_preview":"axl_ci…","created_at":"2026-07-14T00:00:00Z"}],
 				"total":1,"limit":50,"offset":0}`
+		case strings.Contains(p, "/usage/metrics"):
+			body = `{"period_start":"2026-08-01T00:00:00Z","period_end":"2026-08-22T00:00:00Z","granularity":"daily",
+				"compute_minutes":{"total_minutes":42.5,"change":10.0},
+				"cost_by_product":{"sessions":1.25,"inference":0.75,"other":0},
+				"infra_costs":{"total":2.0,"this_period":2.0,"change":-5.0}}`
+		case strings.Contains(p, "/usage/inferences"):
+			body = `{"inferences":[
+				{"inference_id":"inf1","endpoint":"locate","model":"axilio-ground-1","cost_microdollars":1234,"latency_ms":321,"created_at":"2026-08-20T00:00:00Z","ocr_pages":0}],
+				"total":1,"limit":50,"offset":0}`
+		case strings.Contains(p, "/runs/history"):
+			body = `{"runs":[
+				{"run_id":"r9","status":"completed","trigger":"manual","workflow_id":"w1","user_id":"u1","success":true,"started_at":"2026-08-10T00:00:00Z","completed_at":"2026-08-10T00:05:00Z"}],
+				"total":1,"limit":50,"offset":0}`
+		case strings.Contains(p, "/runs/stats/"):
+			body = `{"total_runs":8,"success_rate":0.875}`
 		case strings.Contains(p, ":cancel"):
 			// run cancel: POST /runs/{run_id}:cancel (custom method, 0.72 API).
 			body = `{"success":true}`

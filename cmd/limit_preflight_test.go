@@ -40,6 +40,12 @@ func TestListLimitPreflightsRejectBeforeRequest(t *testing.T) {
 		{"uploads limit zero", []string{"uploads", "list", "--limit", "0"}},
 		{"uploads limit above max", []string{"uploads", "list", "--limit", "101"}},
 		{"uploads negative offset", []string{"uploads", "list", "--offset", "-1"}},
+		{"usage inferences limit zero", []string{"usage", "inferences", "--from", "2026-08-01", "--limit", "0"}},
+		{"usage inferences limit above max", []string{"usage", "inferences", "--from", "2026-08-01", "--limit", "101"}},
+		{"usage inferences negative offset", []string{"usage", "inferences", "--from", "2026-08-01", "--offset", "-1"}},
+		{"runs history limit zero", []string{"runs", "history", "--from", "2026-08-01", "--limit", "0"}},
+		{"runs history limit above max", []string{"runs", "history", "--from", "2026-08-01", "--limit", "501"}},
+		{"runs history negative offset", []string{"runs", "history", "--from", "2026-08-01", "--offset", "-1"}},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

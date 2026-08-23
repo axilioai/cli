@@ -76,6 +76,7 @@ Acquire Axilio phones, drive live sessions, run workflows, and manage
     status                        Check your credentials and reach the API.
     upgrade [--flags]             Update axilio to the latest release.
     uploads [command]             Add, list, push, and delete files in your organization's library.
+    usage [command]               Report usage spend and per-inference costs.
     workflows [command]           Discover workflows that can be run.
 
   FLAGS

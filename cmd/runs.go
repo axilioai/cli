@@ -37,8 +37,124 @@ func runsCmd() *cobra.Command {
 			"start, inspect, or cancel runs. Global flags shown here therefore have " +
 			"no effect. Pass flags to a runs subcommand instead.",
 	}
-	cmd.AddCommand(runsListCmd(), runsStartCmd(), runsGetCmd(), runsCancelCmd())
+	cmd.AddCommand(runsListCmd(), runsStartCmd(), runsGetCmd(), runsCancelCmd(), runsHistoryCmd(), runsStatsCmd())
 	return cmd
+}
+
+func runsHistoryCmd() *cobra.Command {
+	var (
+		from       string
+		to         string
+		workflowID string
+		limit      int64
+		offset     int64
+		statuses   []string
+		search     string
+	)
+	cmd := &cobra.Command{
+		Use:   "history",
+		Short: "List historic (archived) runs over a time window.",
+		Long: "List the caller's historic runs between --from and --to, including " +
+			"archived runs that `runs list` no longer returns. Filter by workflow, " +
+			"final status (repeatable), or a run/workflow ID substring with " +
+			"--search.\n\n" +
+			"Page with --limit and --offset. " + windowFlagsHelp,
+		RunE: func(_ *cobra.Command, _ []string) error {
+			start, end, err := parseWindow(from, to)
+			if err != nil {
+				return err
+			}
+			if limit < minListLimit || limit > maxRunsListLimit {
+				return exit.Usagef("--limit must be between %d and %d (got %d)", minListLimit, maxRunsListLimit, limit)
+			}
+			if offset < 0 {
+				return exit.Usagef("--offset must be zero or positive (got %d)", offset)
+			}
+			req := &platformgo.RunsListHistoricRequest{
+				StartDate: start,
+				EndDate:   end,
+				Limit:     &limit,
+				Offset:    &offset,
+			}
+			for _, s := range statuses {
+				item, err := platformgo.NewRunsListHistoricRequestStatusFilterItemFromString(s)
+				if err != nil {
+					return exit.Usagef("--status must be one of queued, running, completed, failed, cancelled (got %q)", s)
+				}
+				req.StatusFilter = append(req.StatusFilter, item)
+			}
+			if workflowID != "" {
+				req.WorkflowID = &workflowID
+			}
+			if search != "" {
+				req.Search = &search
+			}
+			cl, err := newClient()
+			if err != nil {
+				return err
+			}
+			resp, err := cl.Runs.ListHistoric(context.Background(), req)
+			if err != nil {
+				return err
+			}
+			p := printer()
+			return p.Emit(resp, func() {
+				if len(resp.Runs) == 0 {
+					p.Result("No runs found.")
+					return
+				}
+				rows := [][]string{{"RUN ID", "STATUS", "TRIGGER", "WORKFLOW", "STARTED", "COMPLETED"}}
+				for _, r := range resp.Runs {
+					rows = append(rows, []string{
+						r.RunID, string(r.Status), string(r.Trigger), r.WorkflowID,
+						util.OrDash(tsp(r.StartedAt)), util.OrDash(tsp(r.CompletedAt)),
+					})
+				}
+				p.Table(rows)
+				if int64(len(resp.Runs)) < resp.Total {
+					p.Note("showing %d of %d; use --limit / --offset to page", len(resp.Runs), resp.Total)
+				}
+			})
+		},
+	}
+	cmd.Flags().StringVar(&from, "from", "", "Start of the query window (required)")
+	cmd.Flags().StringVar(&to, "to", "", "End of the query window (default: now)")
+	cmd.Flags().StringVar(&workflowID, "workflow", "", "Return only runs for this workflow ID")
+	cmd.Flags().Int64Var(&limit, "limit", 50, "Maximum runs in this page (1-500)")
+	cmd.Flags().Int64Var(&offset, "offset", 0, "Number of matching runs to skip before this page")
+	cmd.Flags().StringSliceVar(&statuses, "status", nil, "Restrict to run statuses: queued, running, completed, failed, cancelled (repeatable)")
+	cmd.Flags().StringVar(&search, "search", "", "Filter by run or workflow ID substring")
+	return cmd
+}
+
+func runsStatsCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "stats <workflow-id>",
+		Short: "Show a workflow's total run count and success rate.",
+		Long: "Report how a workflow has performed for the caller: total runs across " +
+			"all states, plus the success rate among runs that finished (completed " +
+			"or failed - queued, running, and cancelled runs are not in the rate's " +
+			"denominator).",
+		Args: cobra.ExactArgs(1),
+		RunE: func(_ *cobra.Command, args []string) error {
+			cl, err := newClient()
+			if err != nil {
+				return err
+			}
+			resp, err := cl.Runs.Stats(context.Background(), &platformgo.RunsStatsRequest{WorkflowID: args[0]})
+			if err != nil {
+				return err
+			}
+			p := printer()
+			return p.Emit(resp, func() {
+				p.KV([][2]string{
+					{"Workflow", args[0]},
+					{"Total runs", fmt.Sprintf("%d", resp.TotalRuns)},
+					{"Success rate", fmt.Sprintf("%.1f%% of finished runs", resp.SuccessRate*100)},
+				})
+			})
+		},
+	}
 }
 
 func runsListCmd() *cobra.Command {
