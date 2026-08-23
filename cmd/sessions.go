@@ -28,7 +28,7 @@ func sessionsCmd() *cobra.Command {
 			"list, select, or stop sessions. Global flags shown here therefore have no " +
 			"effect. Pass flags to a sessions subcommand instead.",
 	}
-	cmd.AddCommand(sessionsListCmd(), sessionsStartCmd(), sessionsStopCmd(), sessionsCurrentCmd())
+	cmd.AddCommand(sessionsListCmd(), sessionsStartCmd(), sessionsStopCmd(), sessionsCurrentCmd(), sessionsDownloadsCmd())
 	return cmd
 }
 

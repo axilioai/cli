@@ -304,8 +304,12 @@ var commandDocumentationByKey = map[string]CommandDocumentation{
 		"axilio sessions list",
 		"axilio sessions start",
 		"axilio sessions current",
+		"axilio sessions downloads sess_123",
 		"axilio sessions stop sess_123",
 	),
+	"sessions downloads": {Samples: []CommandSample{
+		sampleWithNote("axilio sessions downloads sess_123", "ID       FILENAME     SIZE     TYPE       STATE  SESSION  CREATED\n<dl-id>  receipt.png  2.0 KiB  image/png  ready  sess_123 <timestamp>", "none", "Rows appear at detection, before the bytes finish moving; watch STATE progress to ready, then save with `downloads get`."),
+	}},
 	"sessions list": {Samples: []CommandSample{
 		sampleWithNote("axilio sessions list", "   SESSION       PHONE       TYPE\n*  <session-id>  <phone-id>  android", "none", "With no sessions saved locally, stdout explains how to start one and exit status is 0."),
 		sampleWithNote("axilio sessions list --remote", "SESSION       PHONE       TYPE     MODEL\n<session-id>  <phone-id>  android  Pixel 8", "none", "Remote results come from the API and do not mark the session selected by this CLI."),
@@ -474,6 +478,24 @@ var commandDocumentationByKey = map[string]CommandDocumentation{
 	"uploads delete": {Samples: []CommandSample{
 		sampleWithNote("axilio uploads delete upl_123", "Deleted upl_123", "Delete upload upl_123? Also recall it from phones holding or receiving a copy? [y/N]", "Table mode prompts only when stdin is a terminal. Redirected, JSON, and quiet execution require --yes."),
 		sample("axilio uploads rm upl_123 --yes", "Deleted upl_123", "none"),
+	}},
+	"downloads": workflow(
+		"axilio downloads list",
+		"axilio downloads get dl_123",
+		"axilio downloads delete dl_123 --yes",
+	),
+	"downloads list": {Samples: []CommandSample{
+		sampleWithNote("axilio downloads list", "ID       FILENAME     SIZE     TYPE       STATE  SESSION      CREATED\n<dl-id>  receipt.png  2.0 KiB  image/png  ready  <session-id> <timestamp>", "none", "A skipped or failed capture is a visible row with its reason in STATE, not an absence."),
+		sample("axilio downloads list --session ses_123 --mime image/png --sort size_bytes --order desc", "ID       FILENAME     SIZE     TYPE       STATE  SESSION      CREATED\n<dl-id>  receipt.png  2.0 KiB  image/png  ready  ses_123      <timestamp>", "none"),
+		sampleWithNote("axilio downloads list -o json", "{\n  \"downloads\": [\n    {\n      \"id\": \"<dl-id>\",\n      \"filename\": \"receipt.png\",\n      \"size_bytes\": 2048,\n      \"mime_type\": \"image/png\",\n      \"capture_state\": \"ready\",\n      \"session_id\": \"<session-id>\",\n      \"download_url\": \"<signed-url>\",\n      \"created_at\": \"<timestamp>\"\n    }\n  ],\n  \"total\": 1\n}", "none", "Representative response; signed URLs are short-lived, re-list to refresh an expired one."),
+	}},
+	"downloads get": {Samples: []CommandSample{
+		sample("axilio downloads get dl_123", "Saved receipt.png (2.0 KiB)", "→ Saving receipt.png to receipt.png"),
+		sampleWithNote("axilio downloads get dl_123 --out ./captures/receipt.png --force", "Saved ./captures/receipt.png (2.0 KiB)", "→ Saving receipt.png to ./captures/receipt.png", "Without --force an existing destination is refused."),
+	}},
+	"downloads delete": {Samples: []CommandSample{
+		sampleWithNote("axilio downloads delete dl_123", "Deleted dl_123", "Delete download dl_123? Also recall it from phones holding or receiving a copy? [y/N]", "Table mode prompts only when stdin is a terminal. Redirected, JSON, and quiet execution require --yes."),
+		sample("axilio downloads rm dl_123 --yes", "Deleted dl_123", "none"),
 	}},
 
 	// Commands Cobra generates. Their samples model installation and use
