@@ -265,6 +265,7 @@ func buildGlobalFlagHelp() map[string]commandGlobalFlagHelp {
 		"usage":     helpOnlyCommandHelp("usage"),
 		"api-keys":  helpOnlyCommandHelp("api-keys"),
 		"uploads":   helpOnlyCommandHelp("uploads"),
+		"billing":   helpOnlyCommandHelp("billing"),
 		"downloads": helpOnlyCommandHelp("downloads"),
 		"help": {
 			apiKey:          "No effect on help command or the help content it renders",
@@ -375,6 +376,9 @@ func buildGlobalFlagHelp() map[string]commandGlobalFlagHelp {
 		"Suppress the prompt and human confirmation; --yes is required; JSON still prints")
 	help["uploads delete"] = withNoColor(help["uploads delete"],
 		"No effect on uploads delete command; its human confirmation is unstyled")
+
+	help["billing balance"] = apiResultHelp("the balance request", "the balance result")
+	help["billing plan"] = apiResultHelp("the subscription request", "the plan result")
 
 	help["downloads list"] = apiResultHelp("the download-list request", "the download-list result")
 	help["sessions downloads"] = apiResultHelp("the session-download request", "the session-download result")

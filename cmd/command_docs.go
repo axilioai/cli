@@ -537,6 +537,17 @@ var commandDocumentationByKey = map[string]CommandDocumentation{
 		sampleWithNote("axilio api-keys delete key_123", "Deleted key_123", "Delete API key key_123? [y/N]", "Without --yes, table mode prompts only when stdin is a terminal. Redirected, JSON, and quiet execution require --yes."),
 		sample("axilio api-keys delete key_123 --yes", "Deleted key_123", "none"),
 	}},
+	"billing": workflow(
+		"axilio billing balance",
+		"axilio billing plan",
+	),
+	"billing balance": {Samples: []CommandSample{
+		sampleWithNote("axilio billing balance", "Balance    $12.50\nIncluded   $10.00 (resets at renewal)\nPurchased  $2.50 (next expiry <timestamp>)\nPlan       Pro (monthly, renews <timestamp>)", "none", "Amounts vary by account; Plan reads (none) when the organization has no active subscription."),
+		sampleWithNote("axilio billing balance -o json", "{\n  \"balance\": {\n    \"balance_display\": \"$12.50\",\n    \"balance_microdollars\": 12500000,\n    \"included_microdollars\": 10000000,\n    \"purchased_microdollars\": 2500000\n  },\n  \"plan\": {\n    \"plan_id\": \"pro\",\n    \"plan_name\": \"Pro\",\n    \"billing_cycle\": \"monthly\",\n    \"current_period_end\": \"<timestamp>\"\n  }\n}", "none", "plan is null when the organization has no active subscription."),
+	}},
+	"billing plan": {Samples: []CommandSample{
+		sampleWithNote("axilio billing plan", "Plan                 Pro (pro)\nStatus               active\nBilling cycle        monthly\nPrice                $20.00/mo\nIncluded / cycle     $10.00\nMax concurrent runs  5\nCurrent period       <timestamp> → <timestamp>", "none", "Cancellation, pending-downgrade, and trial rows appear only when set; without an active subscription the command fails with the API's not-found error."),
+	}},
 	"uploads": workflow(
 		"axilio uploads list",
 		"axilio uploads add ./photo.jpg",
