@@ -8,7 +8,7 @@ Acquire Axilio phones, drive live sessions, run workflows, and manage
   The main command families are:
     phones / sessions   discover phones and manage active phone sessions
     phone               observe and control the selected session's phone
-    workflows / runs    discover workflows and create or inspect runs
+    workflows / runs    author, version, and run workflows; create or inspect runs
     uploads             store media and deliver it to phones
     api-keys            manage organization-scoped API keys
 
@@ -64,6 +64,7 @@ Acquire Axilio phones, drive live sessions, run workflows, and manage
     completion [command]          Generate the autocompletion script for the specified shell
     config [command]              Show and edit CLI configuration (API host, paths, auth).
     doctor                        Check that your setup is sane: auth, connectivity, and environment.
+    downloads [command]           List, save, and delete files captured off phones during sessions.
     help [command] [--flags]      Help about any command, or locate the local HTML manual.
     init [--flags]                Drop an agent skill into this repo so a coding agent can drive phones via the CLI.
     login                         Sign in: browser OAuth by default, or store an API key.
@@ -76,7 +77,7 @@ Acquire Axilio phones, drive live sessions, run workflows, and manage
     status                        Check your credentials and reach the API.
     upgrade [--flags]             Update axilio to the latest release.
     uploads [command]             Add, list, push, and delete files in your organization's library.
-    workflows [command]           Discover workflows that can be run.
+    workflows [command]           Create, inspect, edit, and version workflows.
 
   FLAGS
 

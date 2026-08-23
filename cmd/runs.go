@@ -37,7 +37,7 @@ func runsCmd() *cobra.Command {
 			"start, inspect, or cancel runs. Global flags shown here therefore have " +
 			"no effect. Pass flags to a runs subcommand instead.",
 	}
-	cmd.AddCommand(runsListCmd(), runsStartCmd(), runsGetCmd(), runsCancelCmd())
+	cmd.AddCommand(runsListCmd(), runsStartCmd(), runsGetCmd(), runsCancelCmd(), runsWatchCmd())
 	return cmd
 }
 
@@ -114,6 +114,7 @@ func runsStartCmd() *cobra.Command {
 		startTimeout  int64
 		phoneID       string
 		variablesJSON string
+		watch         bool
 	)
 	cmd := &cobra.Command{
 		Use:   "start <workflow-id>",
@@ -130,12 +131,17 @@ func runsStartCmd() *cobra.Command {
 			"of whole seconds a queued run may wait for a phone before auto-cancel, " +
 			"between 60 and 86400 inclusive; zero or negative values omit the field " +
 			"and use the server default (300).\n\n" +
+			"--watch follows the single created run to completion exactly like " +
+			"`runs watch`, and requires --count 1.\n\n" +
 			"Successful output contains the " +
 			"created run IDs.",
 		Args: cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
 			if count < minRunCount || count > maxRunCount {
 				return exit.Usagef("--count must be between %d and %d (got %d)", minRunCount, maxRunCount, count)
+			}
+			if watch && count != 1 {
+				return exit.Usagef("--watch follows exactly one run; drop --count or set it to 1 (got %d)", count)
 			}
 			if startTimeout > 0 && (startTimeout < minStartTimeout || startTimeout > maxStartTimeout) {
 				return exit.Usagef("--start-timeout must be between %d and %d seconds (got %d)", minStartTimeout, maxStartTimeout, startTimeout)
@@ -174,6 +180,21 @@ func runsStartCmd() *cobra.Command {
 				return err
 			}
 			p := printer()
+			if watch {
+				if len(resp.RunIDs) == 0 {
+					return fmt.Errorf("no runs created, nothing to watch")
+				}
+				// Streaming mode: the created-run IDs become the first
+				// NDJSON line (or Ack), then the watch stream follows.
+				if err := p.JSONLine(resp); err != nil {
+					return err
+				}
+				p.Ack("Started run %s", resp.RunIDs[0])
+				if err := p.Err(); err != nil {
+					return err
+				}
+				return watchRun(cl, p, resp.RunIDs[0])
+			}
 			return p.Emit(resp, func() {
 				if len(resp.RunIDs) == 0 {
 					p.Ack("No runs created.")
@@ -189,6 +210,7 @@ func runsStartCmd() *cobra.Command {
 	cmd.Flags().StringVar(&phoneID, "phone-id", "", "Dedicated phone ID to pin to every created run")
 	cmd.Flags().StringVar(&variablesJSON, "variables", "", "JSON object of run variables applied to every created run (plaintext; no secrets)")
 	cmd.Flags().Int64Var(&startTimeout, "start-timeout", 0, startTimeoutHelp)
+	cmd.Flags().BoolVar(&watch, "watch", false, "Follow the created run to completion (requires --count 1)")
 	return cmd
 }
 

@@ -304,12 +304,26 @@ var commandDocumentationByKey = map[string]CommandDocumentation{
 		"axilio sessions list",
 		"axilio sessions start",
 		"axilio sessions current",
+		"axilio sessions get sess_123",
+		"axilio sessions trace sess_123",
+		"axilio sessions downloads sess_123",
 		"axilio sessions stop sess_123",
 	),
+	"sessions downloads": {Samples: []CommandSample{
+		sampleWithNote("axilio sessions downloads sess_123", "ID       FILENAME     SIZE     TYPE       STATE  SESSION  CREATED\n<dl-id>  receipt.png  2.0 KiB  image/png  ready  sess_123 <timestamp>", "none", "Rows appear at detection, before the bytes finish moving; watch STATE progress to ready, then save with `downloads get`."),
+	}},
 	"sessions list": {Samples: []CommandSample{
 		sampleWithNote("axilio sessions list", "   SESSION       PHONE       TYPE\n*  <session-id>  <phone-id>  android", "none", "With no sessions saved locally, stdout explains how to start one and exit status is 0."),
 		sampleWithNote("axilio sessions list --remote", "SESSION       PHONE       TYPE     MODEL\n<session-id>  <phone-id>  android  Pixel 8", "none", "Remote results come from the API and do not mark the session selected by this CLI."),
 		sampleWithNote("axilio sessions list -o json", "[\n  {\n    \"session_id\": \"<session-id>\",\n    \"phone_id\": \"<phone-id>\",\n    \"phone_type\": \"android\",\n    \"control_url\": \"<control-url>\",\n    \"created_at\": \"<timestamp>\"\n  }\n]", "none", "Locally saved session JSON includes the stored control URL; IDs and URLs vary."),
+	}},
+	"sessions get": {Samples: []CommandSample{
+		sampleWithNote("axilio sessions get sess_123", "Session        sess_123\nName           -\nStatus         completed\nSource         workflow\nAllocated by   api_run\nPhone          <phone-id>\nPhone name     -\nNickname       -\nModel          Pixel 8\nType           android\nLocation       us-central\nDedicated      false\nWorkflow       <workflow-id>\nWorkflow name  demo\nAllocated      2026-08-05 20:00\nReleased       2026-08-05 20:12\nDuration       12m00s\nTags           team=qa\nCapture        true\nTelemetry      true\nRecording      ready\nRecording URL  <recording-url>\nThumbnail URL  -", "none", "Works for active and released sessions; the thumbnail URL is present on active sessions only."),
+		sampleWithNote("axilio sessions get sess_123 -o json", "{\n  \"session_id\": \"sess_123\",\n  \"status\": \"active\",\n  \"source\": \"interactive\",\n  \"phone_id\": \"<phone-id>\",\n  \"allocated_at\": \"<timestamp>\",\n  \"recording_status\": \"pending\",\n  \"thumbnail_status\": \"ready\",\n  \"thumbnail_url\": \"<thumbnail-url>\"\n}", "none", "Excerpt: JSON is the canonical session detail response plus thumbnail_status/thumbnail_url enrichment on active sessions."),
+	}},
+	"sessions trace": {Samples: []CommandSample{
+		sampleWithNote("axilio sessions trace sess_123", "TIME          KIND      NAME            DURATION  STATUS  COST\n20:00:01.000  session   session         12m00s    ok      -\n20:00:02.000  sdk_call  Screen.observe  1.0s      ok      $0.0031\n20:00:02.100  inference inference       800ms     ok      $0.0020\n20:00:03.500  log:output_log  hello     -         INFO    -", "1204 frames; billed sdk_call cost $0.0311", "Costs are billed microdollars: sdk_call spans price by span ID, inference spans by inference ID. Frames with an unknown kind are listed generically, never dropped."),
+		sampleWithNote("axilio sessions trace sess_123 -o json", "{\n  \"frames\": [\n    {\n      \"kind\": \"span\",\n      \"span_id\": \"<span-id>\",\n      \"span_type\": \"sdk_call\",\n      \"name\": \"Screen.observe\",\n      \"start_time_unix_nano\": 0,\n      \"end_time_unix_nano\": 0\n    }\n  ],\n  \"sdk_call_costs\": {\"<span-id>\": 3100},\n  \"inference_costs\": {\"<inference-id>\": 2000},\n  \"total\": 1204,\n  \"retention_expired\": false\n}", "none", "Excerpt: the canonical frames response merged across all pages, so the document is the complete archived trace."),
 	}},
 	"sessions current": {Samples: []CommandSample{
 		sampleWithNote("axilio sessions current", "Session  <session-id>\nPhone    <phone-id>\nType     android", "none", "When no session can be selected, all output modes leave stdout empty and exit with not-found status 4."),
@@ -416,13 +430,43 @@ var commandDocumentationByKey = map[string]CommandDocumentation{
 	}},
 	"workflows": workflow(
 		"axilio workflows list",
-		"axilio workflows list --search checkout",
+		"axilio workflows create checkout-flow --code checkout.py",
+		"axilio workflows pull wf_123 --out checkout.py",
+		"axilio workflows push wf_123 checkout.py -m \"handle 2FA\"",
 		"axilio runs start wf_123",
 	),
 	"workflows list": {Samples: []CommandSample{
 		sampleWithNote("axilio workflows list", "WORKFLOW ID   NAME      PLATFORM  STATUS  LAST RUN\n<workflow-id> Checkout  android   active  <timestamp>", "none", "An empty successful result prints No workflows found."),
 		sampleWithNote("axilio workflows list --search checkout --limit 10", "WORKFLOW ID   NAME      PLATFORM  STATUS  LAST RUN\n<workflow-id> Checkout  android   active  <timestamp>", "none", "Names, IDs, statuses, and timestamps vary by organization."),
 		sampleWithNote("axilio workflows list -o json", "{\n  \"limit\": 20,\n  \"offset\": 0,\n  \"total\": 1,\n  \"workflows\": [\n    {\n      \"workflow\": {\n        \"id\": \"<workflow-id>\",\n        \"name\": \"Checkout\",\n        \"platform\": \"android\",\n        \"status\": \"active\"\n      }\n    }\n  ]\n}", "none", "Shortened representative JSON output; workflow records may include additional fields and statistics."),
+	}},
+	"workflows create": {Samples: []CommandSample{
+		sampleWithNote("axilio workflows create checkout-flow --platform android --code checkout.py", "Workflow     <workflow-id>\nRevision     1\nRevision ID  <revision-id>", "none", "With --code, the file is saved atomically as revision 1. Without it, only the workflow ID prints."),
+		sample("axilio workflows create checkout-flow --recording=false", "Workflow  <workflow-id>", "none"),
+		failedSample("axilio workflows create \"bad name\"", "none", "workflow name must contain only letters, digits, hyphens, and underscores (got \"bad name\")", 2, "The name rule is validated before credentials or an API request."),
+	}},
+	"workflows get": {Samples: []CommandSample{
+		sample("axilio workflows get wf_123", "Workflow      wf_123\nName          Checkout\nPlatform      android\nStatus        active\nOCR engine    free\nRecording     true\nTelemetry     true\nCapture       true\nCreated       <timestamp>\nUpdated       <timestamp>\nLast run      <timestamp>\nTotal runs    4\nSuccess rate  75%", "none"),
+		sampleWithNote("axilio workflows get wf_123 -o json", "{\n  \"stats\": {\n    \"success_rate\": 0.75,\n    \"total_runs\": 4\n  },\n  \"workflow\": {\n    \"id\": \"wf_123\",\n    \"name\": \"Checkout\",\n    \"platform\": \"android\",\n    \"status\": \"active\"\n  }\n}", "none", "Shortened representative JSON output; the workflow record includes the full field set."),
+	}},
+	"workflows delete": {Samples: []CommandSample{
+		sampleWithNote("axilio workflows delete wf_123 --yes", "Deleted wf_123", "none", "Deletes the workflow and its code revisions; recorded runs remain."),
+		failedSample("axilio workflows delete wf_123 < /dev/null", "none", "aborted (pass --yes to delete non-interactively)", 2, "Redirected, JSON, and quiet execution never prompt; they require --yes."),
+	}},
+	"workflows pull": {Samples: []CommandSample{
+		sampleWithNote("axilio workflows pull wf_123", "<the current revision's Python source>", "none", "The raw source prints to stdout so it can be piped or redirected."),
+		sampleWithNote("axilio workflows pull wf_123 --out checkout.py", "Wrote checkout.py (revision 3, <bytes> bytes)", "none", "A new file requests mode 0644, subject to the process umask. Overwriting an existing file preserves its mode while replacing its contents."),
+	}},
+	"workflows push": {Samples: []CommandSample{
+		sampleWithNote("axilio workflows push wf_123 checkout.py -m \"handle 2FA\"", "Saved revision 4 (<revision-id>)", "none", "The server deduplicates by content hash; unchanged source reports a no-op and creates no revision."),
+		sample("axilio workflows push wf_123 checkout.py -o json", "{\n  \"no_op\": false,\n  \"revision\": 4,\n  \"revision_id\": \"<revision-id>\"\n}", "none"),
+	}},
+	"workflows revisions": {Samples: []CommandSample{
+		sampleWithNote("axilio workflows revisions wf_123", "REV  REVISION ID    AUTHOR     SIZE   CREATED      MESSAGE\n4    <revision-id>  <user-id>  1.2 KiB <timestamp> handle 2FA\n3    <revision-id>  <user-id>  1.1 KiB <timestamp> -", "none", "Newest first. When a full page returns, a note names the --before cursor for older history."),
+		sample("axilio workflows revisions wf_123 --limit 10 --before 3", "REV  REVISION ID    AUTHOR     SIZE   CREATED      MESSAGE\n2    <revision-id>  <user-id>  1.0 KiB <timestamp> -", "none"),
+	}},
+	"workflows restore": {Samples: []CommandSample{
+		sampleWithNote("axilio workflows restore wf_123 <revision-id>", "Restored <revision-id> as new revision 5 (<new-revision-id>)", "none", "Restore copies the old source into a new revision; nothing is deleted and the action stays visible in history."),
 	}},
 	"runs": workflow(
 		"axilio workflows list",
@@ -441,6 +485,11 @@ var commandDocumentationByKey = map[string]CommandDocumentation{
 		failedSample("axilio runs start wf_123 --count 0", "none", "--count must be between 1 and 1000 (got 0)", 2, "The range is validated before credentials, allocation, or an API request."),
 		sample("axilio runs start wf_123 --phone-id ph_123", "Started run <run-id>", "none"),
 		sample("axilio runs start wf_123 --start-timeout 300", "Started run <run-id>", "none"),
+		sampleWithNote("axilio runs start wf_123 --watch", "Started run <run-id>\n<frame stream>\n✓ Run <run-id> completed", "→ Run <run-id> queued — waiting for a phone", "Follows the created run exactly like `runs watch`; requires --count 1."),
+	}},
+	"runs watch": {Samples: []CommandSample{
+		sampleWithNote("axilio runs watch run_123", "<time>  span  sdk_call    Screen.observe  250ms\n<time>  INFO  output_log  <workflow output>\n✓ Run run_123 completed", "→ Run run_123 running — streaming session <session-id>", "Streams the session's telemetry — logs and completed spans — until the session ends. Exit 0 on completed, 1 on failed (with the run's error message), 7 on canceled or interrupt. Watching a finished run replays its telemetry."),
+		sampleWithNote("axilio runs watch run_123 -o json", "{\"watch_end\":true,\"run_id\":\"run_123\",\"status\":\"completed\"}", "none", "JSON mode is newline-delimited, not a single document: one object per telemetry frame in archive order (unknown kinds pass through verbatim), then the watch_end summary — carrying status and error_message — as the final line."),
 	}},
 	"runs get": {Samples: []CommandSample{
 		sample("axilio runs get run_123", "Run        run_123\nStatus     completed\nTrigger    manual\nWorkflow   <workflow-id>\nSession    <session-id>\nPhone      <phone-id>\nCreated    <created-at>\nStarted    <started-at>\nCompleted  <completed-at>\nError      -\nVideo      <video-url>", "none"),
@@ -491,6 +540,24 @@ var commandDocumentationByKey = map[string]CommandDocumentation{
 	"uploads delete": {Samples: []CommandSample{
 		sampleWithNote("axilio uploads delete upl_123", "Deleted upl_123", "Delete upload upl_123? Also recall it from phones holding or receiving a copy? [y/N]", "Table mode prompts only when stdin is a terminal. Redirected, JSON, and quiet execution require --yes."),
 		sample("axilio uploads rm upl_123 --yes", "Deleted upl_123", "none"),
+	}},
+	"downloads": workflow(
+		"axilio downloads list",
+		"axilio downloads get dl_123",
+		"axilio downloads delete dl_123 --yes",
+	),
+	"downloads list": {Samples: []CommandSample{
+		sampleWithNote("axilio downloads list", "ID       FILENAME     SIZE     TYPE       STATE  SESSION      CREATED\n<dl-id>  receipt.png  2.0 KiB  image/png  ready  <session-id> <timestamp>", "none", "A skipped or failed capture is a visible row with its reason in STATE, not an absence."),
+		sample("axilio downloads list --session ses_123 --mime image/png --sort size_bytes --order desc", "ID       FILENAME     SIZE     TYPE       STATE  SESSION      CREATED\n<dl-id>  receipt.png  2.0 KiB  image/png  ready  ses_123      <timestamp>", "none"),
+		sampleWithNote("axilio downloads list -o json", "{\n  \"downloads\": [\n    {\n      \"id\": \"<dl-id>\",\n      \"filename\": \"receipt.png\",\n      \"size_bytes\": 2048,\n      \"mime_type\": \"image/png\",\n      \"capture_state\": \"ready\",\n      \"session_id\": \"<session-id>\",\n      \"download_url\": \"<signed-url>\",\n      \"created_at\": \"<timestamp>\"\n    }\n  ],\n  \"total\": 1\n}", "none", "Representative response; signed URLs are short-lived, re-list to refresh an expired one."),
+	}},
+	"downloads get": {Samples: []CommandSample{
+		sample("axilio downloads get dl_123", "Saved receipt.png (2.0 KiB)", "→ Saving receipt.png to receipt.png"),
+		sampleWithNote("axilio downloads get dl_123 --out ./captures/receipt.png --force", "Saved ./captures/receipt.png (2.0 KiB)", "→ Saving receipt.png to ./captures/receipt.png", "Without --force an existing destination is refused."),
+	}},
+	"downloads delete": {Samples: []CommandSample{
+		sampleWithNote("axilio downloads delete dl_123", "Deleted dl_123", "Delete download dl_123? Also recall it from phones holding or receiving a copy? [y/N]", "Table mode prompts only when stdin is a terminal. Redirected, JSON, and quiet execution require --yes."),
+		sample("axilio downloads rm dl_123 --yes", "Deleted dl_123", "none"),
 	}},
 
 	// Commands Cobra generates. Their samples model installation and use
