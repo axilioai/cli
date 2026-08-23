@@ -299,10 +299,14 @@ func buildGlobalFlagHelp() map[string]commandGlobalFlagHelp {
 
 	help["phones list"] = apiResultHelp("the available-phone request", "the available-phone result")
 	help["phones mine"] = apiResultHelp("the dedicated-phone request", "the dedicated-phone result")
+	help["phones rename"] = apiResultHelp("the nickname-update request", "the renamed-phone result")
+	help["phones wipe"] = apiActionHelp("phone wipe", true)
+	help["phones preview"] = apiResultHelp("the preview request", "the preview result")
 
 	help["phone observe"] = phoneResultHelp("phone observe", "observation", "the observation result")
 	help["phone find"] = phoneResultHelp("phone find", "vision search", "the found-element result")
 	help["phone find-text"] = phoneResultHelp("phone find-text", "OCR search", "the text-match result")
+	help["phone find-all-text"] = phoneResultHelp("phone find-all-text", "OCR search", "the text-match list")
 	help["phone tap"] = localActionHelp("phone tap", "tap", "tap")
 	help["phone long-press"] = localActionHelp("phone long-press", "long-press", "long-press")
 	help["phone swipe"] = localActionHelp("phone swipe", "swipe", "swipe")

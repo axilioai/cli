@@ -1688,9 +1688,9 @@ A reliable loop is observe the screen, find or semantically target an
 element, act, then observe again to verify.
 
 .PP
-Available verbs are observe, find, find-text, tap, long-press, swipe,
-type, key, screenshot, wait-for, and send. Every successful verb emits a
-structured result with -o json.
+Available verbs are observe, find, find-text, find-all-text, tap,
+long-press, swipe, type, key, screenshot, wait-for, and send. Every
+successful verb emits a structured result with -o json.
 
 .PP
 Session selection precedence is --session, AXILIO_SESSION, the only
@@ -1826,6 +1826,92 @@ user@host ~ % axilio phone find "continue button" --timeout 15s -o json
 # Notes: Element content and coordinates depend on the current frame.
 .EE
 
+.SS find-all-text
+.EX
+axilio phone find-all-text [contains] [flags]
+.EE
+
+.PP
+Return every OCR element matching the criteria.
+
+.PP
+The positional argument is a case-insensitive substring; --pattern is a
+Go regular expression instead. They are mutually exclusive. With
+neither, every text element on the screen is returned. No match is
+successful: table output prints \fBNo matches.\fR and JSON output is an
+empty array.
+
+.PP
+\fBCommand options\fP
+.IP \(bu 2
+\fB--ocr-engine\fP=\fIvalue\fP - OCR engine: free or premium; omitted uses
+free
+.IP \(bu 2
+\fB--pattern\fP=\fIvalue\fP - Go regular expression to match instead of a
+substring
+
+.PP
+\fBParent options\fP
+.IP \(bu 2
+\fB--session\fP=\fIvalue\fP - Session ID; overrides AXILIO_SESSION and
+automatic session selection
+
+.PP
+\fBGlobal-option behavior\fP
+.IP \(bu 2
+\fB--api-key\fP, \fB--base-url\fP, \fB--org\fP - No effect on phone
+find-all-text command
+.IP \(bu 2
+\fB--no-color\fP - Disable ANSI color in the human-readable form of the
+text-match list
+.IP \(bu 2
+\fB-o\fP, \fB--output\fP=\fIvalue\fP - Render the text-match list as table or
+json (default "table")
+.IP \(bu 2
+\fB-q\fP, \fB--quiet\fP - Suppress stderr notes for OCR search; the
+text-match list remains on stdout
+
+.PP
+\fBExamples and expected output\fP
+
+.PP
+\fBSample 1\fP
+
+.EX
+user@host ~ % axilio phone find-all-text "sign"
+TEXT           X    Y     CONF
+Sign in        540  1120  0.98
+Sign up free   540  1280  0.97
+.sp
+# Exit status: 0
+# Notes: The substring match is case-insensitive.
+.EE
+
+.PP
+\fBSample 2\fP
+
+.EX
+user@host ~ % axilio phone find-all-text --pattern "^\\\\$[0-9]+"
+TEXT   X    Y    CONF
+$12    340  760  0.99
+$8     340  920  0.98
+.sp
+# Exit status: 0
+# Notes: --pattern is a Go regular expression and cannot be combined
+#        with a substring argument.
+.EE
+
+.PP
+\fBSample 3\fP
+
+.EX
+user@host ~ % axilio phone find-all-text "settings" -o json
+[]
+.sp
+# Exit status: 0
+# Notes: No match is a successful empty array.
+.EE
+
 .SS find-text
 .EX
 axilio phone find-text <text> [flags]
@@ -1941,8 +2027,11 @@ axilio phone key <name>
 Press a named key on the selected phone.
 
 .PP
-The only supported named key is \fBenter\fR; back, home, and other key names
-are not available.
+The name is passed through to the phone, which accepts the supported
+named-key set and rejects anything else. The set is currently just
+\fBenter\fR (submits forms / fires the on-screen keyboard's Go or Search
+action) and grows in lockstep with the device side, so new names work
+here without a CLI update.
 
 .PP
 \fBParent options\fP
@@ -2652,18 +2741,23 @@ axilio phones
 .EE
 
 .PP
-Discover phones before starting a session. \fBphones list\fR shows the
-dedicated phones that are free to start a session on right now. \fBphones
-mine\fR shows the organization's complete dedicated inventory, including
-busy and offline phones, and is the place to find a phone ID for
-\fBsessions start --phone-id\fR\&. The shared pool is not listed; it is drawn
-from automatically when you start a session without a phone ID.
+Discover and manage phones. \fBphones list\fR shows the dedicated phones
+that are free to start a session on right now. \fBphones mine\fR shows the
+organization's complete dedicated inventory, including busy and offline
+phones, and is the place to find a phone ID for \fBsessions start
+--phone-id\fR\&. The shared pool is not listed; it is drawn from
+automatically when you start a session without a phone ID.
+
+.PP
+Management verbs act on dedicated phones by ID: \fBphones rename\fR sets the
+nickname, \fBphones wipe\fR requests an on-demand factory reset, and \fBphones
+preview\fR returns a short-lived URL for the current screen preview.
 
 .PP
 Running \fBaxilio phones\fR without a subcommand is equivalent to \fBaxilio
 phones --help\fR: it only displays this help and does not list or change
 phones. Global flags shown here therefore have no effect. Pass flags to
-\fBphones list\fR or \fBphones mine\fR instead.
+a phones subcommand instead.
 
 .PP
 \fBGlobal-option behavior\fP
@@ -2678,6 +2772,7 @@ axilio phones only displays this help
 .EX
 axilio phones list
 axilio phones mine
+axilio phones rename <phone-id> "crawler 3"
 .EE
 
 .SS list
@@ -2801,6 +2896,211 @@ PHONE ID   NICKNAME  TYPE     MODEL    STATUS  SESSION
 .sp
 # Exit status: 0
 # Notes: An empty successful result prints No dedicated phones.
+.EE
+
+.SS preview
+.EX
+axilio phones preview <phone-id> [flags]
+.EE
+
+.PP
+Return a short-lived URL for the phone's current screen preview - a
+rolling JPEG refreshed every few seconds while the phone is paired,
+available with or without an active session.
+
+.PP
+Every call mints a fresh URL; poll and swap the image. Status is pending
+when no preview exists yet. With --out, the JPEG is downloaded and
+written to the given path instead, overwriting existing contents without
+confirmation.
+
+.PP
+\fBCommand options\fP
+.IP \(bu 2
+\fB--out\fP=\fIvalue\fP - JPEG path to create; overwrite existing contents
+without confirmation
+
+.PP
+\fBGlobal-option behavior\fP
+.IP \(bu 2
+\fB--api-key\fP=\fIvalue\fP - API key for the preview request; overrides
+AXILIO_API_KEY and the saved key
+.IP \(bu 2
+\fB--base-url\fP=\fIvalue\fP - API host for the preview request; overrides
+AXILIO_BASE_URL and saved base-url
+.IP \(bu 2
+\fB--no-color\fP - Disable ANSI color in the human-readable form of the
+preview result
+.IP \(bu 2
+\fB--org\fP=\fIvalue\fP - OAuth org for the preview request; overrides
+AXILIO_ORG and the saved active org; API keys ignore it
+.IP \(bu 2
+\fB-o\fP, \fB--output\fP=\fIvalue\fP - Render the preview result as table or
+json (default "table")
+.IP \(bu 2
+\fB-q\fP, \fB--quiet\fP - Suppress stderr notes for the preview request;
+the preview result remains on stdout
+
+.PP
+\fBExamples and expected output\fP
+
+.PP
+\fBSample 1\fP
+
+.EX
+user@host ~ % axilio phones preview <phone-id>
+Status  ready
+URL     <signed-url>
+.sp
+# Exit status: 0
+# Notes: Every call mints a fresh short-lived URL; a phone with no
+#        captured frame yet reports Preview pending.
+.EE
+
+.PP
+\fBSample 2\fP
+
+.EX
+user@host ~ % axilio phones preview <phone-id> --out preview.jpg
+Wrote preview.jpg (<bytes> bytes)
+.sp
+# Exit status: 0
+# Notes: Downloads the current JPEG frame; overwriting an existing file
+#        replaces its contents.
+.EE
+
+.SS rename
+.EX
+axilio phones rename <phone-id> <nickname>
+.EE
+
+.PP
+Set the nickname shown for a dedicated phone in listings and the
+dashboard.
+
+.PP
+The nickname must be 1-100 characters. Use \fBphones mine\fR to discover the
+phone ID.
+
+.PP
+\fBGlobal-option behavior\fP
+.IP \(bu 2
+\fB--api-key\fP=\fIvalue\fP - API key for the nickname-update request;
+overrides AXILIO_API_KEY and the saved key
+.IP \(bu 2
+\fB--base-url\fP=\fIvalue\fP - API host for the nickname-update request;
+overrides AXILIO_BASE_URL and saved base-url
+.IP \(bu 2
+\fB--no-color\fP - Disable ANSI color in the human-readable form of the
+renamed-phone result
+.IP \(bu 2
+\fB--org\fP=\fIvalue\fP - OAuth org for the nickname-update request;
+overrides AXILIO_ORG and the saved active org; API keys ignore it
+.IP \(bu 2
+\fB-o\fP, \fB--output\fP=\fIvalue\fP - Render the renamed-phone result as
+table or json (default "table")
+.IP \(bu 2
+\fB-q\fP, \fB--quiet\fP - Suppress stderr notes for the nickname-update
+request; the renamed-phone result remains on stdout
+
+.PP
+\fBExamples and expected output\fP
+
+.PP
+\fBSample 1\fP
+
+.EX
+user@host ~ % axilio phones rename <phone-id> "crawler 3"
+Renamed <phone-id> to "crawler 3"
+.sp
+# Exit status: 0
+.EE
+
+.PP
+\fBSample 2\fP
+
+.EX
+user@host ~ % axilio phones rename <phone-id> ""
+.sp
+# Standard error:
+nickname must be 1-100 characters (got 0)
+.sp
+# Exit status: 2
+# Notes: The 1-100 bound is enforced before any request is made.
+.EE
+
+.SS wipe
+.EX
+axilio phones wipe <phone-id> [flags]
+.EE
+
+.PP
+Request an on-demand factory reset of a private phone the organization
+owns.
+
+.PP
+The phone must be active and not currently held by a session; it is set
+to maintenance while the wipe is carried out. Without --yes, table mode
+prompts only when stdin is a terminal. Redirected, JSON, and quiet
+execution do not prompt and require --yes.
+
+.PP
+\fBCommand options\fP
+.IP \(bu 2
+\fB-y\fP, \fB--yes\fP - Wipe without prompting; required in JSON, quiet,
+or redirected execution
+
+.PP
+\fBGlobal-option behavior\fP
+.IP \(bu 2
+\fB--no-color\fP - No effect on phones wipe command
+.IP \(bu 2
+\fB--api-key\fP=\fIvalue\fP - API key for phone wipe; overrides
+AXILIO_API_KEY and the saved key
+.IP \(bu 2
+\fB--base-url\fP=\fIvalue\fP - API host for phone wipe; overrides
+AXILIO_BASE_URL and saved base-url
+.IP \(bu 2
+\fB--org\fP=\fIvalue\fP - OAuth org for phone wipe; overrides AXILIO_ORG and
+the saved active org; API keys ignore it
+.IP \(bu 2
+\fB-o\fP, \fB--output\fP=\fIvalue\fP - Emit a human confirmation or JSON phone
+wipe result (default "table")
+.IP \(bu 2
+\fB-q\fP, \fB--quiet\fP - Suppress the phone wipe prompt and human result;
+--yes is still required; JSON still prints
+
+.PP
+\fBExamples and expected output\fP
+
+.PP
+\fBSample 1\fP
+
+.EX
+user@host ~ % axilio phones wipe <phone-id>
+Wipe requested
+.sp
+# Standard error:
+Wipe phone <phone-id>? This factory-resets the device and erases its data. [y/N]
+.sp
+# Exit status: 0
+# Notes: Table mode prompts only when stdin is a terminal. Redirected,
+#        JSON, and quiet execution require --yes. The success message
+#        comes from the API.
+.EE
+
+.PP
+\fBSample 2\fP
+
+.EX
+user@host ~ % axilio phones wipe <phone-id> --yes -o json
+{
+  "message": "Wipe requested"
+}
+.sp
+# Exit status: 0
+# Notes: The phone must be active and not currently held by a session;
+#        it is set to maintenance while the wipe runs.
 .EE
 
 .SH runs

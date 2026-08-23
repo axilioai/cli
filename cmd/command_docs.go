@@ -342,13 +342,25 @@ var commandDocumentationByKey = map[string]CommandDocumentation{
 		sample("axilio sessions stop ph_123 --yes", "Released ph_123.", "none"),
 		sampleWithNote("axilio sessions stop ph_123 --yes -o json", "{\n  \"deallocated_at\": \"<timestamp>\",\n  \"phone_id\": \"ph_123\",\n  \"session_id\": \"<session-id>\",\n  \"workflow_id\": \"<workflow-id>\"\n}", "none", "JSON is the canonical API deallocation response; workflow_id may be empty for an interactive session."),
 	}},
-	"phones": workflow("axilio phones list", "axilio phones mine"),
+	"phones": workflow("axilio phones list", "axilio phones mine", "axilio phones rename <phone-id> \"crawler 3\""),
 	"phones list": {Samples: []CommandSample{
 		sampleWithNote("axilio phones list", "PHONE ID   TYPE     MODEL    STATUS\n<phone-id> android  Pixel 8  active", "none", "An empty successful result prints No phones available."),
 		sampleWithNote("axilio phones list -o json", "{\n  \"android_count\": 1,\n  \"phones\": [\n    {\n      \"created_at\": \"<timestamp>\",\n      \"model_name\": \"Pixel 8\",\n      \"ownership_type\": \"shared\",\n      \"phone_id\": \"<phone-id>\",\n      \"phone_type\": \"android\",\n      \"status\": \"active\",\n      \"updated_at\": \"<timestamp>\"\n    }\n  ]\n}", "none", "Counts, inventory, and optional phone fields vary by organization and availability."),
 	}},
 	"phones mine": {Samples: []CommandSample{
 		sampleWithNote("axilio phones mine", "PHONE ID   NICKNAME  TYPE     MODEL    STATUS  SESSION\n<phone-id> demo      android  Pixel 8  active  <session-id>", "none", "An empty successful result prints No dedicated phones."),
+	}},
+	"phones rename": {Samples: []CommandSample{
+		sample(`axilio phones rename <phone-id> "crawler 3"`, `Renamed <phone-id> to "crawler 3"`, "none"),
+		failedSample("axilio phones rename <phone-id> \"\"", "none", "nickname must be 1-100 characters (got 0)", 2, "The 1-100 bound is enforced before any request is made."),
+	}},
+	"phones wipe": {Samples: []CommandSample{
+		sampleWithNote("axilio phones wipe <phone-id>", "Wipe requested", "Wipe phone <phone-id>? This factory-resets the device and erases its data. [y/N]", "Table mode prompts only when stdin is a terminal. Redirected, JSON, and quiet execution require --yes. The success message comes from the API."),
+		sampleWithNote("axilio phones wipe <phone-id> --yes -o json", "{\n  \"message\": \"Wipe requested\"\n}", "none", "The phone must be active and not currently held by a session; it is set to maintenance while the wipe runs."),
+	}},
+	"phones preview": {Samples: []CommandSample{
+		sampleWithNote("axilio phones preview <phone-id>", "Status  ready\nURL     <signed-url>", "none", "Every call mints a fresh short-lived URL; a phone with no captured frame yet reports Preview pending."),
+		sampleWithNote("axilio phones preview <phone-id> --out preview.jpg", "Wrote preview.jpg (<bytes> bytes)", "none", "Downloads the current JPEG frame; overwriting an existing file replaces its contents."),
 	}},
 	"phone": workflow(
 		"axilio phone observe",
@@ -374,6 +386,11 @@ var commandDocumentationByKey = map[string]CommandDocumentation{
 		sampleWithNote(`axilio phone find-text "Sign in" --exact -o json`, "{\n  \"bbox\": {\n    \"x\": 80,\n    \"y\": 1060,\n    \"width\": 920,\n    \"height\": 120\n  },\n  \"center\": {\n    \"x\": 540,\n    \"y\": 1120\n  },\n  \"confidence\": 0.98,\n  \"text\": \"Sign in\",\n  \"source\": \"ocr\"\n}", "none", "Exact matching is case-sensitive."),
 		sampleWithNote(`axilio phone find-text "settings"`, "No match.", "none", "No match is success; -o json emits null."),
 		sampleWithNote(`axilio phone find-text "settings" -o json`, "null", "none", "No match is a successful literal JSON null."),
+	}},
+	"phone find-all-text": {Samples: []CommandSample{
+		sampleWithNote(`axilio phone find-all-text "sign"`, "TEXT           X    Y     CONF\nSign in        540  1120  0.98\nSign up free   540  1280  0.97", "none", "The substring match is case-insensitive."),
+		sampleWithNote(`axilio phone find-all-text --pattern "^\\$[0-9]+"`, "TEXT   X    Y    CONF\n$12    340  760  0.99\n$8     340  920  0.98", "none", "--pattern is a Go regular expression and cannot be combined with a substring argument."),
+		sampleWithNote(`axilio phone find-all-text "settings" -o json`, "[]", "none", "No match is a successful empty array."),
 	}},
 	"phone tap": {Samples: []CommandSample{
 		sample(`axilio phone tap --query "the search box"`, `Tapped "the search box" at 540,620`, "none"),
