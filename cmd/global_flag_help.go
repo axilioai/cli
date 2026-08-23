@@ -265,6 +265,7 @@ func buildGlobalFlagHelp() map[string]commandGlobalFlagHelp {
 		"usage":     helpOnlyCommandHelp("usage"),
 		"api-keys":  helpOnlyCommandHelp("api-keys"),
 		"uploads":   helpOnlyCommandHelp("uploads"),
+		"downloads": helpOnlyCommandHelp("downloads"),
 		"help": {
 			apiKey:          "No effect on help command or the help content it renders",
 			baseURL:         "No effect on help command or the help content it renders",
@@ -288,6 +289,8 @@ func buildGlobalFlagHelp() map[string]commandGlobalFlagHelp {
 		output:  "Render local or remote sessions as table or json",
 		quiet:   "Suppress stderr notes; the session listing remains on stdout",
 	}
+	help["sessions get"] = apiResultHelp("the session-detail request", "the session-detail result")
+	help["sessions trace"] = apiResultHelp("the telemetry-frames requests", "the trace result")
 	help["sessions current"] = localResultHelp("sessions current", "session resolution", "the current-session result")
 	help["sessions start"] = apiResultHelp("the phone-allocation request", "the allocated-session result")
 	help["sessions start"] = withOutput(help["sessions start"],
@@ -297,10 +300,14 @@ func buildGlobalFlagHelp() map[string]commandGlobalFlagHelp {
 
 	help["phones list"] = apiResultHelp("the available-phone request", "the available-phone result")
 	help["phones mine"] = apiResultHelp("the dedicated-phone request", "the dedicated-phone result")
+	help["phones rename"] = apiResultHelp("the nickname-update request", "the renamed-phone result")
+	help["phones wipe"] = apiActionHelp("phone wipe", true)
+	help["phones preview"] = apiResultHelp("the preview request", "the preview result")
 
 	help["phone observe"] = phoneResultHelp("phone observe", "observation", "the observation result")
 	help["phone find"] = phoneResultHelp("phone find", "vision search", "the found-element result")
 	help["phone find-text"] = phoneResultHelp("phone find-text", "OCR search", "the text-match result")
+	help["phone find-all-text"] = phoneResultHelp("phone find-all-text", "OCR search", "the text-match list")
 	help["phone tap"] = localActionHelp("phone tap", "tap", "tap")
 	help["phone long-press"] = localActionHelp("phone long-press", "long-press", "long-press")
 	help["phone swipe"] = localActionHelp("phone swipe", "swipe", "swipe")
@@ -316,6 +323,19 @@ func buildGlobalFlagHelp() map[string]commandGlobalFlagHelp {
 		"Suppress upload progress and delivery notes; the delivery result remains on stdout")
 
 	help["workflows list"] = apiResultHelp("the workflow-list request", "the workflow-list result")
+	help["workflows create"] = apiResultHelp("the workflow-create request", "the created-workflow result")
+	help["workflows get"] = apiResultHelp("the workflow-detail request", "the workflow-detail result")
+	help["workflows delete"] = apiResultHelp("the workflow-delete request", "the deletion result")
+	help["workflows delete"] = withOutput(help["workflows delete"],
+		"Emit a human confirmation or JSON deletion result",
+		"Suppress the prompt and human confirmation; --yes is required; JSON still prints")
+	help["workflows pull"] = apiResultHelp("the workflow-code request", "the pulled-code result")
+	help["workflows pull"] = withOutput(help["workflows pull"],
+		"Render pulled code as raw stdout text or a json document; --out writes the file either way",
+		"Suppress the --out acknowledgment; pulled source or JSON remains on stdout")
+	help["workflows push"] = apiResultHelp("the code-save request", "the saved-revision result")
+	help["workflows revisions"] = apiResultHelp("the revision-list request", "the revision-list result")
+	help["workflows restore"] = apiResultHelp("the revision-restore request", "the restored-revision result")
 	help["runs list"] = apiResultHelp("the run-list request", "the run-list result")
 	help["runs start"] = apiResultHelp("the run-create request", "the created-run result")
 	help["runs start"] = withOutput(help["runs start"],
@@ -325,6 +345,11 @@ func buildGlobalFlagHelp() map[string]commandGlobalFlagHelp {
 		"No effect on runs start command; its human messages are unstyled")
 	help["runs get"] = apiResultHelp("the run-detail request", "the run-detail result")
 	help["runs cancel"] = apiActionHelp("run cancellation", true)
+	help["runs watch"] = apiResultHelp("the run polling and frame reads", "the telemetry stream")
+	help["runs watch"] = withOutput(help["runs watch"],
+		"Stream frames as human lines or newline-delimited JSON",
+		"Suppress stderr progress notes; the frame stream remains on stdout")
+
 	help["runs history"] = apiResultHelp("the run-history request", "the run-history result")
 	help["runs stats"] = apiResultHelp("the run-stats request", "the run-stats result")
 
@@ -350,6 +375,18 @@ func buildGlobalFlagHelp() map[string]commandGlobalFlagHelp {
 		"Suppress the prompt and human confirmation; --yes is required; JSON still prints")
 	help["uploads delete"] = withNoColor(help["uploads delete"],
 		"No effect on uploads delete command; its human confirmation is unstyled")
+
+	help["downloads list"] = apiResultHelp("the download-list request", "the download-list result")
+	help["sessions downloads"] = apiResultHelp("the session-download request", "the session-download result")
+	help["downloads get"] = apiResultHelp("the download-list and signed-URL requests", "the saved-file result")
+	help["downloads get"] = withQuiet(help["downloads get"],
+		"Suppress save progress; the saved-file result remains on stdout")
+	help["downloads delete"] = apiResultHelp("the download-delete request", "the deletion result")
+	help["downloads delete"] = withOutput(help["downloads delete"],
+		"Emit a human confirmation or JSON deletion result",
+		"Suppress the prompt and human confirmation; --yes is required; JSON still prints")
+	help["downloads delete"] = withNoColor(help["downloads delete"],
+		"No effect on downloads delete command; its human confirmation is unstyled")
 
 	for _, shell := range []string{"bash", "zsh", "fish", "powershell"} {
 		key := "completion " + shell

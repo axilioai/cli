@@ -82,6 +82,25 @@ func (p *Printer) Emit(v any, human func()) error {
 	return p.err
 }
 
+// JSONLine writes v as one compact JSON document on its own stdout line, and
+// does nothing outside JSON mode. It exists for streaming commands (watch),
+// whose JSON contract is newline-delimited JSON rather than Emit's single
+// document; each such command documents that in its long help.
+func (p *Printer) JSONLine(v any) error {
+	if p.err != nil {
+		return p.err
+	}
+	if !p.JSON {
+		return nil
+	}
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	_, err = fmt.Fprintln(p.stdout, string(b))
+	return err
+}
+
 // Result prints primary human result data to stdout. Unlike Ack, Result is not
 // suppressed by --quiet. JSON callers should represent the value through Emit.
 func (p *Printer) Result(format string, a ...any) {
