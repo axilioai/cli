@@ -257,7 +257,12 @@ func traceRow(f *platformgo.RunSessionFramesResponseFramesItem, sdkCosts, infere
 	case f.Span != nil:
 		s := f.Span
 		start := time.Unix(0, s.StartTimeUnixNano)
-		dur := time.Duration(s.EndTimeUnixNano - s.StartTimeUnixNano)
+		// End time is optional on the wire (in-flight spans on the live
+		// stream omit it); the archive this command reads always sets it.
+		var dur time.Duration
+		if s.EndTimeUnixNano != nil {
+			dur = time.Duration(*s.EndTimeUnixNano - s.StartTimeUnixNano)
+		}
 		status := ""
 		if s.Status != nil {
 			status = s.Status.Code

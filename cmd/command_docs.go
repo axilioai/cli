@@ -409,13 +409,43 @@ var commandDocumentationByKey = map[string]CommandDocumentation{
 	}},
 	"workflows": workflow(
 		"axilio workflows list",
-		"axilio workflows list --search checkout",
+		"axilio workflows create checkout-flow --code checkout.py",
+		"axilio workflows pull wf_123 --out checkout.py",
+		"axilio workflows push wf_123 checkout.py -m \"handle 2FA\"",
 		"axilio runs start wf_123",
 	),
 	"workflows list": {Samples: []CommandSample{
 		sampleWithNote("axilio workflows list", "WORKFLOW ID   NAME      PLATFORM  STATUS  LAST RUN\n<workflow-id> Checkout  android   active  <timestamp>", "none", "An empty successful result prints No workflows found."),
 		sampleWithNote("axilio workflows list --search checkout --limit 10", "WORKFLOW ID   NAME      PLATFORM  STATUS  LAST RUN\n<workflow-id> Checkout  android   active  <timestamp>", "none", "Names, IDs, statuses, and timestamps vary by organization."),
 		sampleWithNote("axilio workflows list -o json", "{\n  \"limit\": 20,\n  \"offset\": 0,\n  \"total\": 1,\n  \"workflows\": [\n    {\n      \"workflow\": {\n        \"id\": \"<workflow-id>\",\n        \"name\": \"Checkout\",\n        \"platform\": \"android\",\n        \"status\": \"active\"\n      }\n    }\n  ]\n}", "none", "Shortened representative JSON output; workflow records may include additional fields and statistics."),
+	}},
+	"workflows create": {Samples: []CommandSample{
+		sampleWithNote("axilio workflows create checkout-flow --platform android --code checkout.py", "Workflow     <workflow-id>\nRevision     1\nRevision ID  <revision-id>", "none", "With --code, the file is saved atomically as revision 1. Without it, only the workflow ID prints."),
+		sample("axilio workflows create checkout-flow --recording=false", "Workflow  <workflow-id>", "none"),
+		failedSample("axilio workflows create \"bad name\"", "none", "workflow name must contain only letters, digits, hyphens, and underscores (got \"bad name\")", 2, "The name rule is validated before credentials or an API request."),
+	}},
+	"workflows get": {Samples: []CommandSample{
+		sample("axilio workflows get wf_123", "Workflow      wf_123\nName          Checkout\nPlatform      android\nStatus        active\nOCR engine    free\nRecording     true\nTelemetry     true\nCapture       true\nCreated       <timestamp>\nUpdated       <timestamp>\nLast run      <timestamp>\nTotal runs    4\nSuccess rate  75%", "none"),
+		sampleWithNote("axilio workflows get wf_123 -o json", "{\n  \"stats\": {\n    \"success_rate\": 0.75,\n    \"total_runs\": 4\n  },\n  \"workflow\": {\n    \"id\": \"wf_123\",\n    \"name\": \"Checkout\",\n    \"platform\": \"android\",\n    \"status\": \"active\"\n  }\n}", "none", "Shortened representative JSON output; the workflow record includes the full field set."),
+	}},
+	"workflows delete": {Samples: []CommandSample{
+		sampleWithNote("axilio workflows delete wf_123 --yes", "Deleted wf_123", "none", "Deletes the workflow and its code revisions; recorded runs remain."),
+		failedSample("axilio workflows delete wf_123 < /dev/null", "none", "aborted (pass --yes to delete non-interactively)", 2, "Redirected, JSON, and quiet execution never prompt; they require --yes."),
+	}},
+	"workflows pull": {Samples: []CommandSample{
+		sampleWithNote("axilio workflows pull wf_123", "<the current revision's Python source>", "none", "The raw source prints to stdout so it can be piped or redirected."),
+		sampleWithNote("axilio workflows pull wf_123 --out checkout.py", "Wrote checkout.py (revision 3, <bytes> bytes)", "none", "A new file requests mode 0644, subject to the process umask. Overwriting an existing file preserves its mode while replacing its contents."),
+	}},
+	"workflows push": {Samples: []CommandSample{
+		sampleWithNote("axilio workflows push wf_123 checkout.py -m \"handle 2FA\"", "Saved revision 4 (<revision-id>)", "none", "The server deduplicates by content hash; unchanged source reports a no-op and creates no revision."),
+		sample("axilio workflows push wf_123 checkout.py -o json", "{\n  \"no_op\": false,\n  \"revision\": 4,\n  \"revision_id\": \"<revision-id>\"\n}", "none"),
+	}},
+	"workflows revisions": {Samples: []CommandSample{
+		sampleWithNote("axilio workflows revisions wf_123", "REV  REVISION ID    AUTHOR     SIZE   CREATED      MESSAGE\n4    <revision-id>  <user-id>  1.2 KiB <timestamp> handle 2FA\n3    <revision-id>  <user-id>  1.1 KiB <timestamp> -", "none", "Newest first. When a full page returns, a note names the --before cursor for older history."),
+		sample("axilio workflows revisions wf_123 --limit 10 --before 3", "REV  REVISION ID    AUTHOR     SIZE   CREATED      MESSAGE\n2    <revision-id>  <user-id>  1.0 KiB <timestamp> -", "none"),
+	}},
+	"workflows restore": {Samples: []CommandSample{
+		sampleWithNote("axilio workflows restore wf_123 <revision-id>", "Restored <revision-id> as new revision 5 (<new-revision-id>)", "none", "Restore copies the old source into a new revision; nothing is deleted and the action stays visible in history."),
 	}},
 	"runs": workflow(
 		"axilio workflows list",
