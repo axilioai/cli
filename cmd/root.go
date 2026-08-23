@@ -93,7 +93,7 @@ session information locally so later phone commands can reconnect.
 The main command families are:
   phones / sessions   discover phones and manage active phone sessions
   phone               observe and control the selected session's phone
-  workflows / runs    discover workflows and create or inspect runs
+  workflows / runs    author, version, and run workflows; create or inspect runs
   uploads             store media and deliver it to phones
   api-keys            manage organization-scoped API keys
 
@@ -166,7 +166,7 @@ func Root() *cobra.Command {
 	pf.StringVar(&flagBaseURL, "base-url", "", "API host for API-backed commands; overrides AXILIO_BASE_URL and saved base-url")
 	pf.StringVar(&flagOrg, "org", "", "OAuth organization slug or id; overrides AXILIO_ORG and the saved active org")
 
-	root.AddCommand(loginCmd(), logoutCmd(), statusCmd(), doctorCmd(), configCmd(), orgCmd(), upgradeCmd(), initCmd(), sessionsCmd(), phonesCmd(), phoneCmd(), workflowsCmd(), runsCmd(), apiKeysCmd(), uploadsCmd(), billingCmd())
+	root.AddCommand(loginCmd(), logoutCmd(), statusCmd(), doctorCmd(), configCmd(), orgCmd(), upgradeCmd(), initCmd(), sessionsCmd(), phonesCmd(), phoneCmd(), workflowsCmd(), runsCmd(), usageCmd(), apiKeysCmd(), uploadsCmd(), downloadsCmd(), billingCmd())
 
 	// Own the --version output (fang truncates the commit and adds a "version"
 	// word); cobra adds the --version flag when root.Version is set.

@@ -22,6 +22,11 @@ const (
 	// min/maxStartTimeout mirror the backend's start_timeout_seconds bounds.
 	minStartTimeout int64 = 60
 	maxStartTimeout int64 = 86400
+
+	// runHistoryStatusValues quotes the run-status wire enum verbatim. The API
+	// spells the terminal state with the double-L form, so user-facing docs
+	// must show and accept exactly that spelling despite the linter's US locale.
+	runHistoryStatusValues = "queued, running, completed, failed, cancelled" //nolint:misspell
 )
 
 func runsCmd() *cobra.Command {
@@ -37,8 +42,125 @@ func runsCmd() *cobra.Command {
 			"start, inspect, or cancel runs. Global flags shown here therefore have " +
 			"no effect. Pass flags to a runs subcommand instead.",
 	}
-	cmd.AddCommand(runsListCmd(), runsStartCmd(), runsGetCmd(), runsCancelCmd())
+	cmd.AddCommand(runsListCmd(), runsStartCmd(), runsGetCmd(), runsCancelCmd(), runsWatchCmd(),
+		runsHistoryCmd(), runsStatsCmd())
 	return cmd
+}
+
+func runsHistoryCmd() *cobra.Command {
+	var (
+		from       string
+		to         string
+		workflowID string
+		limit      int64
+		offset     int64
+		statuses   []string
+		search     string
+	)
+	cmd := &cobra.Command{
+		Use:   "history",
+		Short: "List historic (archived) runs over a time window.",
+		Long: "List the caller's historic runs between --from and --to, including " +
+			"archived runs that `runs list` no longer returns. Filter by workflow, " +
+			"final status (repeatable), or a run/workflow ID substring with " +
+			"--search.\n\n" +
+			"Page with --limit and --offset. " + windowFlagsHelp,
+		RunE: func(_ *cobra.Command, _ []string) error {
+			start, end, err := parseWindow(from, to)
+			if err != nil {
+				return err
+			}
+			if limit < minListLimit || limit > maxRunsListLimit {
+				return exit.Usagef("--limit must be between %d and %d (got %d)", minListLimit, maxRunsListLimit, limit)
+			}
+			if offset < 0 {
+				return exit.Usagef("--offset must be zero or positive (got %d)", offset)
+			}
+			req := &platformgo.RunsListHistoricRequest{
+				StartDate: start,
+				EndDate:   end,
+				Limit:     &limit,
+				Offset:    &offset,
+			}
+			for _, s := range statuses {
+				item, err := platformgo.NewRunsListHistoricRequestStatusFilterItemFromString(s)
+				if err != nil {
+					return exit.Usagef("--status must be one of %s (got %q)", runHistoryStatusValues, s)
+				}
+				req.StatusFilter = append(req.StatusFilter, item)
+			}
+			if workflowID != "" {
+				req.WorkflowID = &workflowID
+			}
+			if search != "" {
+				req.Search = &search
+			}
+			cl, err := newClient()
+			if err != nil {
+				return err
+			}
+			resp, err := cl.Runs.ListHistoric(context.Background(), req)
+			if err != nil {
+				return err
+			}
+			p := printer()
+			return p.Emit(resp, func() {
+				if len(resp.Runs) == 0 {
+					p.Result("No runs found.")
+					return
+				}
+				rows := [][]string{{"RUN ID", "STATUS", "TRIGGER", "WORKFLOW", "STARTED", "COMPLETED"}}
+				for _, r := range resp.Runs {
+					rows = append(rows, []string{
+						r.RunID, string(r.Status), string(r.Trigger), r.WorkflowID,
+						util.OrDash(tsp(r.StartedAt)), util.OrDash(tsp(r.CompletedAt)),
+					})
+				}
+				p.Table(rows)
+				if int64(len(resp.Runs)) < resp.Total {
+					p.Note("showing %d of %d; use --limit / --offset to page", len(resp.Runs), resp.Total)
+				}
+			})
+		},
+	}
+	cmd.Flags().StringVar(&from, "from", "", "Start of the query window (required)")
+	cmd.Flags().StringVar(&to, "to", "", "End of the query window (default: now)")
+	cmd.Flags().StringVar(&workflowID, "workflow", "", "Return only runs for this workflow ID")
+	cmd.Flags().Int64Var(&limit, "limit", 50, "Maximum runs in this page (1-500)")
+	cmd.Flags().Int64Var(&offset, "offset", 0, "Number of matching runs to skip before this page")
+	cmd.Flags().StringSliceVar(&statuses, "status", nil, "Restrict to run statuses: "+runHistoryStatusValues+" (repeatable)")
+	cmd.Flags().StringVar(&search, "search", "", "Filter by run or workflow ID substring")
+	return cmd
+}
+
+func runsStatsCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "stats <workflow-id>",
+		Short: "Show a workflow's total run count and success rate.",
+		Long: "Report how a workflow has performed for the caller: total runs across " +
+			"all states, plus the success rate among runs that finished (completed " +
+			"or failed - queued, running, and canceled runs are not in the rate's " +
+			"denominator).",
+		Args: cobra.ExactArgs(1),
+		RunE: func(_ *cobra.Command, args []string) error {
+			cl, err := newClient()
+			if err != nil {
+				return err
+			}
+			resp, err := cl.Runs.Stats(context.Background(), &platformgo.RunsStatsRequest{WorkflowID: args[0]})
+			if err != nil {
+				return err
+			}
+			p := printer()
+			return p.Emit(resp, func() {
+				p.KV([][2]string{
+					{"Workflow", args[0]},
+					{"Total runs", fmt.Sprintf("%d", resp.TotalRuns)},
+					{"Success rate", fmt.Sprintf("%.1f%% of finished runs", resp.SuccessRate*100)},
+				})
+			})
+		},
+	}
 }
 
 func runsListCmd() *cobra.Command {
@@ -114,6 +236,7 @@ func runsStartCmd() *cobra.Command {
 		startTimeout  int64
 		phoneID       string
 		variablesJSON string
+		watch         bool
 	)
 	cmd := &cobra.Command{
 		Use:   "start <workflow-id>",
@@ -130,12 +253,17 @@ func runsStartCmd() *cobra.Command {
 			"of whole seconds a queued run may wait for a phone before auto-cancel, " +
 			"between 60 and 86400 inclusive; zero or negative values omit the field " +
 			"and use the server default (300).\n\n" +
+			"--watch follows the single created run to completion exactly like " +
+			"`runs watch`, and requires --count 1.\n\n" +
 			"Successful output contains the " +
 			"created run IDs.",
 		Args: cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
 			if count < minRunCount || count > maxRunCount {
 				return exit.Usagef("--count must be between %d and %d (got %d)", minRunCount, maxRunCount, count)
+			}
+			if watch && count != 1 {
+				return exit.Usagef("--watch follows exactly one run; drop --count or set it to 1 (got %d)", count)
 			}
 			if startTimeout > 0 && (startTimeout < minStartTimeout || startTimeout > maxStartTimeout) {
 				return exit.Usagef("--start-timeout must be between %d and %d seconds (got %d)", minStartTimeout, maxStartTimeout, startTimeout)
@@ -174,6 +302,21 @@ func runsStartCmd() *cobra.Command {
 				return err
 			}
 			p := printer()
+			if watch {
+				if len(resp.RunIDs) == 0 {
+					return fmt.Errorf("no runs created, nothing to watch")
+				}
+				// Streaming mode: the created-run IDs become the first
+				// NDJSON line (or Ack), then the watch stream follows.
+				if err := p.JSONLine(resp); err != nil {
+					return err
+				}
+				p.Ack("Started run %s", resp.RunIDs[0])
+				if err := p.Err(); err != nil {
+					return err
+				}
+				return watchRun(cl, p, resp.RunIDs[0])
+			}
 			return p.Emit(resp, func() {
 				if len(resp.RunIDs) == 0 {
 					p.Ack("No runs created.")
@@ -189,6 +332,7 @@ func runsStartCmd() *cobra.Command {
 	cmd.Flags().StringVar(&phoneID, "phone-id", "", "Dedicated phone ID to pin to every created run")
 	cmd.Flags().StringVar(&variablesJSON, "variables", "", "JSON object of run variables applied to every created run (plaintext; no secrets)")
 	cmd.Flags().Int64Var(&startTimeout, "start-timeout", 0, startTimeoutHelp)
+	cmd.Flags().BoolVar(&watch, "watch", false, "Follow the created run to completion (requires --count 1)")
 	return cmd
 }
 

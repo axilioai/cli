@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/axilioai/cli/internal/exit"
 	"github.com/axilioai/cli/internal/session"
 	"github.com/axilioai/platform-go/drivers/mobile"
 	"github.com/spf13/cobra"
@@ -22,7 +23,7 @@ func phoneCmd() *cobra.Command {
 			"A reliable loop is " +
 			"observe the screen, find or semantically target an element, act, then " +
 			"observe again to verify.\n\n" +
-			"Available verbs are observe, find, find-text, " +
+			"Available verbs are observe, find, find-text, find-all-text, " +
 			"tap, long-press, swipe, type, key, screenshot, wait-for, and send. " +
 			"Every successful verb emits a structured result with -o json.\n\n" +
 			"Session selection precedence is --session, AXILIO_SESSION, the only locally " +
@@ -36,7 +37,7 @@ func phoneCmd() *cobra.Command {
 	}
 	cmd.PersistentFlags().StringVar(&flagPhoneSession, "session", "", "Session ID; overrides AXILIO_SESSION and automatic session selection")
 	cmd.AddCommand(
-		phoneObserveCmd(), phoneFindCmd(), phoneFindTextCmd(),
+		phoneObserveCmd(), phoneFindCmd(), phoneFindTextCmd(), phoneFindAllTextCmd(),
 		phoneTapCmd(), phoneLongPressCmd(), phoneSwipeCmd(),
 		phoneTypeCmd(), phoneKeyCmd(), phoneScreenshotCmd(), phoneWaitForCmd(),
 		phoneSendCmd(),
@@ -182,6 +183,57 @@ func phoneFindTextCmd() *cobra.Command {
 		},
 	}
 	cmd.Flags().BoolVar(&exact, "exact", false, "Require a case-sensitive exact match instead of case-insensitive substring")
+	return cmd
+}
+
+func phoneFindAllTextCmd() *cobra.Command {
+	var pattern, engine string
+	cmd := &cobra.Command{
+		Use:   "find-all-text [contains]",
+		Short: "Return every OCR text match, or all texts with no criteria.",
+		Long: "Return every OCR element matching the criteria. The positional " +
+			"argument is a case-insensitive substring; --pattern is a Go regular " +
+			"expression instead. They are mutually exclusive. With neither, every " +
+			"text element on the screen is returned. No match is successful: table " +
+			"output prints `No matches.` and JSON output is an empty array.",
+		Args: cobra.MaximumNArgs(1),
+		RunE: func(_ *cobra.Command, args []string) error {
+			contains := ""
+			if len(args) == 1 {
+				contains = args[0]
+			}
+			if contains != "" && pattern != "" {
+				return exit.Usagef("pass at most one of <contains> / --pattern")
+			}
+			d, err := currentDriver()
+			if err != nil {
+				return err
+			}
+			defer d.Close()
+			els, err := d.FindAllText(contains, pattern, visionOpts(engine, "")...)
+			if err != nil {
+				return err
+			}
+			// Non-nil so an empty result serializes as [] in JSON output.
+			if els == nil {
+				els = []mobile.Element{}
+			}
+			p := printer()
+			return p.Emit(els, func() {
+				if len(els) == 0 {
+					p.Result("No matches.")
+					return
+				}
+				rows := [][]string{{"TEXT", "X", "Y", "CONF"}}
+				for _, el := range els {
+					rows = append(rows, []string{el.Text, strconv.Itoa(el.Center.X), strconv.Itoa(el.Center.Y), fmt.Sprintf("%.2f", el.Confidence)})
+				}
+				p.Table(rows)
+			})
+		},
+	}
+	cmd.Flags().StringVar(&pattern, "pattern", "", "Go regular expression to match instead of a substring")
+	cmd.Flags().StringVar(&engine, "ocr-engine", "", "OCR engine: free or premium; omitted uses free")
 	return cmd
 }
 
@@ -334,9 +386,12 @@ func phoneTypeCmd() *cobra.Command {
 func phoneKeyCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "key <name>",
-		Short: "Press the supported named key: enter.",
-		Long: "Press a named key on the selected phone. The only supported named key " +
-			"is `enter`; back, home, and other key names are not available.",
+		Short: "Press a named key. Currently supported: enter.",
+		Long: "Press a named key on the selected phone. The name is passed through " +
+			"to the phone, which accepts the supported named-key set and rejects " +
+			"anything else. The set is currently just `enter` (submits forms / fires " +
+			"the on-screen keyboard's Go or Search action) and grows in lockstep " +
+			"with the device side, so new names work here without a CLI update.",
 		Args: cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
 			d, err := currentDriver()

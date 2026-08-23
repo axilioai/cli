@@ -26,7 +26,7 @@ The main command families are:
 .EX
 phones / sessions   discover phones and manage active phone sessions
 phone               observe and control the selected session's phone
-workflows / runs    discover workflows and create or inspect runs
+workflows / runs    author, version, and run workflows; create or inspect runs
 uploads             store media and deliver it to phones
 api-keys            manage organization-scoped API keys
 .EE
@@ -993,6 +993,311 @@ doctor: API key rejected (HTTP 401); run `axilio login`
 #        6.
 .EE
 
+.SH downloads
+.EX
+axilio downloads
+.EE
+
+.PP
+Manage captured downloads: files that came off phones during sessions.
+Captures land in the org library next to uploads and share its storage
+quota; a ready capture can be delivered to any phone by its id with
+\fBuploads push\fR\&. \fBlist\fR discovers captures across sessions, \fBget\fR saves a
+capture's bytes to a local file, and \fBdelete\fR removes it everywhere. For
+one session's captures, \fBsessions downloads \\<session-id\\>\fR answers
+directly.
+
+.PP
+Running \fBaxilio downloads\fR without a subcommand is equivalent to \fBaxilio
+downloads --help\fR: it only displays this help. Global flags shown here
+therefore have no effect. Pass flags to a downloads subcommand instead.
+
+.PP
+\fBGlobal-option behavior\fP
+.IP \(bu 2
+\fB--api-key\fP, \fB--base-url\fP, \fB--no-color\fP, \fB--org\fP, \fB--output\fP
+/ \fB-o\fP, \fB--quiet\fP / \fB-q\fP - No effect on downloads command; bare
+axilio downloads only displays this help
+
+.PP
+\fBWorkflow examples\fP
+
+.EX
+axilio downloads list
+axilio downloads get dl_123
+axilio downloads delete dl_123 --yes
+.EE
+
+.SS list
+.EX
+axilio downloads list [flags]
+.EE
+
+.PP
+List captured downloads for the active organization.
+
+.PP
+Each row carries its capture state: a skipped or failed capture is a
+visible entry with a reason, not an absence. Results include capture ID,
+filename, size, MIME type, state, source session, and creation time.
+Page with --limit and --offset, narrow by --session, --mime, size and
+time bounds, and sort by created_at, filename, or size_bytes in asc or
+desc order. Omitting sort/order uses server defaults (newest first).
+
+.PP
+\fBCommand options\fP
+.IP \(bu 2
+\fB--created-after\fP=\fIvalue\fP - Only captures registered at or after
+this RFC 3339 time
+.IP \(bu 2
+\fB--created-before\fP=\fIvalue\fP - Only captures registered at or before
+this RFC 3339 time
+.IP \(bu 2
+\fB--limit\fP=\fInumber\fP - Maximum captures in this page (1-100) (default
+"50")
+.IP \(bu 2
+\fB--max-size\fP=\fInumber\fP - Only captures at most this many bytes; 0
+means no bound
+.IP \(bu 2
+\fB--mime\fP=\fIvalue\fP - Only captures of exactly this media type, e.g.
+image/png
+.IP \(bu 2
+\fB--min-size\fP=\fInumber\fP - Only captures at least this many bytes; 0
+means no bound
+.IP \(bu 2
+\fB--offset\fP=\fInumber\fP - Number of matching captures to skip before
+this page
+.IP \(bu 2
+\fB--order\fP=\fIvalue\fP - Sort direction: asc or desc; omitted uses server
+default
+.IP \(bu 2
+\fB--search\fP=\fIvalue\fP - Filter filenames by case-insensitive substring
+.IP \(bu 2
+\fB--session\fP=\fIvalue\fP - Only captures produced by this session ID
+.IP \(bu 2
+\fB--sort\fP=\fIvalue\fP - Sort key: created_at, filename, or size_bytes;
+omitted uses server default
+
+.PP
+\fBGlobal-option behavior\fP
+.IP \(bu 2
+\fB--api-key\fP=\fIvalue\fP - API key for the download-list request;
+overrides AXILIO_API_KEY and the saved key
+.IP \(bu 2
+\fB--base-url\fP=\fIvalue\fP - API host for the download-list request;
+overrides AXILIO_BASE_URL and saved base-url
+.IP \(bu 2
+\fB--no-color\fP - Disable ANSI color in the human-readable form of the
+download-list result
+.IP \(bu 2
+\fB--org\fP=\fIvalue\fP - OAuth org for the download-list request; overrides
+AXILIO_ORG and the saved active org; API keys ignore it
+.IP \(bu 2
+\fB-o\fP, \fB--output\fP=\fIvalue\fP - Render the download-list result as
+table or json (default "table")
+.IP \(bu 2
+\fB-q\fP, \fB--quiet\fP - Suppress stderr notes for the download-list
+request; the download-list result remains on stdout
+
+.PP
+\fBExamples and expected output\fP
+
+.PP
+\fBSample 1\fP
+
+.EX
+user@host ~ % axilio downloads list
+ID       FILENAME     SIZE     TYPE       STATE  SESSION      CREATED
+<dl-id>  receipt.png  2.0 KiB  image/png  ready  <session-id> <timestamp>
+.sp
+# Exit status: 0
+# Notes: A skipped or failed capture is a visible row with its reason in
+#        STATE, not an absence.
+.EE
+
+.PP
+\fBSample 2\fP
+
+.EX
+user@host ~ % axilio downloads list --session ses_123 --mime image/png --sort size_bytes --order desc
+ID       FILENAME     SIZE     TYPE       STATE  SESSION      CREATED
+<dl-id>  receipt.png  2.0 KiB  image/png  ready  ses_123      <timestamp>
+.sp
+# Exit status: 0
+.EE
+
+.PP
+\fBSample 3\fP
+
+.EX
+user@host ~ % axilio downloads list -o json
+{
+  "downloads": [
+    {
+      "id": "<dl-id>",
+      "filename": "receipt.png",
+      "size_bytes": 2048,
+      "mime_type": "image/png",
+      "capture_state": "ready",
+      "session_id": "<session-id>",
+      "download_url": "<signed-url>",
+      "created_at": "<timestamp>"
+    }
+  ],
+  "total": 1
+}
+.sp
+# Exit status: 0
+# Notes: Representative response; signed URLs are short-lived, re-list
+#        to refresh an expired one.
+.EE
+
+.SS delete
+.EX
+axilio downloads delete <download-id> [flags]
+.EE
+
+.PP
+Delete a capture from the org library and free its storage quota.
+
+.PP
+Deletion also recalls every copy delivered to phones; the source phone's
+own copy from the capture session is outside the recall. Use \fBdownloads
+list\fR to discover the capture ID. Without --yes, table mode prompts only
+when stdin is a terminal. Redirected, JSON, and quiet execution do not
+prompt and require --yes. The alias \fBdownloads rm\fR performs the same
+operation.
+
+.PP
+\fBCommand options\fP
+.IP \(bu 2
+\fB-y\fP, \fB--yes\fP - Delete without prompting; required in JSON, quiet,
+or redirected execution
+
+.PP
+\fBGlobal-option behavior\fP
+.IP \(bu 2
+\fB--no-color\fP - No effect on downloads delete command
+.IP \(bu 2
+\fB--api-key\fP=\fIvalue\fP - API key for the download-delete request;
+overrides AXILIO_API_KEY and the saved key
+.IP \(bu 2
+\fB--base-url\fP=\fIvalue\fP - API host for the download-delete request;
+overrides AXILIO_BASE_URL and saved base-url
+.IP \(bu 2
+\fB--org\fP=\fIvalue\fP - OAuth org for the download-delete request;
+overrides AXILIO_ORG and the saved active org; API keys ignore it
+.IP \(bu 2
+\fB-o\fP, \fB--output\fP=\fIvalue\fP - Emit a human confirmation or JSON
+deletion result (default "table")
+.IP \(bu 2
+\fB-q\fP, \fB--quiet\fP - Suppress the prompt and human confirmation;
+--yes is required; JSON still prints
+
+.PP
+\fBExamples and expected output\fP
+
+.PP
+\fBSample 1\fP
+
+.EX
+user@host ~ % axilio downloads delete dl_123
+Deleted dl_123
+.sp
+# Standard error:
+Delete download dl_123? Also recall it from phones holding or receiving a copy? [y/N]
+.sp
+# Exit status: 0
+# Notes: Table mode prompts only when stdin is a terminal. Redirected,
+#        JSON, and quiet execution require --yes.
+.EE
+
+.PP
+\fBSample 2\fP
+
+.EX
+user@host ~ % axilio downloads rm dl_123 --yes
+Deleted dl_123
+.sp
+# Exit status: 0
+.EE
+
+.SS get
+.EX
+axilio downloads get <download-id> [flags]
+.EE
+
+.PP
+Fetch a ready capture through its short-lived signed URL and write the
+bytes to a local file.
+
+.PP
+The destination defaults to the capture's own filename in the current
+directory; -o overrides it. An existing destination is refused unless
+--force is passed. Captures still in flight or terminally skipped have
+no bytes to fetch and are refused with their capture state. Use
+\fBdownloads list\fR to discover capture IDs and states.
+
+.PP
+\fBCommand options\fP
+.IP \(bu 2
+\fB--force\fP - Overwrite the destination if it already exists
+.IP \(bu 2
+\fB--out\fP=\fIvalue\fP - Destination path; omitted uses the capture's
+filename in the current directory
+
+.PP
+\fBGlobal-option behavior\fP
+.IP \(bu 2
+\fB--api-key\fP=\fIvalue\fP - API key for the download-list and signed-URL
+requests; overrides AXILIO_API_KEY and the saved key
+.IP \(bu 2
+\fB--base-url\fP=\fIvalue\fP - API host for the download-list and signed-URL
+requests; overrides AXILIO_BASE_URL and saved base-url
+.IP \(bu 2
+\fB--no-color\fP - Disable ANSI color in the human-readable form of the
+saved-file result
+.IP \(bu 2
+\fB--org\fP=\fIvalue\fP - OAuth org for the download-list and signed-URL
+requests; overrides AXILIO_ORG and the saved active org; API keys ignore
+it
+.IP \(bu 2
+\fB-o\fP, \fB--output\fP=\fIvalue\fP - Render the saved-file result as table
+or json (default "table")
+.IP \(bu 2
+\fB-q\fP, \fB--quiet\fP - Suppress save progress; the saved-file result
+remains on stdout
+
+.PP
+\fBExamples and expected output\fP
+
+.PP
+\fBSample 1\fP
+
+.EX
+user@host ~ % axilio downloads get dl_123
+Saved receipt.png (2.0 KiB)
+.sp
+# Standard error:
+→ Saving receipt.png to receipt.png
+.sp
+# Exit status: 0
+.EE
+
+.PP
+\fBSample 2\fP
+
+.EX
+user@host ~ % axilio downloads get dl_123 --out ./captures/receipt.png --force
+Saved ./captures/receipt.png (2.0 KiB)
+.sp
+# Standard error:
+→ Saving receipt.png to ./captures/receipt.png
+.sp
+# Exit status: 0
+# Notes: Without --force an existing destination is refused.
+.EE
+
 .SH help
 .EX
 axilio help [command] [flags]
@@ -1544,9 +1849,9 @@ A reliable loop is observe the screen, find or semantically target an
 element, act, then observe again to verify.
 
 .PP
-Available verbs are observe, find, find-text, tap, long-press, swipe,
-type, key, screenshot, wait-for, and send. Every successful verb emits a
-structured result with -o json.
+Available verbs are observe, find, find-text, find-all-text, tap,
+long-press, swipe, type, key, screenshot, wait-for, and send. Every
+successful verb emits a structured result with -o json.
 
 .PP
 Session selection precedence is --session, AXILIO_SESSION, the only
@@ -1682,6 +1987,92 @@ user@host ~ % axilio phone find "continue button" --timeout 15s -o json
 # Notes: Element content and coordinates depend on the current frame.
 .EE
 
+.SS find-all-text
+.EX
+axilio phone find-all-text [contains] [flags]
+.EE
+
+.PP
+Return every OCR element matching the criteria.
+
+.PP
+The positional argument is a case-insensitive substring; --pattern is a
+Go regular expression instead. They are mutually exclusive. With
+neither, every text element on the screen is returned. No match is
+successful: table output prints \fBNo matches.\fR and JSON output is an
+empty array.
+
+.PP
+\fBCommand options\fP
+.IP \(bu 2
+\fB--ocr-engine\fP=\fIvalue\fP - OCR engine: free or premium; omitted uses
+free
+.IP \(bu 2
+\fB--pattern\fP=\fIvalue\fP - Go regular expression to match instead of a
+substring
+
+.PP
+\fBParent options\fP
+.IP \(bu 2
+\fB--session\fP=\fIvalue\fP - Session ID; overrides AXILIO_SESSION and
+automatic session selection
+
+.PP
+\fBGlobal-option behavior\fP
+.IP \(bu 2
+\fB--api-key\fP, \fB--base-url\fP, \fB--org\fP - No effect on phone
+find-all-text command
+.IP \(bu 2
+\fB--no-color\fP - Disable ANSI color in the human-readable form of the
+text-match list
+.IP \(bu 2
+\fB-o\fP, \fB--output\fP=\fIvalue\fP - Render the text-match list as table or
+json (default "table")
+.IP \(bu 2
+\fB-q\fP, \fB--quiet\fP - Suppress stderr notes for OCR search; the
+text-match list remains on stdout
+
+.PP
+\fBExamples and expected output\fP
+
+.PP
+\fBSample 1\fP
+
+.EX
+user@host ~ % axilio phone find-all-text "sign"
+TEXT           X    Y     CONF
+Sign in        540  1120  0.98
+Sign up free   540  1280  0.97
+.sp
+# Exit status: 0
+# Notes: The substring match is case-insensitive.
+.EE
+
+.PP
+\fBSample 2\fP
+
+.EX
+user@host ~ % axilio phone find-all-text --pattern "^\\\\$[0-9]+"
+TEXT   X    Y    CONF
+$12    340  760  0.99
+$8     340  920  0.98
+.sp
+# Exit status: 0
+# Notes: --pattern is a Go regular expression and cannot be combined
+#        with a substring argument.
+.EE
+
+.PP
+\fBSample 3\fP
+
+.EX
+user@host ~ % axilio phone find-all-text "settings" -o json
+[]
+.sp
+# Exit status: 0
+# Notes: No match is a successful empty array.
+.EE
+
 .SS find-text
 .EX
 axilio phone find-text <text> [flags]
@@ -1797,8 +2188,11 @@ axilio phone key <name>
 Press a named key on the selected phone.
 
 .PP
-The only supported named key is \fBenter\fR; back, home, and other key names
-are not available.
+The name is passed through to the phone, which accepts the supported
+named-key set and rejects anything else. The set is currently just
+\fBenter\fR (submits forms / fires the on-screen keyboard's Go or Search
+action) and grows in lockstep with the device side, so new names work
+here without a CLI update.
 
 .PP
 \fBParent options\fP
@@ -2508,18 +2902,23 @@ axilio phones
 .EE
 
 .PP
-Discover phones before starting a session. \fBphones list\fR shows the
-dedicated phones that are free to start a session on right now. \fBphones
-mine\fR shows the organization's complete dedicated inventory, including
-busy and offline phones, and is the place to find a phone ID for
-\fBsessions start --phone-id\fR\&. The shared pool is not listed; it is drawn
-from automatically when you start a session without a phone ID.
+Discover and manage phones. \fBphones list\fR shows the dedicated phones
+that are free to start a session on right now. \fBphones mine\fR shows the
+organization's complete dedicated inventory, including busy and offline
+phones, and is the place to find a phone ID for \fBsessions start
+--phone-id\fR\&. The shared pool is not listed; it is drawn from
+automatically when you start a session without a phone ID.
+
+.PP
+Management verbs act on dedicated phones by ID: \fBphones rename\fR sets the
+nickname, \fBphones wipe\fR requests an on-demand factory reset, and \fBphones
+preview\fR returns a short-lived URL for the current screen preview.
 
 .PP
 Running \fBaxilio phones\fR without a subcommand is equivalent to \fBaxilio
 phones --help\fR: it only displays this help and does not list or change
 phones. Global flags shown here therefore have no effect. Pass flags to
-\fBphones list\fR or \fBphones mine\fR instead.
+a phones subcommand instead.
 
 .PP
 \fBGlobal-option behavior\fP
@@ -2534,6 +2933,7 @@ axilio phones only displays this help
 .EX
 axilio phones list
 axilio phones mine
+axilio phones rename <phone-id> "crawler 3"
 .EE
 
 .SS list
@@ -2657,6 +3057,211 @@ PHONE ID   NICKNAME  TYPE     MODEL    STATUS  SESSION
 .sp
 # Exit status: 0
 # Notes: An empty successful result prints No dedicated phones.
+.EE
+
+.SS preview
+.EX
+axilio phones preview <phone-id> [flags]
+.EE
+
+.PP
+Return a short-lived URL for the phone's current screen preview - a
+rolling JPEG refreshed every few seconds while the phone is paired,
+available with or without an active session.
+
+.PP
+Every call mints a fresh URL; poll and swap the image. Status is pending
+when no preview exists yet. With --out, the JPEG is downloaded and
+written to the given path instead, overwriting existing contents without
+confirmation.
+
+.PP
+\fBCommand options\fP
+.IP \(bu 2
+\fB--out\fP=\fIvalue\fP - JPEG path to create; overwrite existing contents
+without confirmation
+
+.PP
+\fBGlobal-option behavior\fP
+.IP \(bu 2
+\fB--api-key\fP=\fIvalue\fP - API key for the preview request; overrides
+AXILIO_API_KEY and the saved key
+.IP \(bu 2
+\fB--base-url\fP=\fIvalue\fP - API host for the preview request; overrides
+AXILIO_BASE_URL and saved base-url
+.IP \(bu 2
+\fB--no-color\fP - Disable ANSI color in the human-readable form of the
+preview result
+.IP \(bu 2
+\fB--org\fP=\fIvalue\fP - OAuth org for the preview request; overrides
+AXILIO_ORG and the saved active org; API keys ignore it
+.IP \(bu 2
+\fB-o\fP, \fB--output\fP=\fIvalue\fP - Render the preview result as table or
+json (default "table")
+.IP \(bu 2
+\fB-q\fP, \fB--quiet\fP - Suppress stderr notes for the preview request;
+the preview result remains on stdout
+
+.PP
+\fBExamples and expected output\fP
+
+.PP
+\fBSample 1\fP
+
+.EX
+user@host ~ % axilio phones preview <phone-id>
+Status  ready
+URL     <signed-url>
+.sp
+# Exit status: 0
+# Notes: Every call mints a fresh short-lived URL; a phone with no
+#        captured frame yet reports Preview pending.
+.EE
+
+.PP
+\fBSample 2\fP
+
+.EX
+user@host ~ % axilio phones preview <phone-id> --out preview.jpg
+Wrote preview.jpg (<bytes> bytes)
+.sp
+# Exit status: 0
+# Notes: Downloads the current JPEG frame; overwriting an existing file
+#        replaces its contents.
+.EE
+
+.SS rename
+.EX
+axilio phones rename <phone-id> <nickname>
+.EE
+
+.PP
+Set the nickname shown for a dedicated phone in listings and the
+dashboard.
+
+.PP
+The nickname must be 1-100 characters. Use \fBphones mine\fR to discover the
+phone ID.
+
+.PP
+\fBGlobal-option behavior\fP
+.IP \(bu 2
+\fB--api-key\fP=\fIvalue\fP - API key for the nickname-update request;
+overrides AXILIO_API_KEY and the saved key
+.IP \(bu 2
+\fB--base-url\fP=\fIvalue\fP - API host for the nickname-update request;
+overrides AXILIO_BASE_URL and saved base-url
+.IP \(bu 2
+\fB--no-color\fP - Disable ANSI color in the human-readable form of the
+renamed-phone result
+.IP \(bu 2
+\fB--org\fP=\fIvalue\fP - OAuth org for the nickname-update request;
+overrides AXILIO_ORG and the saved active org; API keys ignore it
+.IP \(bu 2
+\fB-o\fP, \fB--output\fP=\fIvalue\fP - Render the renamed-phone result as
+table or json (default "table")
+.IP \(bu 2
+\fB-q\fP, \fB--quiet\fP - Suppress stderr notes for the nickname-update
+request; the renamed-phone result remains on stdout
+
+.PP
+\fBExamples and expected output\fP
+
+.PP
+\fBSample 1\fP
+
+.EX
+user@host ~ % axilio phones rename <phone-id> "crawler 3"
+Renamed <phone-id> to "crawler 3"
+.sp
+# Exit status: 0
+.EE
+
+.PP
+\fBSample 2\fP
+
+.EX
+user@host ~ % axilio phones rename <phone-id> ""
+.sp
+# Standard error:
+nickname must be 1-100 characters (got 0)
+.sp
+# Exit status: 2
+# Notes: The 1-100 bound is enforced before any request is made.
+.EE
+
+.SS wipe
+.EX
+axilio phones wipe <phone-id> [flags]
+.EE
+
+.PP
+Request an on-demand factory reset of a private phone the organization
+owns.
+
+.PP
+The phone must be active and not currently held by a session; it is set
+to maintenance while the wipe is carried out. Without --yes, table mode
+prompts only when stdin is a terminal. Redirected, JSON, and quiet
+execution do not prompt and require --yes.
+
+.PP
+\fBCommand options\fP
+.IP \(bu 2
+\fB-y\fP, \fB--yes\fP - Wipe without prompting; required in JSON, quiet,
+or redirected execution
+
+.PP
+\fBGlobal-option behavior\fP
+.IP \(bu 2
+\fB--no-color\fP - No effect on phones wipe command
+.IP \(bu 2
+\fB--api-key\fP=\fIvalue\fP - API key for phone wipe; overrides
+AXILIO_API_KEY and the saved key
+.IP \(bu 2
+\fB--base-url\fP=\fIvalue\fP - API host for phone wipe; overrides
+AXILIO_BASE_URL and saved base-url
+.IP \(bu 2
+\fB--org\fP=\fIvalue\fP - OAuth org for phone wipe; overrides AXILIO_ORG and
+the saved active org; API keys ignore it
+.IP \(bu 2
+\fB-o\fP, \fB--output\fP=\fIvalue\fP - Emit a human confirmation or JSON phone
+wipe result (default "table")
+.IP \(bu 2
+\fB-q\fP, \fB--quiet\fP - Suppress the phone wipe prompt and human result;
+--yes is still required; JSON still prints
+
+.PP
+\fBExamples and expected output\fP
+
+.PP
+\fBSample 1\fP
+
+.EX
+user@host ~ % axilio phones wipe <phone-id>
+Wipe requested
+.sp
+# Standard error:
+Wipe phone <phone-id>? This factory-resets the device and erases its data. [y/N]
+.sp
+# Exit status: 0
+# Notes: Table mode prompts only when stdin is a terminal. Redirected,
+#        JSON, and quiet execution require --yes. The success message
+#        comes from the API.
+.EE
+
+.PP
+\fBSample 2\fP
+
+.EX
+user@host ~ % axilio phones wipe <phone-id> --yes -o json
+{
+  "message": "Wipe requested"
+}
+.sp
+# Exit status: 0
+# Notes: The phone must be active and not currently held by a session;
+#        it is set to maintenance while the wipe runs.
 .EE
 
 .SH runs
@@ -2928,6 +3533,103 @@ user@host ~ % axilio runs get run_123 -o json
 #        video URL appear when available.
 .EE
 
+.SS history
+.EX
+axilio runs history [flags]
+.EE
+
+.PP
+List the caller's historic runs between --from and --to, including
+archived runs that \fBruns list\fR no longer returns. Filter by workflow,
+final status (repeatable), or a run/workflow ID substring with --search.
+
+.PP
+Page with --limit and --offset. Accepts an RFC 3339 timestamp
+(2026-08-01T00:00:00Z) or a bare YYYY-MM-DD date, which reads as
+midnight UTC of that day.
+
+.PP
+\fBCommand options\fP
+.IP \(bu 2
+\fB--from\fP=\fIvalue\fP - Start of the query window (required)
+.IP \(bu 2
+\fB--limit\fP=\fInumber\fP - Maximum runs in this page (1-500) (default
+"50")
+.IP \(bu 2
+\fB--offset\fP=\fInumber\fP - Number of matching runs to skip before this
+page
+.IP \(bu 2
+\fB--search\fP=\fIvalue\fP - Filter by run or workflow ID substring
+.IP \(bu 2
+\fB--status\fP=\fIstringSlice\fP - Restrict to run statuses: queued,
+running, completed, failed, cancelled (repeatable) (default "[]")
+.IP \(bu 2
+\fB--to\fP=\fIvalue\fP - End of the query window (default: now)
+.IP \(bu 2
+\fB--workflow\fP=\fIvalue\fP - Return only runs for this workflow ID
+
+.PP
+\fBGlobal-option behavior\fP
+.IP \(bu 2
+\fB--api-key\fP=\fIvalue\fP - API key for the run-history request; overrides
+AXILIO_API_KEY and the saved key
+.IP \(bu 2
+\fB--base-url\fP=\fIvalue\fP - API host for the run-history request;
+overrides AXILIO_BASE_URL and saved base-url
+.IP \(bu 2
+\fB--no-color\fP - Disable ANSI color in the human-readable form of the
+run-history result
+.IP \(bu 2
+\fB--org\fP=\fIvalue\fP - OAuth org for the run-history request; overrides
+AXILIO_ORG and the saved active org; API keys ignore it
+.IP \(bu 2
+\fB-o\fP, \fB--output\fP=\fIvalue\fP - Render the run-history result as table
+or json (default "table")
+.IP \(bu 2
+\fB-q\fP, \fB--quiet\fP - Suppress stderr notes for the run-history
+request; the run-history result remains on stdout
+
+.PP
+\fBExamples and expected output\fP
+
+.PP
+\fBSample 1\fP
+
+.EX
+user@host ~ % axilio runs history --from 2026-08-01
+RUN ID   STATUS     TRIGGER  WORKFLOW      STARTED      COMPLETED
+<run-id> completed  manual   <workflow-id> <timestamp>  <timestamp>
+.sp
+# Exit status: 0
+# Notes: --from is required; an omitted --to means now. Bare dates read
+#        as midnight UTC. An empty successful result prints No runs
+#        found.
+.EE
+
+.PP
+\fBSample 2\fP
+
+.EX
+user@host ~ % axilio runs history --from 2026-08-01 --to 2026-08-22 --workflow wf_123 --status failed
+RUN ID   STATUS  TRIGGER  WORKFLOW  STARTED      COMPLETED
+<run-id> failed  manual   wf_123    <timestamp>  <timestamp>
+.sp
+# Exit status: 0
+.EE
+
+.PP
+\fBSample 3\fP
+
+.EX
+user@host ~ % axilio runs history
+.sp
+# Standard error:
+--from is required. Accepts an RFC 3339 timestamp (2026-08-01T00:00:00Z) or a bare YYYY-MM-DD date, which reads as midnight UTC of that day.
+.sp
+# Exit status: 2
+# Notes: The window is validated before credentials or an API request.
+.EE
+
 .SS start
 .EX
 axilio runs start <workflow-id> [flags]
@@ -2954,6 +3656,10 @@ a phone before auto-cancel, between 60 and 86400 inclusive; zero or
 negative values omit the field and use the server default (300).
 
 .PP
+--watch follows the single created run to completion exactly like \fBruns
+watch\fR, and requires --count 1.
+
+.PP
 Successful output contains the created run IDs.
 
 .PP
@@ -2971,6 +3677,9 @@ default
 .IP \(bu 2
 \fB--variables\fP=\fIvalue\fP - JSON object of run variables applied to
 every created run (plaintext; no secrets)
+.IP \(bu 2
+\fB--watch\fP - Follow the created run to completion (requires --count
+1)
 
 .PP
 \fBGlobal-option behavior\fP
@@ -3053,6 +3762,165 @@ Started run <run-id>
 # Exit status: 0
 .EE
 
+.PP
+\fBSample 6\fP
+
+.EX
+user@host ~ % axilio runs start wf_123 --watch
+Started run <run-id>
+<frame stream>
+✓ Run <run-id> completed
+.sp
+# Standard error:
+→ Run <run-id> queued — waiting for a phone
+.sp
+# Exit status: 0
+# Notes: Follows the created run exactly like `runs watch`; requires
+#        --count 1.
+.EE
+
+.SS stats
+.EX
+axilio runs stats <workflow-id>
+.EE
+
+.PP
+Report how a workflow has performed for the caller: total runs across
+all states, plus the success rate among runs that finished (completed or
+failed - queued, running, and canceled runs are not in the rate's
+denominator).
+
+.PP
+\fBGlobal-option behavior\fP
+.IP \(bu 2
+\fB--api-key\fP=\fIvalue\fP - API key for the run-stats request; overrides
+AXILIO_API_KEY and the saved key
+.IP \(bu 2
+\fB--base-url\fP=\fIvalue\fP - API host for the run-stats request; overrides
+AXILIO_BASE_URL and saved base-url
+.IP \(bu 2
+\fB--no-color\fP - Disable ANSI color in the human-readable form of the
+run-stats result
+.IP \(bu 2
+\fB--org\fP=\fIvalue\fP - OAuth org for the run-stats request; overrides
+AXILIO_ORG and the saved active org; API keys ignore it
+.IP \(bu 2
+\fB-o\fP, \fB--output\fP=\fIvalue\fP - Render the run-stats result as table or
+json (default "table")
+.IP \(bu 2
+\fB-q\fP, \fB--quiet\fP - Suppress stderr notes for the run-stats request;
+the run-stats result remains on stdout
+
+.PP
+\fBExamples and expected output\fP
+
+.PP
+\fBSample 1\fP
+
+.EX
+user@host ~ % axilio runs stats wf_123
+Workflow      wf_123
+Total runs    8
+Success rate  87.5% of finished runs
+.sp
+# Exit status: 0
+# Notes: The rate's denominator is completed plus failed runs; total
+#        runs counts every state.
+.EE
+
+.PP
+\fBSample 2\fP
+
+.EX
+user@host ~ % axilio runs stats wf_123 -o json
+{
+  "total_runs": 8,
+  "success_rate": 0.875
+}
+.sp
+# Exit status: 0
+.EE
+
+.SS watch
+.EX
+axilio runs watch <run-id>
+.EE
+
+.PP
+Follow a run live: wait for it to start, then stream its session's
+telemetry (output logs and completed spans) until the session ends, and
+exit with the run's outcome. Watching an already-finished run replays
+its recorded telemetry and exits the same way.
+
+.PP
+The exit code reflects the outcome: 0 when the run completed, 1 when it
+failed (the error message is printed), 7 when it was canceled or the
+watch was interrupted. Interrupting the watch does not affect the run;
+re-run \fBruns watch\fR to replay and resume following.
+
+.PP
+JSON mode streams newline-delimited JSON rather than a single document:
+one object per telemetry frame in archive order, then a final
+\fB{"watch_end": true, ...}\fR object carrying the run's status and error
+message.
+
+.PP
+\fBGlobal-option behavior\fP
+.IP \(bu 2
+\fB--api-key\fP=\fIvalue\fP - API key for the run polling and frame reads;
+overrides AXILIO_API_KEY and the saved key
+.IP \(bu 2
+\fB--base-url\fP=\fIvalue\fP - API host for the run polling and frame reads;
+overrides AXILIO_BASE_URL and saved base-url
+.IP \(bu 2
+\fB--no-color\fP - Disable ANSI color in the human-readable form of the
+telemetry stream
+.IP \(bu 2
+\fB--org\fP=\fIvalue\fP - OAuth org for the run polling and frame reads;
+overrides AXILIO_ORG and the saved active org; API keys ignore it
+.IP \(bu 2
+\fB-o\fP, \fB--output\fP=\fIvalue\fP - Stream frames as human lines or
+newline-delimited JSON (default "table")
+.IP \(bu 2
+\fB-q\fP, \fB--quiet\fP - Suppress stderr progress notes; the frame stream
+remains on stdout
+
+.PP
+\fBExamples and expected output\fP
+
+.PP
+\fBSample 1\fP
+
+.EX
+user@host ~ % axilio runs watch run_123
+<time>  span  sdk_call    Screen.observe  250ms
+<time>  INFO  output_log  <workflow output>
+✓ Run run_123 completed
+.sp
+# Standard error:
+→ Run run_123 running — streaming session <session-id>
+.sp
+# Exit status: 0
+# Notes: Streams the session's telemetry — logs and completed spans —
+#        until the session ends. Exit 0 on completed, 1 on failed (with
+#        the run's error message), 7 on canceled or interrupt. Watching
+#        a finished run replays its telemetry.
+.EE
+
+.PP
+\fBSample 2\fP
+
+.EX
+user@host ~ % axilio runs watch run_123 -o json
+{"watch_end":true,"run_id":"run_123","status":"completed"}
+.sp
+# Exit status: 0
+# Notes: JSON mode is newline-delimited, not a single document: one
+#        object per telemetry frame in archive order (unknown kinds pass
+#        through verbatim), then the watch_end summary — carrying status
+#        and error_message — as the final line.
+.EE
+
 .SH sessions
 .EX
 axilio sessions
@@ -3087,6 +3955,9 @@ axilio sessions only displays this help
 axilio sessions list
 axilio sessions start
 axilio sessions current
+axilio sessions get sess_123
+axilio sessions trace sess_123
+axilio sessions downloads sess_123
 axilio sessions stop sess_123
 .EE
 
@@ -3096,20 +3967,62 @@ axilio sessions list [flags]
 .EE
 
 .PP
-List sessions saved locally by default.
+List sessions saved locally by default. The \fB*\fR marker identifies the
+session that phone commands would select in this shell when selection is
+not ambiguous. Use --remote to list all active Axilio sessions instead;
+remote rows include session ID, phone ID, phone type, and model but do
+not indicate which session this CLI would select.
 
 .PP
-The \fB*\fR marker identifies the session that phone commands would select
-in this shell when selection is not ambiguous. Use --remote to list all
-active Axilio sessions instead; remote rows include session ID, phone
-ID, phone type, and model but do not indicate which session this CLI
-would select.
+Use --history for the org's full session history, active and released.
+Any history filter flag switches to history mode on its own: status,
+source, phone type, search, workflow, and started/ended time bounds,
+plus sort, order, and offset. Time bounds accept RFC3339 or YYYY-MM-DD.
+Inspect a returned ID with \fBsessions get\fR or \fBsessions trace\fR\&.
 
 .PP
 \fBCommand options\fP
 .IP \(bu 2
+\fB--ended-after\fP=\fIvalue\fP - Only sessions released at or after this
+time
+.IP \(bu 2
+\fB--ended-before\fP=\fIvalue\fP - Only sessions released at or before this
+time
+.IP \(bu 2
+\fB--history\fP - List the org's session history, active and released
+.IP \(bu 2
+\fB--limit\fP=\fInumber\fP - Maximum history rows to return (1-100) (default
+"50")
+.IP \(bu 2
+\fB--offset\fP=\fInumber\fP - History rows to skip for pagination
+.IP \(bu 2
+\fB--order\fP=\fIvalue\fP - History sort direction: asc|desc
+.IP \(bu 2
 \fB--remote\fP - List all active Axilio sessions instead of sessions
 saved locally
+.IP \(bu 2
+\fB--search\fP=\fIvalue\fP - Case-insensitive match on phone, session, or
+workflow
+.IP \(bu 2
+\fB--sort\fP=\fIvalue\fP - History sort column:
+started|ended|status|duration|source
+.IP \(bu 2
+\fB--source\fP=\fIstringSlice\fP - Filter history by source:
+workflow|interactive (repeatable) (default "[]")
+.IP \(bu 2
+\fB--started-after\fP=\fIvalue\fP - Only sessions started at or after this
+time
+.IP \(bu 2
+\fB--started-before\fP=\fIvalue\fP - Only sessions started at or before this
+time
+.IP \(bu 2
+\fB--status\fP=\fIstringSlice\fP - Filter history by status:
+active|completed|cancelled|expired (repeatable) (default "[]")
+.IP \(bu 2
+\fB--type\fP=\fIstringSlice\fP - Filter history by phone type:
+shared|dedicated (repeatable) (default "[]")
+.IP \(bu 2
+\fB--workflow\fP=\fIvalue\fP - Only sessions for this workflow ID
 
 .PP
 \fBGlobal-option behavior\fP
@@ -3258,6 +4171,175 @@ user@host ~ % axilio sessions current -o json
 # Exit status: 0
 # Notes: A selected session keeps the same JSON shape. With no selected
 #        session, stdout is empty and exit status is 4.
+.EE
+
+.SS downloads
+.EX
+axilio sessions downloads <session-id> [flags]
+.EE
+
+.PP
+List one session's captured downloads, newest first — the direct answer
+to "what did this session download".
+
+.PP
+Rows appear at detection, before the bytes finish moving, so a caller
+waiting on a file watches its capture state progress rather than an
+empty list. Save a ready capture with \fBdownloads get\fR\&. Filters and
+paging match \fBdownloads list\fR\&.
+
+.PP
+\fBCommand options\fP
+.IP \(bu 2
+\fB--created-after\fP=\fIvalue\fP - Only captures registered at or after
+this RFC 3339 time
+.IP \(bu 2
+\fB--created-before\fP=\fIvalue\fP - Only captures registered at or before
+this RFC 3339 time
+.IP \(bu 2
+\fB--limit\fP=\fInumber\fP - Maximum captures in this page (1-100) (default
+"50")
+.IP \(bu 2
+\fB--max-size\fP=\fInumber\fP - Only captures at most this many bytes; 0
+means no bound
+.IP \(bu 2
+\fB--mime\fP=\fIvalue\fP - Only captures of exactly this media type, e.g.
+image/png
+.IP \(bu 2
+\fB--min-size\fP=\fInumber\fP - Only captures at least this many bytes; 0
+means no bound
+.IP \(bu 2
+\fB--offset\fP=\fInumber\fP - Number of matching captures to skip before
+this page
+.IP \(bu 2
+\fB--search\fP=\fIvalue\fP - Filter filenames by case-insensitive substring
+
+.PP
+\fBGlobal-option behavior\fP
+.IP \(bu 2
+\fB--api-key\fP=\fIvalue\fP - API key for the session-download request;
+overrides AXILIO_API_KEY and the saved key
+.IP \(bu 2
+\fB--base-url\fP=\fIvalue\fP - API host for the session-download request;
+overrides AXILIO_BASE_URL and saved base-url
+.IP \(bu 2
+\fB--no-color\fP - Disable ANSI color in the human-readable form of the
+session-download result
+.IP \(bu 2
+\fB--org\fP=\fIvalue\fP - OAuth org for the session-download request;
+overrides AXILIO_ORG and the saved active org; API keys ignore it
+.IP \(bu 2
+\fB-o\fP, \fB--output\fP=\fIvalue\fP - Render the session-download result as
+table or json (default "table")
+.IP \(bu 2
+\fB-q\fP, \fB--quiet\fP - Suppress stderr notes for the session-download
+request; the session-download result remains on stdout
+
+.PP
+\fBExamples and expected output\fP
+
+.EX
+user@host ~ % axilio sessions downloads sess_123
+ID       FILENAME     SIZE     TYPE       STATE  SESSION  CREATED
+<dl-id>  receipt.png  2.0 KiB  image/png  ready  sess_123 <timestamp>
+.sp
+# Exit status: 0
+# Notes: Rows appear at detection, before the bytes finish moving; watch
+#        STATE progress to ready, then save with `downloads get`.
+.EE
+
+.SS get
+.EX
+axilio sessions get <session-id>
+.EE
+
+.PP
+Fetch one session by ID, active or historical.
+
+.PP
+The result includes status, source, phone, allocation and release times,
+duration, tags, workflow, capture and telemetry settings, and the
+recording status and playback URL when ready. Active sessions also
+include a short-lived screen thumbnail URL. Discover IDs with \fBsessions
+list --remote\fR or \fBsessions list --history\fR\&.
+
+.PP
+\fBGlobal-option behavior\fP
+.IP \(bu 2
+\fB--api-key\fP=\fIvalue\fP - API key for the session-detail request;
+overrides AXILIO_API_KEY and the saved key
+.IP \(bu 2
+\fB--base-url\fP=\fIvalue\fP - API host for the session-detail request;
+overrides AXILIO_BASE_URL and saved base-url
+.IP \(bu 2
+\fB--no-color\fP - Disable ANSI color in the human-readable form of the
+session-detail result
+.IP \(bu 2
+\fB--org\fP=\fIvalue\fP - OAuth org for the session-detail request;
+overrides AXILIO_ORG and the saved active org; API keys ignore it
+.IP \(bu 2
+\fB-o\fP, \fB--output\fP=\fIvalue\fP - Render the session-detail result as
+table or json (default "table")
+.IP \(bu 2
+\fB-q\fP, \fB--quiet\fP - Suppress stderr notes for the session-detail
+request; the session-detail result remains on stdout
+
+.PP
+\fBExamples and expected output\fP
+
+.PP
+\fBSample 1\fP
+
+.EX
+user@host ~ % axilio sessions get sess_123
+Session        sess_123
+Name           -
+Status         completed
+Source         workflow
+Allocated by   api_run
+Phone          <phone-id>
+Phone name     -
+Nickname       -
+Model          Pixel 8
+Type           android
+Location       us-central
+Dedicated      false
+Workflow       <workflow-id>
+Workflow name  demo
+Allocated      2026-08-05 20:00
+Released       2026-08-05 20:12
+Duration       12m00s
+Tags           team=qa
+Capture        true
+Telemetry      true
+Recording      ready
+Recording URL  <recording-url>
+Thumbnail URL  -
+.sp
+# Exit status: 0
+# Notes: Works for active and released sessions; the thumbnail URL is
+#        present on active sessions only.
+.EE
+
+.PP
+\fBSample 2\fP
+
+.EX
+user@host ~ % axilio sessions get sess_123 -o json
+{
+  "session_id": "sess_123",
+  "status": "active",
+  "source": "interactive",
+  "phone_id": "<phone-id>",
+  "allocated_at": "<timestamp>",
+  "recording_status": "pending",
+  "thumbnail_status": "ready",
+  "thumbnail_url": "<thumbnail-url>"
+}
+.sp
+# Exit status: 0
+# Notes: Excerpt: JSON is the canonical session detail response plus
+#        thumbnail_status/thumbnail_url enrichment on active sessions.
 .EE
 
 .SS start
@@ -3483,6 +4565,95 @@ user@host ~ % axilio sessions stop ph_123 --yes -o json
 # Exit status: 0
 # Notes: JSON is the canonical API deallocation response; workflow_id
 #        may be empty for an interactive session.
+.EE
+
+.SS trace
+.EX
+axilio sessions trace <session-id>
+.EE
+
+.PP
+Fetch the durable telemetry frames for a session and render them as an
+ordered listing of spans and logs with durations and billed costs.
+
+.PP
+Costs join at read time: sdk_call spans price by span ID and inference
+spans by inference ID, in microdollars as billed. All pages are fetched,
+so the output is the complete archived trace; frames with an
+unrecognized kind are listed generically rather than dropped. JSON
+output is the canonical frames response (frames, sdk_call_costs,
+inference_costs, totals) merged across pages. A live --follow mode is
+planned to arrive with the SDK's telemetry transport.
+
+.PP
+\fBGlobal-option behavior\fP
+.IP \(bu 2
+\fB--api-key\fP=\fIvalue\fP - API key for the telemetry-frames requests;
+overrides AXILIO_API_KEY and the saved key
+.IP \(bu 2
+\fB--base-url\fP=\fIvalue\fP - API host for the telemetry-frames requests;
+overrides AXILIO_BASE_URL and saved base-url
+.IP \(bu 2
+\fB--no-color\fP - Disable ANSI color in the human-readable form of the
+trace result
+.IP \(bu 2
+\fB--org\fP=\fIvalue\fP - OAuth org for the telemetry-frames requests;
+overrides AXILIO_ORG and the saved active org; API keys ignore it
+.IP \(bu 2
+\fB-o\fP, \fB--output\fP=\fIvalue\fP - Render the trace result as table or
+json (default "table")
+.IP \(bu 2
+\fB-q\fP, \fB--quiet\fP - Suppress stderr notes for the telemetry-frames
+requests; the trace result remains on stdout
+
+.PP
+\fBExamples and expected output\fP
+
+.PP
+\fBSample 1\fP
+
+.EX
+user@host ~ % axilio sessions trace sess_123
+TIME          KIND      NAME            DURATION  STATUS  COST
+20:00:01.000  session   session         12m00s    ok      -
+20:00:02.000  sdk_call  Screen.observe  1.0s      ok      $0.0031
+20:00:02.100  inference inference       800ms     ok      $0.0020
+20:00:03.500  log:output_log  hello     -         INFO    -
+.sp
+# Standard error:
+1204 frames; billed sdk_call cost $0.0311
+.sp
+# Exit status: 0
+# Notes: Costs are billed microdollars: sdk_call spans price by span ID,
+#        inference spans by inference ID. Frames with an unknown kind
+#        are listed generically, never dropped.
+.EE
+
+.PP
+\fBSample 2\fP
+
+.EX
+user@host ~ % axilio sessions trace sess_123 -o json
+{
+  "frames": [
+    {
+      "kind": "span",
+      "span_id": "<span-id>",
+      "span_type": "sdk_call",
+      "name": "Screen.observe",
+      "start_time_unix_nano": 0,
+      "end_time_unix_nano": 0
+    }
+  ],
+  "sdk_call_costs": {"<span-id>": 3100},
+  "inference_costs": {"<inference-id>": 2000},
+  "total": 1204,
+  "retention_expired": false
+}
+.sp
+# Exit status: 0
+# Notes: Excerpt: the canonical frames response merged across all pages,
+#        so the document is the complete archived trace.
 .EE
 
 .SH status
@@ -4059,21 +5230,242 @@ Status    delivered
 #        or the two-minute deadline.
 .EE
 
+.SH usage
+.EX
+axilio usage
+.EE
+
+.PP
+Read the active organization's usage: aggregate spend and compute
+metrics over a reporting window, or the individual billed inference
+calls behind the inference line item.
+
+.PP
+Running \fBaxilio usage\fR without a subcommand only displays this help.
+
+.PP
+\fBGlobal-option behavior\fP
+.IP \(bu 2
+\fB--api-key\fP, \fB--base-url\fP, \fB--no-color\fP, \fB--org\fP, \fB--output\fP
+/ \fB-o\fP, \fB--quiet\fP / \fB-q\fP - No effect on usage command; bare axilio
+usage only displays this help
+
+.PP
+\fBWorkflow examples\fP
+
+.EX
+axilio usage metrics --from 2026-08-01
+axilio usage inferences --from 2026-08-01 --endpoint locate
+.EE
+
+.SS inferences
+.EX
+axilio usage inferences [flags]
+.EE
+
+.PP
+List the billed vision inference calls between --from and --to, most
+recent first, with the cost and latency of each. Filter by endpoint
+(detect or locate, repeatable), model, or session; --search matches
+inference-ID substrings.
+
+.PP
+--order-by is a '<field> <asc|desc>\&' expression; the field is one of
+created_at, cost_microdollars, latency_ms, endpoint, model, or
+inference_id.
+
+.PP
+Page with --limit and --offset.
+
+.PP
+Accepts an RFC 3339 timestamp (2026-08-01T00:00:00Z) or a bare
+YYYY-MM-DD date, which reads as midnight UTC of that day.
+
+.PP
+\fBCommand options\fP
+.IP \(bu 2
+\fB--endpoint\fP=\fIstringSlice\fP - Restrict to a vision endpoint: detect
+or locate (repeatable) (default "[]")
+.IP \(bu 2
+\fB--from\fP=\fIvalue\fP - Start of the query window (required)
+.IP \(bu 2
+\fB--limit\fP=\fInumber\fP - Maximum inference calls in this page (1-100)
+(default "50")
+.IP \(bu 2
+\fB--model\fP=\fIvalue\fP - Restrict to a single model name
+.IP \(bu 2
+\fB--offset\fP=\fInumber\fP - Number of matching calls to skip before this
+page
+.IP \(bu 2
+\fB--order-by\fP=\fIvalue\fP - Sort expression '<field> <asc|desc>\&'
+(default: created_at desc)
+.IP \(bu 2
+\fB--search\fP=\fIvalue\fP - Filter by inference-ID substring
+.IP \(bu 2
+\fB--session\fP=\fIvalue\fP - Restrict to inferences that ran under one
+phone session
+.IP \(bu 2
+\fB--to\fP=\fIvalue\fP - End of the query window (default: now)
+
+.PP
+\fBGlobal-option behavior\fP
+.IP \(bu 2
+\fB--api-key\fP=\fIvalue\fP - API key for the inference-list request;
+overrides AXILIO_API_KEY and the saved key
+.IP \(bu 2
+\fB--base-url\fP=\fIvalue\fP - API host for the inference-list request;
+overrides AXILIO_BASE_URL and saved base-url
+.IP \(bu 2
+\fB--no-color\fP - Disable ANSI color in the human-readable form of the
+inference-list result
+.IP \(bu 2
+\fB--org\fP=\fIvalue\fP - OAuth org for the inference-list request;
+overrides AXILIO_ORG and the saved active org; API keys ignore it
+.IP \(bu 2
+\fB-o\fP, \fB--output\fP=\fIvalue\fP - Render the inference-list result as
+table or json (default "table")
+.IP \(bu 2
+\fB-q\fP, \fB--quiet\fP - Suppress stderr notes for the inference-list
+request; the inference-list result remains on stdout
+
+.PP
+\fBExamples and expected output\fP
+
+.PP
+\fBSample 1\fP
+
+.EX
+user@host ~ % axilio usage inferences --from 2026-08-01
+TIME        INFERENCE ID   ENDPOINT  MODEL            COST     LATENCY  SESSION
+<timestamp> <inference-id> locate    axilio-ground-1  $0.0012  321 ms   -
+.sp
+# Exit status: 0
+# Notes: Costs render in dollars from the API's microdollar amounts. An
+#        empty successful result prints No inferences found.
+.EE
+
+.PP
+\fBSample 2\fP
+
+.EX
+user@host ~ % axilio usage inferences --from 2026-08-01 --endpoint locate --session ses_123
+TIME        INFERENCE ID   ENDPOINT  MODEL            COST     LATENCY  SESSION
+<timestamp> <inference-id> locate    axilio-ground-1  $0.0012  321 ms   ses_123
+.sp
+# Exit status: 0
+.EE
+
+.SS metrics
+.EX
+axilio usage metrics [flags]
+.EE
+
+.PP
+Summarize the organization's usage between --from and --to: total
+compute minutes, spend split by product (sessions, inference, other),
+and infrastructure costs, each with the change from the previous period.
+
+.PP
+--granularity picks the bucket resolution (hourly or daily); the server
+chooses when omitted. --tz names an IANA timezone (e.g.
+America/Los_Angeles) for bucketing periods.
+
+.PP
+Table mode prints the summary numbers; the per-period chart series are
+available in --output json.
+
+.PP
+Accepts an RFC 3339 timestamp (2026-08-01T00:00:00Z) or a bare
+YYYY-MM-DD date, which reads as midnight UTC of that day.
+
+.PP
+\fBCommand options\fP
+.IP \(bu 2
+\fB--from\fP=\fIvalue\fP - Start of the reporting window (required)
+.IP \(bu 2
+\fB--granularity\fP=\fIvalue\fP - Bucket resolution: hourly or daily
+(default: server-chosen)
+.IP \(bu 2
+\fB--to\fP=\fIvalue\fP - End of the reporting window (default: now)
+.IP \(bu 2
+\fB--tz\fP=\fIvalue\fP - IANA timezone for bucketing periods, such as
+America/Los_Angeles
+
+.PP
+\fBGlobal-option behavior\fP
+.IP \(bu 2
+\fB--api-key\fP=\fIvalue\fP - API key for the usage-metrics request;
+overrides AXILIO_API_KEY and the saved key
+.IP \(bu 2
+\fB--base-url\fP=\fIvalue\fP - API host for the usage-metrics request;
+overrides AXILIO_BASE_URL and saved base-url
+.IP \(bu 2
+\fB--no-color\fP - Disable ANSI color in the human-readable form of the
+usage summary
+.IP \(bu 2
+\fB--org\fP=\fIvalue\fP - OAuth org for the usage-metrics request; overrides
+AXILIO_ORG and the saved active org; API keys ignore it
+.IP \(bu 2
+\fB-o\fP, \fB--output\fP=\fIvalue\fP - Render the usage summary as table or
+json (default "table")
+.IP \(bu 2
+\fB-q\fP, \fB--quiet\fP - Suppress stderr notes for the usage-metrics
+request; the usage summary remains on stdout
+
+.PP
+\fBExamples and expected output\fP
+
+.PP
+\fBSample 1\fP
+
+.EX
+user@host ~ % axilio usage metrics --from 2026-08-01
+Period           <start> - <end> (daily)
+Compute minutes  42.5 (+10.0%)
+Session spend    $1.25
+Inference spend  $0.75
+Other spend      $0.00
+Infra cost       $2.00 total, $2.00 this period (-5.0%)
+.sp
+# Exit status: 0
+# Notes: --from is required; an omitted --to means now. Bare dates read
+#        as midnight UTC. The per-period chart series are only in -o
+#        json.
+.EE
+
+.PP
+\fBSample 2\fP
+
+.EX
+user@host ~ % axilio usage metrics --from 2026-08-01 --to 2026-08-22 --granularity daily
+Period           <start> - <end> (daily)
+Compute minutes  42.5 (+10.0%)
+Session spend    $1.25
+Inference spend  $0.75
+Other spend      $0.00
+Infra cost       $2.00 total, $2.00 this period (-5.0%)
+.sp
+# Exit status: 0
+.EE
+
 .SH workflows
 .EX
 axilio workflows
 .EE
 
 .PP
-Inspect workflows in the active organization. Use \fBworkflows list\fR to
-discover a workflow ID, then pass that ID to \fBruns start\fR or \fBsessions
-start --workflow\fR\&.
+Manage workflows in the active organization. \fBworkflows list\fR discovers
+workflow IDs; create, get, and delete manage the records; pull, push,
+revisions, and restore round-trip the Python source: pull the current
+code to a file, edit locally, push it back as a new revision, and
+restore any earlier revision. A workflow ID can be passed to \fBruns
+start\fR or \fBsessions start --workflow\fR\&.
 
 .PP
 Running \fBaxilio workflows\fR without a subcommand is equivalent to \fBaxilio
 workflows --help\fR: it only displays this help and does not list
 workflows. Global flags shown here therefore have no effect. Pass flags
-to \fBworkflows list\fR instead.
+to a workflows subcommand instead.
 
 .PP
 \fBGlobal-option behavior\fP
@@ -4087,7 +5479,9 @@ axilio workflows only displays this help
 
 .EX
 axilio workflows list
-axilio workflows list --search checkout
+axilio workflows create checkout-flow --code checkout.py
+axilio workflows pull wf_123 --out checkout.py
+axilio workflows push wf_123 checkout.py -m "handle 2FA"
 axilio runs start wf_123
 .EE
 
@@ -4184,6 +5578,516 @@ user@host ~ % axilio workflows list -o json
 # Exit status: 0
 # Notes: Shortened representative JSON output; workflow records may
 #        include additional fields and statistics.
+.EE
+
+.SS create
+.EX
+axilio workflows create <name> [flags]
+.EE
+
+.PP
+Create a workflow in the active organization.
+
+.PP
+The name must contain only letters, digits, hyphens, and underscores,
+and be unique within the org. Pass --code with a Python file to save the
+workflow's first code revision atomically with it; omit it to create an
+empty workflow and \fBworkflows push\fR code later. Recording, telemetry,
+and capture default to on server-side; each toggle flag is sent only
+when set explicitly, so omitted toggles keep the server defaults.
+
+.PP
+\fBCommand options\fP
+.IP \(bu 2
+\fB--capture\fP - Capture media produced on the phone into the org
+library; --capture=false disables it (default "true")
+.IP \(bu 2
+\fB--code\fP=\fIvalue\fP - Python file saved as the workflow's first code
+revision
+.IP \(bu 2
+\fB--platform\fP=\fIvalue\fP - Target platform: ios, android, or both;
+omitted uses the server default
+.IP \(bu 2
+\fB--recording\fP - Record this workflow's runs; --recording=false
+suppresses video and thumbnails (default "true")
+.IP \(bu 2
+\fB--telemetry\fP - Persist telemetry spans for runs; --telemetry=false
+skips the durable trace store (default "true")
+
+.PP
+\fBGlobal-option behavior\fP
+.IP \(bu 2
+\fB--api-key\fP=\fIvalue\fP - API key for the workflow-create request;
+overrides AXILIO_API_KEY and the saved key
+.IP \(bu 2
+\fB--base-url\fP=\fIvalue\fP - API host for the workflow-create request;
+overrides AXILIO_BASE_URL and saved base-url
+.IP \(bu 2
+\fB--no-color\fP - Disable ANSI color in the human-readable form of the
+created-workflow result
+.IP \(bu 2
+\fB--org\fP=\fIvalue\fP - OAuth org for the workflow-create request;
+overrides AXILIO_ORG and the saved active org; API keys ignore it
+.IP \(bu 2
+\fB-o\fP, \fB--output\fP=\fIvalue\fP - Render the created-workflow result as
+table or json (default "table")
+.IP \(bu 2
+\fB-q\fP, \fB--quiet\fP - Suppress stderr notes for the workflow-create
+request; the created-workflow result remains on stdout
+
+.PP
+\fBExamples and expected output\fP
+
+.PP
+\fBSample 1\fP
+
+.EX
+user@host ~ % axilio workflows create checkout-flow --platform android --code checkout.py
+Workflow     <workflow-id>
+Revision     1
+Revision ID  <revision-id>
+.sp
+# Exit status: 0
+# Notes: With --code, the file is saved atomically as revision 1.
+#        Without it, only the workflow ID prints.
+.EE
+
+.PP
+\fBSample 2\fP
+
+.EX
+user@host ~ % axilio workflows create checkout-flow --recording=false
+Workflow  <workflow-id>
+.sp
+# Exit status: 0
+.EE
+
+.PP
+\fBSample 3\fP
+
+.EX
+user@host ~ % axilio workflows create "bad name"
+.sp
+# Standard error:
+workflow name must contain only letters, digits, hyphens, and underscores (got "bad name")
+.sp
+# Exit status: 2
+# Notes: The name rule is validated before credentials or an API
+#        request.
+.EE
+
+.SS delete
+.EX
+axilio workflows delete <workflow-id> [flags]
+.EE
+
+.PP
+Delete a workflow from the active organization, including its code
+revisions.
+
+.PP
+Runs already recorded against it are not removed. Without --yes, table
+mode prompts only when stdin is a terminal. Redirected, JSON, and quiet
+execution do not prompt and require --yes. The alias \fBworkflows rm\fR
+performs the same operation.
+
+.PP
+\fBCommand options\fP
+.IP \(bu 2
+\fB-y\fP, \fB--yes\fP - Delete without prompting; required in JSON, quiet,
+or redirected execution
+
+.PP
+\fBGlobal-option behavior\fP
+.IP \(bu 2
+\fB--api-key\fP=\fIvalue\fP - API key for the workflow-delete request;
+overrides AXILIO_API_KEY and the saved key
+.IP \(bu 2
+\fB--base-url\fP=\fIvalue\fP - API host for the workflow-delete request;
+overrides AXILIO_BASE_URL and saved base-url
+.IP \(bu 2
+\fB--no-color\fP - Disable ANSI color in the human-readable form of the
+deletion result
+.IP \(bu 2
+\fB--org\fP=\fIvalue\fP - OAuth org for the workflow-delete request;
+overrides AXILIO_ORG and the saved active org; API keys ignore it
+.IP \(bu 2
+\fB-o\fP, \fB--output\fP=\fIvalue\fP - Emit a human confirmation or JSON
+deletion result (default "table")
+.IP \(bu 2
+\fB-q\fP, \fB--quiet\fP - Suppress the prompt and human confirmation;
+--yes is required; JSON still prints
+
+.PP
+\fBExamples and expected output\fP
+
+.PP
+\fBSample 1\fP
+
+.EX
+user@host ~ % axilio workflows delete wf_123 --yes
+Deleted wf_123
+.sp
+# Exit status: 0
+# Notes: Deletes the workflow and its code revisions; recorded runs
+#        remain.
+.EE
+
+.PP
+\fBSample 2\fP
+
+.EX
+user@host ~ % axilio workflows delete wf_123 < /dev/null
+.sp
+# Standard error:
+aborted (pass --yes to delete non-interactively)
+.sp
+# Exit status: 2
+# Notes: Redirected, JSON, and quiet execution never prompt; they
+#        require --yes.
+.EE
+
+.SS get
+.EX
+axilio workflows get <workflow-id>
+.EE
+
+.PP
+Show a single workflow: name, platform, status, OCR engine, the
+recording/telemetry/capture toggles, timestamps, and run statistics.
+
+.PP
+Use \fBworkflows list\fR to discover the workflow ID, \fBworkflows pull\fR for
+its code, and \fBworkflows revisions\fR for its code history.
+
+.PP
+\fBGlobal-option behavior\fP
+.IP \(bu 2
+\fB--api-key\fP=\fIvalue\fP - API key for the workflow-detail request;
+overrides AXILIO_API_KEY and the saved key
+.IP \(bu 2
+\fB--base-url\fP=\fIvalue\fP - API host for the workflow-detail request;
+overrides AXILIO_BASE_URL and saved base-url
+.IP \(bu 2
+\fB--no-color\fP - Disable ANSI color in the human-readable form of the
+workflow-detail result
+.IP \(bu 2
+\fB--org\fP=\fIvalue\fP - OAuth org for the workflow-detail request;
+overrides AXILIO_ORG and the saved active org; API keys ignore it
+.IP \(bu 2
+\fB-o\fP, \fB--output\fP=\fIvalue\fP - Render the workflow-detail result as
+table or json (default "table")
+.IP \(bu 2
+\fB-q\fP, \fB--quiet\fP - Suppress stderr notes for the workflow-detail
+request; the workflow-detail result remains on stdout
+
+.PP
+\fBExamples and expected output\fP
+
+.PP
+\fBSample 1\fP
+
+.EX
+user@host ~ % axilio workflows get wf_123
+Workflow      wf_123
+Name          Checkout
+Platform      android
+Status        active
+OCR engine    free
+Recording     true
+Telemetry     true
+Capture       true
+Created       <timestamp>
+Updated       <timestamp>
+Last run      <timestamp>
+Total runs    4
+Success rate  75%
+.sp
+# Exit status: 0
+.EE
+
+.PP
+\fBSample 2\fP
+
+.EX
+user@host ~ % axilio workflows get wf_123 -o json
+{
+  "stats": {
+    "success_rate": 0.75,
+    "total_runs": 4
+  },
+  "workflow": {
+    "id": "wf_123",
+    "name": "Checkout",
+    "platform": "android",
+    "status": "active"
+  }
+}
+.sp
+# Exit status: 0
+# Notes: Shortened representative JSON output; the workflow record
+#        includes the full field set.
+.EE
+
+.SS pull
+.EX
+axilio workflows pull <workflow-id> [flags]
+.EE
+
+.PP
+Fetch the Python source of the workflow's current code revision.
+
+.PP
+By default the source prints to stdout so it can be piped; --out writes
+it to a file instead, overwriting existing contents without
+confirmation. A workflow with no revisions yet yields empty source at
+revision 0. Edit the pulled file locally and \fBworkflows push\fR it back as
+a new revision.
+
+.PP
+\fBCommand options\fP
+.IP \(bu 2
+\fB--out\fP=\fIvalue\fP - File to write the source to; omitted prints it to
+stdout
+
+.PP
+\fBGlobal-option behavior\fP
+.IP \(bu 2
+\fB--api-key\fP=\fIvalue\fP - API key for the workflow-code request;
+overrides AXILIO_API_KEY and the saved key
+.IP \(bu 2
+\fB--base-url\fP=\fIvalue\fP - API host for the workflow-code request;
+overrides AXILIO_BASE_URL and saved base-url
+.IP \(bu 2
+\fB--no-color\fP - Disable ANSI color in the human-readable form of the
+pulled-code result
+.IP \(bu 2
+\fB--org\fP=\fIvalue\fP - OAuth org for the workflow-code request; overrides
+AXILIO_ORG and the saved active org; API keys ignore it
+.IP \(bu 2
+\fB-o\fP, \fB--output\fP=\fIvalue\fP - Render pulled code as raw stdout text
+or a json document; --out writes the file either way (default "table")
+.IP \(bu 2
+\fB-q\fP, \fB--quiet\fP - Suppress the --out acknowledgment; pulled source
+or JSON remains on stdout
+
+.PP
+\fBExamples and expected output\fP
+
+.PP
+\fBSample 1\fP
+
+.EX
+user@host ~ % axilio workflows pull wf_123
+<the current revision's Python source>
+.sp
+# Exit status: 0
+# Notes: The raw source prints to stdout so it can be piped or
+#        redirected.
+.EE
+
+.PP
+\fBSample 2\fP
+
+.EX
+user@host ~ % axilio workflows pull wf_123 --out checkout.py
+Wrote checkout.py (revision 3, <bytes> bytes)
+.sp
+# Exit status: 0
+# Notes: A new file requests mode 0644, subject to the process umask.
+#        Overwriting an existing file preserves its mode while replacing
+#        its contents.
+.EE
+
+.SS push
+.EX
+axilio workflows push <workflow-id> <file> [flags]
+.EE
+
+.PP
+Save a local Python file as a new code revision of the workflow, with an
+optional commit-style --message.
+
+.PP
+The server deduplicates against the current revision by content hash:
+pushing unchanged source is a no-op that creates no revision. Source is
+capped at 256 KiB. Use \fBworkflows revisions\fR to inspect history and
+\fBworkflows restore\fR to return to an earlier revision.
+
+.PP
+\fBCommand options\fP
+.IP \(bu 2
+\fB-m\fP, \fB--message\fP=\fIvalue\fP - Commit-style note stored with the
+revision
+
+.PP
+\fBGlobal-option behavior\fP
+.IP \(bu 2
+\fB--api-key\fP=\fIvalue\fP - API key for the code-save request; overrides
+AXILIO_API_KEY and the saved key
+.IP \(bu 2
+\fB--base-url\fP=\fIvalue\fP - API host for the code-save request; overrides
+AXILIO_BASE_URL and saved base-url
+.IP \(bu 2
+\fB--no-color\fP - Disable ANSI color in the human-readable form of the
+saved-revision result
+.IP \(bu 2
+\fB--org\fP=\fIvalue\fP - OAuth org for the code-save request; overrides
+AXILIO_ORG and the saved active org; API keys ignore it
+.IP \(bu 2
+\fB-o\fP, \fB--output\fP=\fIvalue\fP - Render the saved-revision result as
+table or json (default "table")
+.IP \(bu 2
+\fB-q\fP, \fB--quiet\fP - Suppress stderr notes for the code-save request;
+the saved-revision result remains on stdout
+
+.PP
+\fBExamples and expected output\fP
+
+.PP
+\fBSample 1\fP
+
+.EX
+user@host ~ % axilio workflows push wf_123 checkout.py -m "handle 2FA"
+Saved revision 4 (<revision-id>)
+.sp
+# Exit status: 0
+# Notes: The server deduplicates by content hash; unchanged source
+#        reports a no-op and creates no revision.
+.EE
+
+.PP
+\fBSample 2\fP
+
+.EX
+user@host ~ % axilio workflows push wf_123 checkout.py -o json
+{
+  "no_op": false,
+  "revision": 4,
+  "revision_id": "<revision-id>"
+}
+.sp
+# Exit status: 0
+.EE
+
+.SS restore
+.EX
+axilio workflows restore <workflow-id> <revision-id>
+.EE
+
+.PP
+Create a new code revision containing the source of the named earlier
+revision.
+
+.PP
+Nothing is deleted and the action is not deduplicated, so the restore
+itself is visible in \fBworkflows revisions\fR history. Use \fBworkflows
+revisions\fR to discover revision IDs.
+
+.PP
+\fBGlobal-option behavior\fP
+.IP \(bu 2
+\fB--api-key\fP=\fIvalue\fP - API key for the revision-restore request;
+overrides AXILIO_API_KEY and the saved key
+.IP \(bu 2
+\fB--base-url\fP=\fIvalue\fP - API host for the revision-restore request;
+overrides AXILIO_BASE_URL and saved base-url
+.IP \(bu 2
+\fB--no-color\fP - Disable ANSI color in the human-readable form of the
+restored-revision result
+.IP \(bu 2
+\fB--org\fP=\fIvalue\fP - OAuth org for the revision-restore request;
+overrides AXILIO_ORG and the saved active org; API keys ignore it
+.IP \(bu 2
+\fB-o\fP, \fB--output\fP=\fIvalue\fP - Render the restored-revision result as
+table or json (default "table")
+.IP \(bu 2
+\fB-q\fP, \fB--quiet\fP - Suppress stderr notes for the revision-restore
+request; the restored-revision result remains on stdout
+
+.PP
+\fBExamples and expected output\fP
+
+.EX
+user@host ~ % axilio workflows restore wf_123 <revision-id>
+Restored <revision-id> as new revision 5 (<new-revision-id>)
+.sp
+# Exit status: 0
+# Notes: Restore copies the old source into a new revision; nothing is
+#        deleted and the action stays visible in history.
+.EE
+
+.SS revisions
+.EX
+axilio workflows revisions <workflow-id> [flags]
+.EE
+
+.PP
+List the workflow's code revision history in reverse-chronological
+order: revision number, revision ID, author, size, save time, and the
+optional message.
+
+.PP
+Page older history with --before, which returns revisions numbered
+strictly below the given revision number. A listed revision ID can be
+passed to \fBworkflows restore\fR\&.
+
+.PP
+\fBCommand options\fP
+.IP \(bu 2
+\fB--before\fP=\fInumber\fP - Return revisions numbered below this; 0 starts
+from the newest
+.IP \(bu 2
+\fB--limit\fP=\fInumber\fP - Maximum revisions to return (1-200) (default
+"50")
+
+.PP
+\fBGlobal-option behavior\fP
+.IP \(bu 2
+\fB--api-key\fP=\fIvalue\fP - API key for the revision-list request;
+overrides AXILIO_API_KEY and the saved key
+.IP \(bu 2
+\fB--base-url\fP=\fIvalue\fP - API host for the revision-list request;
+overrides AXILIO_BASE_URL and saved base-url
+.IP \(bu 2
+\fB--no-color\fP - Disable ANSI color in the human-readable form of the
+revision-list result
+.IP \(bu 2
+\fB--org\fP=\fIvalue\fP - OAuth org for the revision-list request; overrides
+AXILIO_ORG and the saved active org; API keys ignore it
+.IP \(bu 2
+\fB-o\fP, \fB--output\fP=\fIvalue\fP - Render the revision-list result as
+table or json (default "table")
+.IP \(bu 2
+\fB-q\fP, \fB--quiet\fP - Suppress stderr notes for the revision-list
+request; the revision-list result remains on stdout
+
+.PP
+\fBExamples and expected output\fP
+
+.PP
+\fBSample 1\fP
+
+.EX
+user@host ~ % axilio workflows revisions wf_123
+REV  REVISION ID    AUTHOR     SIZE   CREATED      MESSAGE
+4    <revision-id>  <user-id>  1.2 KiB <timestamp> handle 2FA
+3    <revision-id>  <user-id>  1.1 KiB <timestamp> -
+.sp
+# Exit status: 0
+# Notes: Newest first. When a full page returns, a note names the
+#        --before cursor for older history.
+.EE
+
+.PP
+\fBSample 2\fP
+
+.EX
+user@host ~ % axilio workflows revisions wf_123 --limit 10 --before 3
+REV  REVISION ID    AUTHOR     SIZE   CREATED      MESSAGE
+2    <revision-id>  <user-id>  1.0 KiB <timestamp> -
+.sp
+# Exit status: 0
 .EE
 
 

@@ -41,6 +41,21 @@ func fakeAPI(t *testing.T) *httptest.Server {
 			body = `{"api_keys":[
 				{"id":"k1","name":"ci","key_preview":"axl_ci…","created_at":"2026-07-14T00:00:00Z"}],
 				"total":1,"limit":50,"offset":0}`
+		case strings.Contains(p, "/usage/metrics"):
+			body = `{"period_start":"2026-08-01T00:00:00Z","period_end":"2026-08-22T00:00:00Z","granularity":"daily",
+				"compute_minutes":{"total_minutes":42.5,"change":10.0},
+				"cost_by_product":{"sessions":1.25,"inference":0.75,"other":0},
+				"infra_costs":{"total":2.0,"this_period":2.0,"change":-5.0}}`
+		case strings.Contains(p, "/usage/inferences"):
+			body = `{"inferences":[
+				{"inference_id":"inf1","endpoint":"locate","model":"axilio-ground-1","cost_microdollars":1234,"latency_ms":321,"created_at":"2026-08-20T00:00:00Z","ocr_pages":0}],
+				"total":1,"limit":50,"offset":0}`
+		case strings.Contains(p, "/runs/history"):
+			body = `{"runs":[
+				{"run_id":"r9","status":"completed","trigger":"manual","workflow_id":"w1","user_id":"u1","success":true,"started_at":"2026-08-10T00:00:00Z","completed_at":"2026-08-10T00:05:00Z"}],
+				"total":1,"limit":50,"offset":0}`
+		case strings.Contains(p, "/runs/stats/"):
+			body = `{"total_runs":8,"success_rate":0.875}`
 		case strings.Contains(p, ":cancel"):
 			// run cancel: POST /runs/{run_id}:cancel (custom method, 0.72 API).
 			body = `{"success":true}`
@@ -65,6 +80,74 @@ func fakeAPI(t *testing.T) *httptest.Server {
 			body = `{"runs":[
 				{"id":"r1","status":"completed","trigger":"manual","workflow_id":"w1","success":true}],
 				"total":1,"limit":20,"offset":0}`
+		case strings.HasSuffix(p, "/blob"):
+			// Stands in for the storage service behind a capture's signed URL.
+			w.Header().Set("Content-Type", "application/octet-stream")
+			_, _ = io.WriteString(w, "captured-bytes")
+			return
+		case strings.Contains(p, "/phones/sessions/") && strings.HasSuffix(p, "/downloads"):
+			body = `{"downloads":[
+				{"id":"d1","filename":"receipt.png","mime_type":"image/png","size_bytes":2048,"capture_state":"ready","preview_state":"ready","on_phone_count":1,"session_id":"s1","created_at":"2026-08-22T10:00:00Z","download_url":"http://` + r.Host + `/blob"}],
+				"total":1}`
+		case strings.HasSuffix(p, "/downloads") && r.Method == http.MethodGet:
+			body = `{"downloads":[
+				{"id":"d1","filename":"receipt.png","mime_type":"image/png","size_bytes":2048,"capture_state":"ready","preview_state":"ready","on_phone_count":1,"session_id":"s1","created_at":"2026-08-22T10:00:00Z","download_url":"http://` + r.Host + `/blob"},
+				{"id":"d2","filename":"clip.mp4","mime_type":"video/mp4","size_bytes":9999,"capture_state":"skipped_size","capture_error":"file exceeds the capture ceiling","preview_state":"unavailable","on_phone_count":0,"session_id":"s1","created_at":"2026-08-22T09:00:00Z"}],
+				"total":2}`
+		case strings.Contains(p, "/downloads/") && r.Method == http.MethodDelete:
+			body = `{"message":"file deleted","phones_pending_removal":2}`
+		case strings.HasSuffix(p, "/code/restore") && r.Method == http.MethodPost:
+			// workflow code restore: POST /workflows/{id}/code/restore.
+			var reqBody struct {
+				RevisionID string `json:"revision_id"`
+			}
+			_ = json.NewDecoder(r.Body).Decode(&reqBody)
+			if reqBody.RevisionID == "" {
+				http.Error(w, `{"title":"Unprocessable Entity","status":422,"detail":"expected required property revision_id to be present"}`, http.StatusUnprocessableEntity)
+				return
+			}
+			body = `{"no_op":false,"revision":4,"revision_id":"rev4"}`
+		case strings.HasSuffix(p, "/code") && r.Method == http.MethodGet:
+			body = `{"revision":2,"revision_id":"rev2","source":"print('hello')\n","updated_at":"2026-08-05T20:00:00Z"}`
+		case strings.HasSuffix(p, "/code") && r.Method == http.MethodPost:
+			// workflow code save: POST /workflows/{id}/code. The backend
+			// requires source; reject its absence so the test seam stays
+			// faithful to the real contract.
+			var reqBody struct {
+				Source *string `json:"source"`
+			}
+			_ = json.NewDecoder(r.Body).Decode(&reqBody)
+			if reqBody.Source == nil {
+				http.Error(w, `{"title":"Unprocessable Entity","status":422,"detail":"expected required property source to be present"}`, http.StatusUnprocessableEntity)
+				return
+			}
+			body = `{"no_op":false,"revision":3,"revision_id":"rev3"}`
+		case strings.HasSuffix(p, "/revisions") && r.Method == http.MethodGet:
+			body = `{"revisions":[
+				{"id":"rev2","revision":2,"author_user_id":"u1","bytes":14,"sha256":"abc","message":"tweak","created_at":"2026-08-05T20:00:00Z"},
+				{"id":"rev1","revision":1,"author_user_id":"u1","bytes":12,"sha256":"def","created_at":"2026-08-04T20:00:00Z"}]}`
+		case strings.HasSuffix(p, "/workflows") && r.Method == http.MethodPost:
+			// workflow create: POST /workflows. Echo back a first revision only
+			// when code was provided, like the real endpoint.
+			var reqBody struct {
+				Name string  `json:"name"`
+				Code *string `json:"code"`
+			}
+			_ = json.NewDecoder(r.Body).Decode(&reqBody)
+			if reqBody.Name == "" {
+				http.Error(w, `{"title":"Unprocessable Entity","status":422,"detail":"expected required property name to be present"}`, http.StatusUnprocessableEntity)
+				return
+			}
+			if reqBody.Code != nil {
+				body = `{"workflow_id":"w2","revision":1,"revision_id":"rev1"}`
+			} else {
+				body = `{"workflow_id":"w2"}`
+			}
+		case strings.Contains(p, "/workflows/") && r.Method == http.MethodDelete:
+			body = `{"message":"deleted"}`
+		case strings.Contains(p, "/workflows/") && r.Method == http.MethodGet:
+			body = `{"workflow":{"id":"w1","name":"demo","platform":"android","status":"active","ocr_engine":"free","recording":true,"telemetry":true,"capture":false,"created_at":"2026-08-01T00:00:00Z","updated_at":"2026-08-05T00:00:00Z","user_id":"u1"},
+				"stats":{"total_runs":4,"success_rate":0.75}}`
 		case strings.Contains(p, "/workflows"):
 			body = `{"workflows":[
 				{"workflow":{"id":"w1","name":"demo","platform":"android","status":"active"}}],
