@@ -2926,6 +2926,8 @@ axilio sessions only displays this help
 axilio sessions list
 axilio sessions start
 axilio sessions current
+axilio sessions get sess_123
+axilio sessions trace sess_123
 axilio sessions stop sess_123
 .EE
 
@@ -2935,20 +2937,62 @@ axilio sessions list [flags]
 .EE
 
 .PP
-List sessions saved locally by default.
+List sessions saved locally by default. The \fB*\fR marker identifies the
+session that phone commands would select in this shell when selection is
+not ambiguous. Use --remote to list all active Axilio sessions instead;
+remote rows include session ID, phone ID, phone type, and model but do
+not indicate which session this CLI would select.
 
 .PP
-The \fB*\fR marker identifies the session that phone commands would select
-in this shell when selection is not ambiguous. Use --remote to list all
-active Axilio sessions instead; remote rows include session ID, phone
-ID, phone type, and model but do not indicate which session this CLI
-would select.
+Use --history for the org's full session history, active and released.
+Any history filter flag switches to history mode on its own: status,
+source, phone type, search, workflow, and started/ended time bounds,
+plus sort, order, and offset. Time bounds accept RFC3339 or YYYY-MM-DD.
+Inspect a returned ID with \fBsessions get\fR or \fBsessions trace\fR\&.
 
 .PP
 \fBCommand options\fP
 .IP \(bu 2
+\fB--ended-after\fP=\fIvalue\fP - Only sessions released at or after this
+time
+.IP \(bu 2
+\fB--ended-before\fP=\fIvalue\fP - Only sessions released at or before this
+time
+.IP \(bu 2
+\fB--history\fP - List the org's session history, active and released
+.IP \(bu 2
+\fB--limit\fP=\fInumber\fP - Maximum history rows to return (1-100) (default
+"50")
+.IP \(bu 2
+\fB--offset\fP=\fInumber\fP - History rows to skip for pagination
+.IP \(bu 2
+\fB--order\fP=\fIvalue\fP - History sort direction: asc|desc
+.IP \(bu 2
 \fB--remote\fP - List all active Axilio sessions instead of sessions
 saved locally
+.IP \(bu 2
+\fB--search\fP=\fIvalue\fP - Case-insensitive match on phone, session, or
+workflow
+.IP \(bu 2
+\fB--sort\fP=\fIvalue\fP - History sort column:
+started|ended|status|duration|source
+.IP \(bu 2
+\fB--source\fP=\fIstringSlice\fP - Filter history by source:
+workflow|interactive (repeatable) (default "[]")
+.IP \(bu 2
+\fB--started-after\fP=\fIvalue\fP - Only sessions started at or after this
+time
+.IP \(bu 2
+\fB--started-before\fP=\fIvalue\fP - Only sessions started at or before this
+time
+.IP \(bu 2
+\fB--status\fP=\fIstringSlice\fP - Filter history by status:
+active|completed|cancelled|expired (repeatable) (default "[]")
+.IP \(bu 2
+\fB--type\fP=\fIstringSlice\fP - Filter history by phone type:
+shared|dedicated (repeatable) (default "[]")
+.IP \(bu 2
+\fB--workflow\fP=\fIvalue\fP - Only sessions for this workflow ID
 
 .PP
 \fBGlobal-option behavior\fP
@@ -3097,6 +3141,100 @@ user@host ~ % axilio sessions current -o json
 # Exit status: 0
 # Notes: A selected session keeps the same JSON shape. With no selected
 #        session, stdout is empty and exit status is 4.
+.EE
+
+.SS get
+.EX
+axilio sessions get <session-id>
+.EE
+
+.PP
+Fetch one session by ID, active or historical.
+
+.PP
+The result includes status, source, phone, allocation and release times,
+duration, tags, workflow, capture and telemetry settings, and the
+recording status and playback URL when ready. Active sessions also
+include a short-lived screen thumbnail URL. Discover IDs with \fBsessions
+list --remote\fR or \fBsessions list --history\fR\&.
+
+.PP
+\fBGlobal-option behavior\fP
+.IP \(bu 2
+\fB--api-key\fP=\fIvalue\fP - API key for the session-detail request;
+overrides AXILIO_API_KEY and the saved key
+.IP \(bu 2
+\fB--base-url\fP=\fIvalue\fP - API host for the session-detail request;
+overrides AXILIO_BASE_URL and saved base-url
+.IP \(bu 2
+\fB--no-color\fP - Disable ANSI color in the human-readable form of the
+session-detail result
+.IP \(bu 2
+\fB--org\fP=\fIvalue\fP - OAuth org for the session-detail request;
+overrides AXILIO_ORG and the saved active org; API keys ignore it
+.IP \(bu 2
+\fB-o\fP, \fB--output\fP=\fIvalue\fP - Render the session-detail result as
+table or json (default "table")
+.IP \(bu 2
+\fB-q\fP, \fB--quiet\fP - Suppress stderr notes for the session-detail
+request; the session-detail result remains on stdout
+
+.PP
+\fBExamples and expected output\fP
+
+.PP
+\fBSample 1\fP
+
+.EX
+user@host ~ % axilio sessions get sess_123
+Session        sess_123
+Name           -
+Status         completed
+Source         workflow
+Allocated by   api_run
+Phone          <phone-id>
+Phone name     -
+Nickname       -
+Model          Pixel 8
+Type           android
+Location       us-central
+Dedicated      false
+Workflow       <workflow-id>
+Workflow name  demo
+Allocated      2026-08-05 20:00
+Released       2026-08-05 20:12
+Duration       12m00s
+Tags           team=qa
+Capture        true
+Telemetry      true
+Recording      ready
+Recording URL  <recording-url>
+Thumbnail URL  -
+.sp
+# Exit status: 0
+# Notes: Works for active and released sessions; the thumbnail URL is
+#        present on active sessions only.
+.EE
+
+.PP
+\fBSample 2\fP
+
+.EX
+user@host ~ % axilio sessions get sess_123 -o json
+{
+  "session_id": "sess_123",
+  "status": "active",
+  "source": "interactive",
+  "phone_id": "<phone-id>",
+  "allocated_at": "<timestamp>",
+  "recording_status": "pending",
+  "thumbnail_status": "ready",
+  "thumbnail_url": "<thumbnail-url>"
+}
+.sp
+# Exit status: 0
+# Notes: Excerpt: JSON is the canonical session detail response plus
+#        thumbnail_status/thumbnail_url enrichment on active sessions.
 .EE
 
 .SS start
@@ -3322,6 +3460,95 @@ user@host ~ % axilio sessions stop ph_123 --yes -o json
 # Exit status: 0
 # Notes: JSON is the canonical API deallocation response; workflow_id
 #        may be empty for an interactive session.
+.EE
+
+.SS trace
+.EX
+axilio sessions trace <session-id>
+.EE
+
+.PP
+Fetch the durable telemetry frames for a session and render them as an
+ordered listing of spans and logs with durations and billed costs.
+
+.PP
+Costs join at read time: sdk_call spans price by span ID and inference
+spans by inference ID, in microdollars as billed. All pages are fetched,
+so the output is the complete archived trace; frames with an
+unrecognized kind are listed generically rather than dropped. JSON
+output is the canonical frames response (frames, sdk_call_costs,
+inference_costs, totals) merged across pages. A live --follow mode is
+planned to arrive with the SDK's telemetry transport.
+
+.PP
+\fBGlobal-option behavior\fP
+.IP \(bu 2
+\fB--api-key\fP=\fIvalue\fP - API key for the telemetry-frames requests;
+overrides AXILIO_API_KEY and the saved key
+.IP \(bu 2
+\fB--base-url\fP=\fIvalue\fP - API host for the telemetry-frames requests;
+overrides AXILIO_BASE_URL and saved base-url
+.IP \(bu 2
+\fB--no-color\fP - Disable ANSI color in the human-readable form of the
+trace result
+.IP \(bu 2
+\fB--org\fP=\fIvalue\fP - OAuth org for the telemetry-frames requests;
+overrides AXILIO_ORG and the saved active org; API keys ignore it
+.IP \(bu 2
+\fB-o\fP, \fB--output\fP=\fIvalue\fP - Render the trace result as table or
+json (default "table")
+.IP \(bu 2
+\fB-q\fP, \fB--quiet\fP - Suppress stderr notes for the telemetry-frames
+requests; the trace result remains on stdout
+
+.PP
+\fBExamples and expected output\fP
+
+.PP
+\fBSample 1\fP
+
+.EX
+user@host ~ % axilio sessions trace sess_123
+TIME          KIND      NAME            DURATION  STATUS  COST
+20:00:01.000  session   session         12m00s    ok      -
+20:00:02.000  sdk_call  Screen.observe  1.0s      ok      $0.0031
+20:00:02.100  inference inference       800ms     ok      $0.0020
+20:00:03.500  log:output_log  hello     -         INFO    -
+.sp
+# Standard error:
+1204 frames; billed sdk_call cost $0.0311
+.sp
+# Exit status: 0
+# Notes: Costs are billed microdollars: sdk_call spans price by span ID,
+#        inference spans by inference ID. Frames with an unknown kind
+#        are listed generically, never dropped.
+.EE
+
+.PP
+\fBSample 2\fP
+
+.EX
+user@host ~ % axilio sessions trace sess_123 -o json
+{
+  "frames": [
+    {
+      "kind": "span",
+      "span_id": "<span-id>",
+      "span_type": "sdk_call",
+      "name": "Screen.observe",
+      "start_time_unix_nano": 0,
+      "end_time_unix_nano": 0
+    }
+  ],
+  "sdk_call_costs": {"<span-id>": 3100},
+  "inference_costs": {"<inference-id>": 2000},
+  "total": 1204,
+  "retention_expired": false
+}
+.sp
+# Exit status: 0
+# Notes: Excerpt: the canonical frames response merged across all pages,
+#        so the document is the complete archived trace.
 .EE
 
 .SH status
