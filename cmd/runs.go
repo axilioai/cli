@@ -22,6 +22,11 @@ const (
 	// min/maxStartTimeout mirror the backend's start_timeout_seconds bounds.
 	minStartTimeout int64 = 60
 	maxStartTimeout int64 = 86400
+
+	// runHistoryStatusValues quotes the run-status wire enum verbatim. The API
+	// spells the terminal state with the double-L form, so user-facing docs
+	// must show and accept exactly that spelling despite the linter's US locale.
+	runHistoryStatusValues = "queued, running, completed, failed, cancelled" //nolint:misspell
 )
 
 func runsCmd() *cobra.Command {
@@ -79,7 +84,7 @@ func runsHistoryCmd() *cobra.Command {
 			for _, s := range statuses {
 				item, err := platformgo.NewRunsListHistoricRequestStatusFilterItemFromString(s)
 				if err != nil {
-					return exit.Usagef("--status must be one of queued, running, completed, failed, cancelled (got %q)", s)
+					return exit.Usagef("--status must be one of %s (got %q)", runHistoryStatusValues, s)
 				}
 				req.StatusFilter = append(req.StatusFilter, item)
 			}
@@ -122,7 +127,7 @@ func runsHistoryCmd() *cobra.Command {
 	cmd.Flags().StringVar(&workflowID, "workflow", "", "Return only runs for this workflow ID")
 	cmd.Flags().Int64Var(&limit, "limit", 50, "Maximum runs in this page (1-500)")
 	cmd.Flags().Int64Var(&offset, "offset", 0, "Number of matching runs to skip before this page")
-	cmd.Flags().StringSliceVar(&statuses, "status", nil, "Restrict to run statuses: queued, running, completed, failed, cancelled (repeatable)")
+	cmd.Flags().StringSliceVar(&statuses, "status", nil, "Restrict to run statuses: "+runHistoryStatusValues+" (repeatable)")
 	cmd.Flags().StringVar(&search, "search", "", "Filter by run or workflow ID substring")
 	return cmd
 }
@@ -133,7 +138,7 @@ func runsStatsCmd() *cobra.Command {
 		Short: "Show a workflow's total run count and success rate.",
 		Long: "Report how a workflow has performed for the caller: total runs across " +
 			"all states, plus the success rate among runs that finished (completed " +
-			"or failed - queued, running, and cancelled runs are not in the rate's " +
+			"or failed - queued, running, and canceled runs are not in the rate's " +
 			"denominator).",
 		Args: cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
