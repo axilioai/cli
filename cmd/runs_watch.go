@@ -257,7 +257,12 @@ func spanDuration(s *platformgo.RunSpanFrame) time.Duration {
 			return time.Duration(int64(f))
 		}
 	}
-	d := s.EndTimeUnixNano - s.StartTimeUnixNano
+	// End time is optional on the wire since spec 0.82.0 (in-flight spans
+	// on the live stream omit it); treat absence as no duration.
+	if s.EndTimeUnixNano == nil {
+		return 0
+	}
+	d := *s.EndTimeUnixNano - s.StartTimeUnixNano
 	if d < 0 {
 		return 0
 	}

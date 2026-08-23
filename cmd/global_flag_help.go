@@ -287,6 +287,8 @@ func buildGlobalFlagHelp() map[string]commandGlobalFlagHelp {
 		output:  "Render local or remote sessions as table or json",
 		quiet:   "Suppress stderr notes; the session listing remains on stdout",
 	}
+	help["sessions get"] = apiResultHelp("the session-detail request", "the session-detail result")
+	help["sessions trace"] = apiResultHelp("the telemetry-frames requests", "the trace result")
 	help["sessions current"] = localResultHelp("sessions current", "session resolution", "the current-session result")
 	help["sessions start"] = apiResultHelp("the phone-allocation request", "the allocated-session result")
 	help["sessions start"] = withOutput(help["sessions start"],
@@ -315,6 +317,19 @@ func buildGlobalFlagHelp() map[string]commandGlobalFlagHelp {
 		"Suppress upload progress and delivery notes; the delivery result remains on stdout")
 
 	help["workflows list"] = apiResultHelp("the workflow-list request", "the workflow-list result")
+	help["workflows create"] = apiResultHelp("the workflow-create request", "the created-workflow result")
+	help["workflows get"] = apiResultHelp("the workflow-detail request", "the workflow-detail result")
+	help["workflows delete"] = apiResultHelp("the workflow-delete request", "the deletion result")
+	help["workflows delete"] = withOutput(help["workflows delete"],
+		"Emit a human confirmation or JSON deletion result",
+		"Suppress the prompt and human confirmation; --yes is required; JSON still prints")
+	help["workflows pull"] = apiResultHelp("the workflow-code request", "the pulled-code result")
+	help["workflows pull"] = withOutput(help["workflows pull"],
+		"Render pulled code as raw stdout text or a json document; --out writes the file either way",
+		"Suppress the --out acknowledgment; pulled source or JSON remains on stdout")
+	help["workflows push"] = apiResultHelp("the code-save request", "the saved-revision result")
+	help["workflows revisions"] = apiResultHelp("the revision-list request", "the revision-list result")
+	help["workflows restore"] = apiResultHelp("the revision-restore request", "the restored-revision result")
 	help["runs list"] = apiResultHelp("the run-list request", "the run-list result")
 	help["runs start"] = apiResultHelp("the run-create request", "the created-run result")
 	help["runs start"] = withOutput(help["runs start"],

@@ -26,7 +26,7 @@ The main command families are:
 .EX
 phones / sessions   discover phones and manage active phone sessions
 phone               observe and control the selected session's phone
-workflows / runs    discover workflows and create or inspect runs
+workflows / runs    author, version, and run workflows; create or inspect runs
 uploads             store media and deliver it to phones
 api-keys            manage organization-scoped API keys
 .EE
@@ -3030,6 +3030,8 @@ axilio sessions only displays this help
 axilio sessions list
 axilio sessions start
 axilio sessions current
+axilio sessions get sess_123
+axilio sessions trace sess_123
 axilio sessions stop sess_123
 .EE
 
@@ -3039,20 +3041,62 @@ axilio sessions list [flags]
 .EE
 
 .PP
-List sessions saved locally by default.
+List sessions saved locally by default. The \fB*\fR marker identifies the
+session that phone commands would select in this shell when selection is
+not ambiguous. Use --remote to list all active Axilio sessions instead;
+remote rows include session ID, phone ID, phone type, and model but do
+not indicate which session this CLI would select.
 
 .PP
-The \fB*\fR marker identifies the session that phone commands would select
-in this shell when selection is not ambiguous. Use --remote to list all
-active Axilio sessions instead; remote rows include session ID, phone
-ID, phone type, and model but do not indicate which session this CLI
-would select.
+Use --history for the org's full session history, active and released.
+Any history filter flag switches to history mode on its own: status,
+source, phone type, search, workflow, and started/ended time bounds,
+plus sort, order, and offset. Time bounds accept RFC3339 or YYYY-MM-DD.
+Inspect a returned ID with \fBsessions get\fR or \fBsessions trace\fR\&.
 
 .PP
 \fBCommand options\fP
 .IP \(bu 2
+\fB--ended-after\fP=\fIvalue\fP - Only sessions released at or after this
+time
+.IP \(bu 2
+\fB--ended-before\fP=\fIvalue\fP - Only sessions released at or before this
+time
+.IP \(bu 2
+\fB--history\fP - List the org's session history, active and released
+.IP \(bu 2
+\fB--limit\fP=\fInumber\fP - Maximum history rows to return (1-100) (default
+"50")
+.IP \(bu 2
+\fB--offset\fP=\fInumber\fP - History rows to skip for pagination
+.IP \(bu 2
+\fB--order\fP=\fIvalue\fP - History sort direction: asc|desc
+.IP \(bu 2
 \fB--remote\fP - List all active Axilio sessions instead of sessions
 saved locally
+.IP \(bu 2
+\fB--search\fP=\fIvalue\fP - Case-insensitive match on phone, session, or
+workflow
+.IP \(bu 2
+\fB--sort\fP=\fIvalue\fP - History sort column:
+started|ended|status|duration|source
+.IP \(bu 2
+\fB--source\fP=\fIstringSlice\fP - Filter history by source:
+workflow|interactive (repeatable) (default "[]")
+.IP \(bu 2
+\fB--started-after\fP=\fIvalue\fP - Only sessions started at or after this
+time
+.IP \(bu 2
+\fB--started-before\fP=\fIvalue\fP - Only sessions started at or before this
+time
+.IP \(bu 2
+\fB--status\fP=\fIstringSlice\fP - Filter history by status:
+active|completed|cancelled|expired (repeatable) (default "[]")
+.IP \(bu 2
+\fB--type\fP=\fIstringSlice\fP - Filter history by phone type:
+shared|dedicated (repeatable) (default "[]")
+.IP \(bu 2
+\fB--workflow\fP=\fIvalue\fP - Only sessions for this workflow ID
 
 .PP
 \fBGlobal-option behavior\fP
@@ -3201,6 +3245,100 @@ user@host ~ % axilio sessions current -o json
 # Exit status: 0
 # Notes: A selected session keeps the same JSON shape. With no selected
 #        session, stdout is empty and exit status is 4.
+.EE
+
+.SS get
+.EX
+axilio sessions get <session-id>
+.EE
+
+.PP
+Fetch one session by ID, active or historical.
+
+.PP
+The result includes status, source, phone, allocation and release times,
+duration, tags, workflow, capture and telemetry settings, and the
+recording status and playback URL when ready. Active sessions also
+include a short-lived screen thumbnail URL. Discover IDs with \fBsessions
+list --remote\fR or \fBsessions list --history\fR\&.
+
+.PP
+\fBGlobal-option behavior\fP
+.IP \(bu 2
+\fB--api-key\fP=\fIvalue\fP - API key for the session-detail request;
+overrides AXILIO_API_KEY and the saved key
+.IP \(bu 2
+\fB--base-url\fP=\fIvalue\fP - API host for the session-detail request;
+overrides AXILIO_BASE_URL and saved base-url
+.IP \(bu 2
+\fB--no-color\fP - Disable ANSI color in the human-readable form of the
+session-detail result
+.IP \(bu 2
+\fB--org\fP=\fIvalue\fP - OAuth org for the session-detail request;
+overrides AXILIO_ORG and the saved active org; API keys ignore it
+.IP \(bu 2
+\fB-o\fP, \fB--output\fP=\fIvalue\fP - Render the session-detail result as
+table or json (default "table")
+.IP \(bu 2
+\fB-q\fP, \fB--quiet\fP - Suppress stderr notes for the session-detail
+request; the session-detail result remains on stdout
+
+.PP
+\fBExamples and expected output\fP
+
+.PP
+\fBSample 1\fP
+
+.EX
+user@host ~ % axilio sessions get sess_123
+Session        sess_123
+Name           -
+Status         completed
+Source         workflow
+Allocated by   api_run
+Phone          <phone-id>
+Phone name     -
+Nickname       -
+Model          Pixel 8
+Type           android
+Location       us-central
+Dedicated      false
+Workflow       <workflow-id>
+Workflow name  demo
+Allocated      2026-08-05 20:00
+Released       2026-08-05 20:12
+Duration       12m00s
+Tags           team=qa
+Capture        true
+Telemetry      true
+Recording      ready
+Recording URL  <recording-url>
+Thumbnail URL  -
+.sp
+# Exit status: 0
+# Notes: Works for active and released sessions; the thumbnail URL is
+#        present on active sessions only.
+.EE
+
+.PP
+\fBSample 2\fP
+
+.EX
+user@host ~ % axilio sessions get sess_123 -o json
+{
+  "session_id": "sess_123",
+  "status": "active",
+  "source": "interactive",
+  "phone_id": "<phone-id>",
+  "allocated_at": "<timestamp>",
+  "recording_status": "pending",
+  "thumbnail_status": "ready",
+  "thumbnail_url": "<thumbnail-url>"
+}
+.sp
+# Exit status: 0
+# Notes: Excerpt: JSON is the canonical session detail response plus
+#        thumbnail_status/thumbnail_url enrichment on active sessions.
 .EE
 
 .SS start
@@ -3426,6 +3564,95 @@ user@host ~ % axilio sessions stop ph_123 --yes -o json
 # Exit status: 0
 # Notes: JSON is the canonical API deallocation response; workflow_id
 #        may be empty for an interactive session.
+.EE
+
+.SS trace
+.EX
+axilio sessions trace <session-id>
+.EE
+
+.PP
+Fetch the durable telemetry frames for a session and render them as an
+ordered listing of spans and logs with durations and billed costs.
+
+.PP
+Costs join at read time: sdk_call spans price by span ID and inference
+spans by inference ID, in microdollars as billed. All pages are fetched,
+so the output is the complete archived trace; frames with an
+unrecognized kind are listed generically rather than dropped. JSON
+output is the canonical frames response (frames, sdk_call_costs,
+inference_costs, totals) merged across pages. A live --follow mode is
+planned to arrive with the SDK's telemetry transport.
+
+.PP
+\fBGlobal-option behavior\fP
+.IP \(bu 2
+\fB--api-key\fP=\fIvalue\fP - API key for the telemetry-frames requests;
+overrides AXILIO_API_KEY and the saved key
+.IP \(bu 2
+\fB--base-url\fP=\fIvalue\fP - API host for the telemetry-frames requests;
+overrides AXILIO_BASE_URL and saved base-url
+.IP \(bu 2
+\fB--no-color\fP - Disable ANSI color in the human-readable form of the
+trace result
+.IP \(bu 2
+\fB--org\fP=\fIvalue\fP - OAuth org for the telemetry-frames requests;
+overrides AXILIO_ORG and the saved active org; API keys ignore it
+.IP \(bu 2
+\fB-o\fP, \fB--output\fP=\fIvalue\fP - Render the trace result as table or
+json (default "table")
+.IP \(bu 2
+\fB-q\fP, \fB--quiet\fP - Suppress stderr notes for the telemetry-frames
+requests; the trace result remains on stdout
+
+.PP
+\fBExamples and expected output\fP
+
+.PP
+\fBSample 1\fP
+
+.EX
+user@host ~ % axilio sessions trace sess_123
+TIME          KIND      NAME            DURATION  STATUS  COST
+20:00:01.000  session   session         12m00s    ok      -
+20:00:02.000  sdk_call  Screen.observe  1.0s      ok      $0.0031
+20:00:02.100  inference inference       800ms     ok      $0.0020
+20:00:03.500  log:output_log  hello     -         INFO    -
+.sp
+# Standard error:
+1204 frames; billed sdk_call cost $0.0311
+.sp
+# Exit status: 0
+# Notes: Costs are billed microdollars: sdk_call spans price by span ID,
+#        inference spans by inference ID. Frames with an unknown kind
+#        are listed generically, never dropped.
+.EE
+
+.PP
+\fBSample 2\fP
+
+.EX
+user@host ~ % axilio sessions trace sess_123 -o json
+{
+  "frames": [
+    {
+      "kind": "span",
+      "span_id": "<span-id>",
+      "span_type": "sdk_call",
+      "name": "Screen.observe",
+      "start_time_unix_nano": 0,
+      "end_time_unix_nano": 0
+    }
+  ],
+  "sdk_call_costs": {"<span-id>": 3100},
+  "inference_costs": {"<inference-id>": 2000},
+  "total": 1204,
+  "retention_expired": false
+}
+.sp
+# Exit status: 0
+# Notes: Excerpt: the canonical frames response merged across all pages,
+#        so the document is the complete archived trace.
 .EE
 
 .SH status
@@ -4008,15 +4235,18 @@ axilio workflows
 .EE
 
 .PP
-Inspect workflows in the active organization. Use \fBworkflows list\fR to
-discover a workflow ID, then pass that ID to \fBruns start\fR or \fBsessions
-start --workflow\fR\&.
+Manage workflows in the active organization. \fBworkflows list\fR discovers
+workflow IDs; create, get, and delete manage the records; pull, push,
+revisions, and restore round-trip the Python source: pull the current
+code to a file, edit locally, push it back as a new revision, and
+restore any earlier revision. A workflow ID can be passed to \fBruns
+start\fR or \fBsessions start --workflow\fR\&.
 
 .PP
 Running \fBaxilio workflows\fR without a subcommand is equivalent to \fBaxilio
 workflows --help\fR: it only displays this help and does not list
 workflows. Global flags shown here therefore have no effect. Pass flags
-to \fBworkflows list\fR instead.
+to a workflows subcommand instead.
 
 .PP
 \fBGlobal-option behavior\fP
@@ -4030,7 +4260,9 @@ axilio workflows only displays this help
 
 .EX
 axilio workflows list
-axilio workflows list --search checkout
+axilio workflows create checkout-flow --code checkout.py
+axilio workflows pull wf_123 --out checkout.py
+axilio workflows push wf_123 checkout.py -m "handle 2FA"
 axilio runs start wf_123
 .EE
 
@@ -4127,6 +4359,516 @@ user@host ~ % axilio workflows list -o json
 # Exit status: 0
 # Notes: Shortened representative JSON output; workflow records may
 #        include additional fields and statistics.
+.EE
+
+.SS create
+.EX
+axilio workflows create <name> [flags]
+.EE
+
+.PP
+Create a workflow in the active organization.
+
+.PP
+The name must contain only letters, digits, hyphens, and underscores,
+and be unique within the org. Pass --code with a Python file to save the
+workflow's first code revision atomically with it; omit it to create an
+empty workflow and \fBworkflows push\fR code later. Recording, telemetry,
+and capture default to on server-side; each toggle flag is sent only
+when set explicitly, so omitted toggles keep the server defaults.
+
+.PP
+\fBCommand options\fP
+.IP \(bu 2
+\fB--capture\fP - Capture media produced on the phone into the org
+library; --capture=false disables it (default "true")
+.IP \(bu 2
+\fB--code\fP=\fIvalue\fP - Python file saved as the workflow's first code
+revision
+.IP \(bu 2
+\fB--platform\fP=\fIvalue\fP - Target platform: ios, android, or both;
+omitted uses the server default
+.IP \(bu 2
+\fB--recording\fP - Record this workflow's runs; --recording=false
+suppresses video and thumbnails (default "true")
+.IP \(bu 2
+\fB--telemetry\fP - Persist telemetry spans for runs; --telemetry=false
+skips the durable trace store (default "true")
+
+.PP
+\fBGlobal-option behavior\fP
+.IP \(bu 2
+\fB--api-key\fP=\fIvalue\fP - API key for the workflow-create request;
+overrides AXILIO_API_KEY and the saved key
+.IP \(bu 2
+\fB--base-url\fP=\fIvalue\fP - API host for the workflow-create request;
+overrides AXILIO_BASE_URL and saved base-url
+.IP \(bu 2
+\fB--no-color\fP - Disable ANSI color in the human-readable form of the
+created-workflow result
+.IP \(bu 2
+\fB--org\fP=\fIvalue\fP - OAuth org for the workflow-create request;
+overrides AXILIO_ORG and the saved active org; API keys ignore it
+.IP \(bu 2
+\fB-o\fP, \fB--output\fP=\fIvalue\fP - Render the created-workflow result as
+table or json (default "table")
+.IP \(bu 2
+\fB-q\fP, \fB--quiet\fP - Suppress stderr notes for the workflow-create
+request; the created-workflow result remains on stdout
+
+.PP
+\fBExamples and expected output\fP
+
+.PP
+\fBSample 1\fP
+
+.EX
+user@host ~ % axilio workflows create checkout-flow --platform android --code checkout.py
+Workflow     <workflow-id>
+Revision     1
+Revision ID  <revision-id>
+.sp
+# Exit status: 0
+# Notes: With --code, the file is saved atomically as revision 1.
+#        Without it, only the workflow ID prints.
+.EE
+
+.PP
+\fBSample 2\fP
+
+.EX
+user@host ~ % axilio workflows create checkout-flow --recording=false
+Workflow  <workflow-id>
+.sp
+# Exit status: 0
+.EE
+
+.PP
+\fBSample 3\fP
+
+.EX
+user@host ~ % axilio workflows create "bad name"
+.sp
+# Standard error:
+workflow name must contain only letters, digits, hyphens, and underscores (got "bad name")
+.sp
+# Exit status: 2
+# Notes: The name rule is validated before credentials or an API
+#        request.
+.EE
+
+.SS delete
+.EX
+axilio workflows delete <workflow-id> [flags]
+.EE
+
+.PP
+Delete a workflow from the active organization, including its code
+revisions.
+
+.PP
+Runs already recorded against it are not removed. Without --yes, table
+mode prompts only when stdin is a terminal. Redirected, JSON, and quiet
+execution do not prompt and require --yes. The alias \fBworkflows rm\fR
+performs the same operation.
+
+.PP
+\fBCommand options\fP
+.IP \(bu 2
+\fB-y\fP, \fB--yes\fP - Delete without prompting; required in JSON, quiet,
+or redirected execution
+
+.PP
+\fBGlobal-option behavior\fP
+.IP \(bu 2
+\fB--api-key\fP=\fIvalue\fP - API key for the workflow-delete request;
+overrides AXILIO_API_KEY and the saved key
+.IP \(bu 2
+\fB--base-url\fP=\fIvalue\fP - API host for the workflow-delete request;
+overrides AXILIO_BASE_URL and saved base-url
+.IP \(bu 2
+\fB--no-color\fP - Disable ANSI color in the human-readable form of the
+deletion result
+.IP \(bu 2
+\fB--org\fP=\fIvalue\fP - OAuth org for the workflow-delete request;
+overrides AXILIO_ORG and the saved active org; API keys ignore it
+.IP \(bu 2
+\fB-o\fP, \fB--output\fP=\fIvalue\fP - Emit a human confirmation or JSON
+deletion result (default "table")
+.IP \(bu 2
+\fB-q\fP, \fB--quiet\fP - Suppress the prompt and human confirmation;
+--yes is required; JSON still prints
+
+.PP
+\fBExamples and expected output\fP
+
+.PP
+\fBSample 1\fP
+
+.EX
+user@host ~ % axilio workflows delete wf_123 --yes
+Deleted wf_123
+.sp
+# Exit status: 0
+# Notes: Deletes the workflow and its code revisions; recorded runs
+#        remain.
+.EE
+
+.PP
+\fBSample 2\fP
+
+.EX
+user@host ~ % axilio workflows delete wf_123 < /dev/null
+.sp
+# Standard error:
+aborted (pass --yes to delete non-interactively)
+.sp
+# Exit status: 2
+# Notes: Redirected, JSON, and quiet execution never prompt; they
+#        require --yes.
+.EE
+
+.SS get
+.EX
+axilio workflows get <workflow-id>
+.EE
+
+.PP
+Show a single workflow: name, platform, status, OCR engine, the
+recording/telemetry/capture toggles, timestamps, and run statistics.
+
+.PP
+Use \fBworkflows list\fR to discover the workflow ID, \fBworkflows pull\fR for
+its code, and \fBworkflows revisions\fR for its code history.
+
+.PP
+\fBGlobal-option behavior\fP
+.IP \(bu 2
+\fB--api-key\fP=\fIvalue\fP - API key for the workflow-detail request;
+overrides AXILIO_API_KEY and the saved key
+.IP \(bu 2
+\fB--base-url\fP=\fIvalue\fP - API host for the workflow-detail request;
+overrides AXILIO_BASE_URL and saved base-url
+.IP \(bu 2
+\fB--no-color\fP - Disable ANSI color in the human-readable form of the
+workflow-detail result
+.IP \(bu 2
+\fB--org\fP=\fIvalue\fP - OAuth org for the workflow-detail request;
+overrides AXILIO_ORG and the saved active org; API keys ignore it
+.IP \(bu 2
+\fB-o\fP, \fB--output\fP=\fIvalue\fP - Render the workflow-detail result as
+table or json (default "table")
+.IP \(bu 2
+\fB-q\fP, \fB--quiet\fP - Suppress stderr notes for the workflow-detail
+request; the workflow-detail result remains on stdout
+
+.PP
+\fBExamples and expected output\fP
+
+.PP
+\fBSample 1\fP
+
+.EX
+user@host ~ % axilio workflows get wf_123
+Workflow      wf_123
+Name          Checkout
+Platform      android
+Status        active
+OCR engine    free
+Recording     true
+Telemetry     true
+Capture       true
+Created       <timestamp>
+Updated       <timestamp>
+Last run      <timestamp>
+Total runs    4
+Success rate  75%
+.sp
+# Exit status: 0
+.EE
+
+.PP
+\fBSample 2\fP
+
+.EX
+user@host ~ % axilio workflows get wf_123 -o json
+{
+  "stats": {
+    "success_rate": 0.75,
+    "total_runs": 4
+  },
+  "workflow": {
+    "id": "wf_123",
+    "name": "Checkout",
+    "platform": "android",
+    "status": "active"
+  }
+}
+.sp
+# Exit status: 0
+# Notes: Shortened representative JSON output; the workflow record
+#        includes the full field set.
+.EE
+
+.SS pull
+.EX
+axilio workflows pull <workflow-id> [flags]
+.EE
+
+.PP
+Fetch the Python source of the workflow's current code revision.
+
+.PP
+By default the source prints to stdout so it can be piped; --out writes
+it to a file instead, overwriting existing contents without
+confirmation. A workflow with no revisions yet yields empty source at
+revision 0. Edit the pulled file locally and \fBworkflows push\fR it back as
+a new revision.
+
+.PP
+\fBCommand options\fP
+.IP \(bu 2
+\fB--out\fP=\fIvalue\fP - File to write the source to; omitted prints it to
+stdout
+
+.PP
+\fBGlobal-option behavior\fP
+.IP \(bu 2
+\fB--api-key\fP=\fIvalue\fP - API key for the workflow-code request;
+overrides AXILIO_API_KEY and the saved key
+.IP \(bu 2
+\fB--base-url\fP=\fIvalue\fP - API host for the workflow-code request;
+overrides AXILIO_BASE_URL and saved base-url
+.IP \(bu 2
+\fB--no-color\fP - Disable ANSI color in the human-readable form of the
+pulled-code result
+.IP \(bu 2
+\fB--org\fP=\fIvalue\fP - OAuth org for the workflow-code request; overrides
+AXILIO_ORG and the saved active org; API keys ignore it
+.IP \(bu 2
+\fB-o\fP, \fB--output\fP=\fIvalue\fP - Render pulled code as raw stdout text
+or a json document; --out writes the file either way (default "table")
+.IP \(bu 2
+\fB-q\fP, \fB--quiet\fP - Suppress the --out acknowledgment; pulled source
+or JSON remains on stdout
+
+.PP
+\fBExamples and expected output\fP
+
+.PP
+\fBSample 1\fP
+
+.EX
+user@host ~ % axilio workflows pull wf_123
+<the current revision's Python source>
+.sp
+# Exit status: 0
+# Notes: The raw source prints to stdout so it can be piped or
+#        redirected.
+.EE
+
+.PP
+\fBSample 2\fP
+
+.EX
+user@host ~ % axilio workflows pull wf_123 --out checkout.py
+Wrote checkout.py (revision 3, <bytes> bytes)
+.sp
+# Exit status: 0
+# Notes: A new file requests mode 0644, subject to the process umask.
+#        Overwriting an existing file preserves its mode while replacing
+#        its contents.
+.EE
+
+.SS push
+.EX
+axilio workflows push <workflow-id> <file> [flags]
+.EE
+
+.PP
+Save a local Python file as a new code revision of the workflow, with an
+optional commit-style --message.
+
+.PP
+The server deduplicates against the current revision by content hash:
+pushing unchanged source is a no-op that creates no revision. Source is
+capped at 256 KiB. Use \fBworkflows revisions\fR to inspect history and
+\fBworkflows restore\fR to return to an earlier revision.
+
+.PP
+\fBCommand options\fP
+.IP \(bu 2
+\fB-m\fP, \fB--message\fP=\fIvalue\fP - Commit-style note stored with the
+revision
+
+.PP
+\fBGlobal-option behavior\fP
+.IP \(bu 2
+\fB--api-key\fP=\fIvalue\fP - API key for the code-save request; overrides
+AXILIO_API_KEY and the saved key
+.IP \(bu 2
+\fB--base-url\fP=\fIvalue\fP - API host for the code-save request; overrides
+AXILIO_BASE_URL and saved base-url
+.IP \(bu 2
+\fB--no-color\fP - Disable ANSI color in the human-readable form of the
+saved-revision result
+.IP \(bu 2
+\fB--org\fP=\fIvalue\fP - OAuth org for the code-save request; overrides
+AXILIO_ORG and the saved active org; API keys ignore it
+.IP \(bu 2
+\fB-o\fP, \fB--output\fP=\fIvalue\fP - Render the saved-revision result as
+table or json (default "table")
+.IP \(bu 2
+\fB-q\fP, \fB--quiet\fP - Suppress stderr notes for the code-save request;
+the saved-revision result remains on stdout
+
+.PP
+\fBExamples and expected output\fP
+
+.PP
+\fBSample 1\fP
+
+.EX
+user@host ~ % axilio workflows push wf_123 checkout.py -m "handle 2FA"
+Saved revision 4 (<revision-id>)
+.sp
+# Exit status: 0
+# Notes: The server deduplicates by content hash; unchanged source
+#        reports a no-op and creates no revision.
+.EE
+
+.PP
+\fBSample 2\fP
+
+.EX
+user@host ~ % axilio workflows push wf_123 checkout.py -o json
+{
+  "no_op": false,
+  "revision": 4,
+  "revision_id": "<revision-id>"
+}
+.sp
+# Exit status: 0
+.EE
+
+.SS restore
+.EX
+axilio workflows restore <workflow-id> <revision-id>
+.EE
+
+.PP
+Create a new code revision containing the source of the named earlier
+revision.
+
+.PP
+Nothing is deleted and the action is not deduplicated, so the restore
+itself is visible in \fBworkflows revisions\fR history. Use \fBworkflows
+revisions\fR to discover revision IDs.
+
+.PP
+\fBGlobal-option behavior\fP
+.IP \(bu 2
+\fB--api-key\fP=\fIvalue\fP - API key for the revision-restore request;
+overrides AXILIO_API_KEY and the saved key
+.IP \(bu 2
+\fB--base-url\fP=\fIvalue\fP - API host for the revision-restore request;
+overrides AXILIO_BASE_URL and saved base-url
+.IP \(bu 2
+\fB--no-color\fP - Disable ANSI color in the human-readable form of the
+restored-revision result
+.IP \(bu 2
+\fB--org\fP=\fIvalue\fP - OAuth org for the revision-restore request;
+overrides AXILIO_ORG and the saved active org; API keys ignore it
+.IP \(bu 2
+\fB-o\fP, \fB--output\fP=\fIvalue\fP - Render the restored-revision result as
+table or json (default "table")
+.IP \(bu 2
+\fB-q\fP, \fB--quiet\fP - Suppress stderr notes for the revision-restore
+request; the restored-revision result remains on stdout
+
+.PP
+\fBExamples and expected output\fP
+
+.EX
+user@host ~ % axilio workflows restore wf_123 <revision-id>
+Restored <revision-id> as new revision 5 (<new-revision-id>)
+.sp
+# Exit status: 0
+# Notes: Restore copies the old source into a new revision; nothing is
+#        deleted and the action stays visible in history.
+.EE
+
+.SS revisions
+.EX
+axilio workflows revisions <workflow-id> [flags]
+.EE
+
+.PP
+List the workflow's code revision history in reverse-chronological
+order: revision number, revision ID, author, size, save time, and the
+optional message.
+
+.PP
+Page older history with --before, which returns revisions numbered
+strictly below the given revision number. A listed revision ID can be
+passed to \fBworkflows restore\fR\&.
+
+.PP
+\fBCommand options\fP
+.IP \(bu 2
+\fB--before\fP=\fInumber\fP - Return revisions numbered below this; 0 starts
+from the newest
+.IP \(bu 2
+\fB--limit\fP=\fInumber\fP - Maximum revisions to return (1-200) (default
+"50")
+
+.PP
+\fBGlobal-option behavior\fP
+.IP \(bu 2
+\fB--api-key\fP=\fIvalue\fP - API key for the revision-list request;
+overrides AXILIO_API_KEY and the saved key
+.IP \(bu 2
+\fB--base-url\fP=\fIvalue\fP - API host for the revision-list request;
+overrides AXILIO_BASE_URL and saved base-url
+.IP \(bu 2
+\fB--no-color\fP - Disable ANSI color in the human-readable form of the
+revision-list result
+.IP \(bu 2
+\fB--org\fP=\fIvalue\fP - OAuth org for the revision-list request; overrides
+AXILIO_ORG and the saved active org; API keys ignore it
+.IP \(bu 2
+\fB-o\fP, \fB--output\fP=\fIvalue\fP - Render the revision-list result as
+table or json (default "table")
+.IP \(bu 2
+\fB-q\fP, \fB--quiet\fP - Suppress stderr notes for the revision-list
+request; the revision-list result remains on stdout
+
+.PP
+\fBExamples and expected output\fP
+
+.PP
+\fBSample 1\fP
+
+.EX
+user@host ~ % axilio workflows revisions wf_123
+REV  REVISION ID    AUTHOR     SIZE   CREATED      MESSAGE
+4    <revision-id>  <user-id>  1.2 KiB <timestamp> handle 2FA
+3    <revision-id>  <user-id>  1.1 KiB <timestamp> -
+.sp
+# Exit status: 0
+# Notes: Newest first. When a full page returns, a note names the
+#        --before cursor for older history.
+.EE
+
+.PP
+\fBSample 2\fP
+
+.EX
+user@host ~ % axilio workflows revisions wf_123 --limit 10 --before 3
+REV  REVISION ID    AUTHOR     SIZE   CREATED      MESSAGE
+2    <revision-id>  <user-id>  1.0 KiB <timestamp> -
+.sp
+# Exit status: 0
 .EE
 
 
