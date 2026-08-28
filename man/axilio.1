@@ -1,5 +1,5 @@
 .nh
-.TH "AXILIO" "1" "2026-08-03" "axilio 0.8.1" "Axilio CLI Manual"
+.TH "AXILIO" "1" "2026-08-03" "axilio 0.9.0" "Axilio CLI Manual"
 
 .SH NAME
 axilio \- Acquire and drive Axilio phones from the command line
@@ -993,111 +993,119 @@ doctor: API key rejected (HTTP 401); run `axilio login`
 #        6.
 .EE
 
-.SH downloads
+.SH files
 .EX
-axilio downloads
+axilio files
 .EE
 
 .PP
-Manage captured downloads: files that came off phones during sessions.
-Captures land in the org library next to uploads and share its storage
-quota; a ready capture can be delivered to any phone by its id with
-\fBuploads push\fR\&. \fBlist\fR discovers captures across sessions, \fBget\fR saves a
-capture's bytes to a local file, and \fBdelete\fR removes it everywhere. For
-one session's captures, \fBsessions downloads \\<session-id\\>\fR answers
-directly.
+Manage the org file library. Files live here until deleted and can be
+pushed to any phone the org holds, so one file serves many phones. Every
+file has a source: \fBupload\fR (you put it in) or \fBcapture\fR (a session
+pulled it off a phone). \fBupload\fR stores a local file, \fBlist\fR discovers
+files and quota (filter by --source/--surface/--session), \fBdownload\fR
+saves a file's bytes locally, \fBpush\fR delivers a stored file to a phone,
+and \fBdelete\fR frees quota and recalls delivered copies. \fBphone send\fR
+combines upload and push for the selected session's phone.
 
 .PP
-Running \fBaxilio downloads\fR without a subcommand is equivalent to \fBaxilio
-downloads --help\fR: it only displays this help. Global flags shown here
-therefore have no effect. Pass flags to a downloads subcommand instead.
+Running \fBaxilio files\fR without a subcommand is equivalent to \fBaxilio
+files --help\fR: it only displays this help. Global flags shown here
+therefore have no effect. Pass flags to a files subcommand instead.
 
 .PP
 \fBGlobal-option behavior\fP
 .IP \(bu 2
 \fB--api-key\fP, \fB--base-url\fP, \fB--no-color\fP, \fB--org\fP, \fB--output\fP
-/ \fB-o\fP, \fB--quiet\fP / \fB-q\fP - No effect on downloads command; bare
-axilio downloads only displays this help
+/ \fB-o\fP, \fB--quiet\fP / \fB-q\fP - No effect on files command; bare axilio
+files only displays this help
 
 .PP
 \fBWorkflow examples\fP
 
 .EX
-axilio downloads list
-axilio downloads get dl_123
-axilio downloads delete dl_123 --yes
+axilio files list
+axilio files upload ./photo.jpg
+axilio files download file_123
+axilio files push file_123 --phone-id ph_123
+axilio files delete file_123 --yes
 .EE
 
 .SS list
 .EX
-axilio downloads list [flags]
+axilio files list [flags]
 .EE
 
 .PP
-List captured downloads for the active organization.
+List files and standing storage quota for the active organization.
 
 .PP
-Each row carries its capture state: a skipped or failed capture is a
-visible entry with a reason, not an absence. Results include capture ID,
-filename, size, MIME type, state, source session, and creation time.
-Page with --limit and --offset, narrow by --session, --mime, size and
-time bounds, and sort by created_at, filename, or size_bytes in asc or
-desc order. Omitting sort/order uses server defaults (newest first).
+Each row shows its source (upload or capture) and, for a capture, its
+state — a skipped or failed capture is a visible entry with a reason,
+not an absence. Filter by --source (upload/capture), --surface (phone),
+--session, --mime, size and time bounds; search filenames by
+case-insensitive substring; page with --limit and --offset; sort by
+created_at, filename, size_bytes, or source in asc or desc order.
+Omitting sort/order uses server defaults (newest first).
 
 .PP
 \fBCommand options\fP
 .IP \(bu 2
-\fB--created-after\fP=\fIvalue\fP - Only captures registered at or after
-this RFC 3339 time
+\fB--created-after\fP=\fIvalue\fP - Only files registered at or after this
+RFC 3339 time
 .IP \(bu 2
-\fB--created-before\fP=\fIvalue\fP - Only captures registered at or before
-this RFC 3339 time
+\fB--created-before\fP=\fIvalue\fP - Only files registered at or before this
+RFC 3339 time
 .IP \(bu 2
-\fB--limit\fP=\fInumber\fP - Maximum captures in this page (1-100) (default
+\fB--limit\fP=\fInumber\fP - Maximum files in this page (1-100) (default
 "50")
 .IP \(bu 2
-\fB--max-size\fP=\fInumber\fP - Only captures at most this many bytes; 0
-means no bound
+\fB--max-size\fP=\fInumber\fP - Only files at most this many bytes; 0 means
+no bound
 .IP \(bu 2
-\fB--mime\fP=\fIvalue\fP - Only captures of exactly this media type, e.g.
+\fB--mime\fP=\fIvalue\fP - Only files of exactly this media type, e.g.
 image/png
 .IP \(bu 2
-\fB--min-size\fP=\fInumber\fP - Only captures at least this many bytes; 0
-means no bound
+\fB--min-size\fP=\fInumber\fP - Only files at least this many bytes; 0 means
+no bound
 .IP \(bu 2
-\fB--offset\fP=\fInumber\fP - Number of matching captures to skip before
-this page
+\fB--offset\fP=\fInumber\fP - Number of matching files to skip before this
+page
 .IP \(bu 2
 \fB--order\fP=\fIvalue\fP - Sort direction: asc or desc; omitted uses server
 default
 .IP \(bu 2
 \fB--search\fP=\fIvalue\fP - Filter filenames by case-insensitive substring
 .IP \(bu 2
-\fB--session\fP=\fIvalue\fP - Only captures produced by this session ID
+\fB--session\fP=\fIvalue\fP - Only files captured by this session ID
 .IP \(bu 2
-\fB--sort\fP=\fIvalue\fP - Sort key: created_at, filename, or size_bytes;
-omitted uses server default
+\fB--sort\fP=\fIvalue\fP - Sort key: created_at, filename, size_bytes, or
+source; omitted uses server default
+.IP \(bu 2
+\fB--source\fP=\fIvalue\fP - Only files of this source: upload or capture
+.IP \(bu 2
+\fB--surface\fP=\fIvalue\fP - Only captures off this surface: phone
 
 .PP
 \fBGlobal-option behavior\fP
 .IP \(bu 2
-\fB--api-key\fP=\fIvalue\fP - API key for the download-list request;
-overrides AXILIO_API_KEY and the saved key
+\fB--api-key\fP=\fIvalue\fP - API key for the file-list request; overrides
+AXILIO_API_KEY and the saved key
 .IP \(bu 2
-\fB--base-url\fP=\fIvalue\fP - API host for the download-list request;
-overrides AXILIO_BASE_URL and saved base-url
+\fB--base-url\fP=\fIvalue\fP - API host for the file-list request; overrides
+AXILIO_BASE_URL and saved base-url
 .IP \(bu 2
 \fB--no-color\fP - Disable ANSI color in the human-readable form of the
-download-list result
+file-list result
 .IP \(bu 2
-\fB--org\fP=\fIvalue\fP - OAuth org for the download-list request; overrides
+\fB--org\fP=\fIvalue\fP - OAuth org for the file-list request; overrides
 AXILIO_ORG and the saved active org; API keys ignore it
 .IP \(bu 2
-\fB-o\fP, \fB--output\fP=\fIvalue\fP - Render the download-list result as
-table or json (default "table")
+\fB-o\fP, \fB--output\fP=\fIvalue\fP - Render the file-list result as table or
+json (default "table")
 .IP \(bu 2
-\fB-q\fP, \fB--quiet\fP - Suppress stderr notes for the download-list
-request; the download-list result remains on stdout
+\fB-q\fP, \fB--quiet\fP - Suppress stderr notes for the file-list request;
+the file-list result remains on stdout
 
 .PP
 \fBExamples and expected output\fP
@@ -1106,67 +1114,99 @@ request; the download-list result remains on stdout
 \fBSample 1\fP
 
 .EX
-user@host ~ % axilio downloads list
-ID       FILENAME     SIZE     TYPE       STATE  SESSION      CREATED
-<dl-id>  receipt.png  2.0 KiB  image/png  ready  <session-id> <timestamp>
+user@host ~ % axilio files list
+ID         FILENAME   SIZE     TYPE        SOURCE   STATE  SESSION       CREATED
+<file-id>  photo.jpg  2.0 MiB  image/jpeg  upload   ready         <timestamp>
+.sp
+# Standard error:
+1 of 10000 files, 2.0 MiB of 50.0 GiB used
 .sp
 # Exit status: 0
-# Notes: A skipped or failed capture is a visible row with its reason in
-#        STATE, not an absence.
+# Notes: An empty page still reports quota usage; the current global
+#        limits are 10000 files and 50 GiB.
 .EE
 
 .PP
 \fBSample 2\fP
 
 .EX
-user@host ~ % axilio downloads list --session ses_123 --mime image/png --sort size_bytes --order desc
-ID       FILENAME     SIZE     TYPE       STATE  SESSION      CREATED
-<dl-id>  receipt.png  2.0 KiB  image/png  ready  ses_123      <timestamp>
+user@host ~ % axilio files list --source capture --session ses_123
+ID         FILENAME     SIZE     TYPE       SOURCE   STATE  SESSION  CREATED
+<file-id>  receipt.png  2.0 KiB  image/png  capture  ready  ses_123  <timestamp>
+.sp
+# Standard error:
+1 of 10000 files, 2.0 KiB of 50.0 GiB used
 .sp
 # Exit status: 0
+# Notes: --source is upload or capture; --surface (phone) and --session
+#        further narrow captures. A skipped or failed capture is a
+#        visible row with its reason in STATE.
 .EE
 
 .PP
 \fBSample 3\fP
 
 .EX
-user@host ~ % axilio downloads list -o json
+user@host ~ % axilio files list --search receipt --sort source --order asc
+ID         FILENAME     SIZE      TYPE       SOURCE   STATE  SESSION  CREATED
+<file-id>  receipt.jpg  512.0 KiB image/jpeg upload   ready         <timestamp>
+.sp
+# Standard error:
+1 of 10000 files, 512.0 KiB of 50.0 GiB used
+.sp
+# Exit status: 0
+# Notes: sort=source groups uploads and captures; results and bytes used
+#        vary by organization.
+.EE
+
+.PP
+\fBSample 4\fP
+
+.EX
+user@host ~ % axilio files list -o json
 {
-  "downloads": [
+  "files": [
     {
-      "id": "<dl-id>",
-      "filename": "receipt.png",
-      "size_bytes": 2048,
-      "mime_type": "image/png",
-      "capture_state": "ready",
-      "session_id": "<session-id>",
-      "download_url": "<signed-url>",
+      "id": "<file-id>",
+      "source": "upload",
+      "filename": "photo.jpg",
+      "size_bytes": 2097152,
+      "mime_type": "image/jpeg",
+      "status": "ready",
       "created_at": "<timestamp>"
     }
   ],
-  "total": 1
+  "total": 1,
+  "usage": {
+    "file_count": 1,
+    "file_limit": 10000,
+    "total_bytes": 2097152,
+    "byte_limit": 53687091200
+  }
 }
 .sp
 # Exit status: 0
-# Notes: Representative response; signed URLs are short-lived, re-list
-#        to refresh an expired one.
+# Notes: Representative response; a capture row also carries surface,
+#        session_id, and capture_state. Files, result count, and bytes
+#        used vary by organization; limits are global.
 .EE
 
 .SS delete
 .EX
-axilio downloads delete <download-id> [flags]
+axilio files delete <file-id> [flags]
 .EE
 
 .PP
-Delete a capture from the org library and free its storage quota.
+Delete a file from the active organization's library and free its
+storage quota.
 
 .PP
-Deletion also recalls every copy delivered to phones; the source phone's
-own copy from the capture session is outside the recall. Use \fBdownloads
-list\fR to discover the capture ID. Without --yes, table mode prompts only
-when stdin is a terminal. Redirected, JSON, and quiet execution do not
-prompt and require --yes. The alias \fBdownloads rm\fR performs the same
-operation.
+Works for any source. Deletion also recalls every copy delivered to
+phones; for a capture, the source phone's own copy from the capture
+session is outside the recall. Use \fBfiles list\fR to discover the file ID.
+Without --yes, table mode prompts only when stdin is a terminal.
+Redirected, JSON, and quiet execution do not prompt and require --yes.
+The alias \fBfiles rm\fR performs the same operation.
 
 .PP
 \fBCommand options\fP
@@ -1177,16 +1217,16 @@ or redirected execution
 .PP
 \fBGlobal-option behavior\fP
 .IP \(bu 2
-\fB--no-color\fP - No effect on downloads delete command
+\fB--no-color\fP - No effect on files delete command
 .IP \(bu 2
-\fB--api-key\fP=\fIvalue\fP - API key for the download-delete request;
-overrides AXILIO_API_KEY and the saved key
+\fB--api-key\fP=\fIvalue\fP - API key for the file-delete request; overrides
+AXILIO_API_KEY and the saved key
 .IP \(bu 2
-\fB--base-url\fP=\fIvalue\fP - API host for the download-delete request;
+\fB--base-url\fP=\fIvalue\fP - API host for the file-delete request;
 overrides AXILIO_BASE_URL and saved base-url
 .IP \(bu 2
-\fB--org\fP=\fIvalue\fP - OAuth org for the download-delete request;
-overrides AXILIO_ORG and the saved active org; API keys ignore it
+\fB--org\fP=\fIvalue\fP - OAuth org for the file-delete request; overrides
+AXILIO_ORG and the saved active org; API keys ignore it
 .IP \(bu 2
 \fB-o\fP, \fB--output\fP=\fIvalue\fP - Emit a human confirmation or JSON
 deletion result (default "table")
@@ -1201,11 +1241,11 @@ deletion result (default "table")
 \fBSample 1\fP
 
 .EX
-user@host ~ % axilio downloads delete dl_123
-Deleted dl_123
+user@host ~ % axilio files delete file_123
+Deleted file_123
 .sp
 # Standard error:
-Delete download dl_123? Also recall it from phones holding or receiving a copy? [y/N]
+Delete file file_123? Also recall it from phones holding or receiving a copy? [y/N]
 .sp
 # Exit status: 0
 # Notes: Table mode prompts only when stdin is a terminal. Redirected,
@@ -1216,49 +1256,49 @@ Delete download dl_123? Also recall it from phones holding or receiving a copy? 
 \fBSample 2\fP
 
 .EX
-user@host ~ % axilio downloads rm dl_123 --yes
-Deleted dl_123
+user@host ~ % axilio files rm file_123 --yes
+Deleted file_123
 .sp
 # Exit status: 0
 .EE
 
-.SS get
+.SS download
 .EX
-axilio downloads get <download-id> [flags]
+axilio files download <file-id> [flags]
 .EE
 
 .PP
-Fetch a ready capture through its short-lived signed URL and write the
+Fetch a ready file through its short-lived signed URL and write the
 bytes to a local file.
 
 .PP
-The destination defaults to the capture's own filename in the current
-directory; -o overrides it. An existing destination is refused unless
---force is passed. Captures still in flight or terminally skipped have
-no bytes to fetch and are refused with their capture state. Use
-\fBdownloads list\fR to discover capture IDs and states.
+Works for any source — an upload or a capture. The destination defaults
+to the file's own filename in the current directory; --out overrides it.
+An existing destination is refused unless --force is passed. Files still
+uploading or terminally skipped have no bytes to fetch and are refused
+with their state. Use \fBfiles list\fR to discover file IDs.
 
 .PP
 \fBCommand options\fP
 .IP \(bu 2
 \fB--force\fP - Overwrite the destination if it already exists
 .IP \(bu 2
-\fB--out\fP=\fIvalue\fP - Destination path; omitted uses the capture's
-filename in the current directory
+\fB--out\fP=\fIvalue\fP - Destination path; omitted uses the file's filename
+in the current directory
 
 .PP
 \fBGlobal-option behavior\fP
 .IP \(bu 2
-\fB--api-key\fP=\fIvalue\fP - API key for the download-list and signed-URL
+\fB--api-key\fP=\fIvalue\fP - API key for the file-list and signed-URL
 requests; overrides AXILIO_API_KEY and the saved key
 .IP \(bu 2
-\fB--base-url\fP=\fIvalue\fP - API host for the download-list and signed-URL
+\fB--base-url\fP=\fIvalue\fP - API host for the file-list and signed-URL
 requests; overrides AXILIO_BASE_URL and saved base-url
 .IP \(bu 2
 \fB--no-color\fP - Disable ANSI color in the human-readable form of the
 saved-file result
 .IP \(bu 2
-\fB--org\fP=\fIvalue\fP - OAuth org for the download-list and signed-URL
+\fB--org\fP=\fIvalue\fP - OAuth org for the file-list and signed-URL
 requests; overrides AXILIO_ORG and the saved active org; API keys ignore
 it
 .IP \(bu 2
@@ -1275,7 +1315,7 @@ remains on stdout
 \fBSample 1\fP
 
 .EX
-user@host ~ % axilio downloads get dl_123
+user@host ~ % axilio files download file_123
 Saved receipt.png (2.0 KiB)
 .sp
 # Standard error:
@@ -1288,14 +1328,213 @@ Saved receipt.png (2.0 KiB)
 \fBSample 2\fP
 
 .EX
-user@host ~ % axilio downloads get dl_123 --out ./captures/receipt.png --force
+user@host ~ % axilio files download file_123 --out ./captures/receipt.png --force
 Saved ./captures/receipt.png (2.0 KiB)
 .sp
 # Standard error:
 → Saving receipt.png to ./captures/receipt.png
 .sp
 # Exit status: 0
-# Notes: Without --force an existing destination is refused.
+# Notes: Works for any source. Without --force an existing destination
+#        is refused. The alias `files get` does the same.
+.EE
+
+.SS push
+.EX
+axilio files push <file-id> [flags]
+.EE
+
+.PP
+Send a stored library file to a phone's media library.
+
+.PP
+Unlike \fBaxilio phone send\fR this uploads nothing, so the same file can be
+pushed to many phones without re-uploading it or consuming more quota; a
+captured file is deliverable to a phone by its id just like an upload.
+--phone-id is required and can be discovered with \fBphones mine\fR or
+\fBsessions list --remote\fR\&. The collection is inferred unless DCIM,
+Pictures, or Movies is selected. Phone delivery is limited to 100 MiB
+per file; the server rejects a stored file above that even though the
+library holds it. By default the command returns after dispatch; --wait
+blocks for delivered or failed, and --timeout applies only with --wait.
+
+.PP
+\fBCommand options\fP
+.IP \(bu 2
+\fB--collection\fP=\fIvalue\fP - Target DCIM, Pictures, or Movies; omitted
+infers from media type
+.IP \(bu 2
+\fB--phone-id\fP=\fIvalue\fP - Target phone ID from \fBphones mine\fR or remote
+sessions (required)
+.IP \(bu 2
+\fB--timeout\fP=\fIduration\fP - Maximum delivery wait, such as 30s, 1m30s,
+or 2m; applies only with --wait (default 1m). Units: ns, us/µs, ms, s,
+m, h.
+.IP \(bu 2
+\fB--wait\fP - Block until the phone reports delivered or failed instead
+of returning at dispatch
+
+.PP
+\fBGlobal-option behavior\fP
+.IP \(bu 2
+\fB--api-key\fP=\fIvalue\fP - API key for the file-delivery request;
+overrides AXILIO_API_KEY and the saved key
+.IP \(bu 2
+\fB--base-url\fP=\fIvalue\fP - API host for the file-delivery request;
+overrides AXILIO_BASE_URL and saved base-url
+.IP \(bu 2
+\fB--no-color\fP - Disable ANSI color in the human-readable form of the
+delivery result
+.IP \(bu 2
+\fB--org\fP=\fIvalue\fP - OAuth org for the file-delivery request; overrides
+AXILIO_ORG and the saved active org; API keys ignore it
+.IP \(bu 2
+\fB-o\fP, \fB--output\fP=\fIvalue\fP - Render the delivery result as table or
+json (default "table")
+.IP \(bu 2
+\fB-q\fP, \fB--quiet\fP - Suppress delivery progress and notes; the
+delivery result remains on stdout
+
+.PP
+\fBExamples and expected output\fP
+
+.PP
+\fBSample 1\fP
+
+.EX
+user@host ~ % axilio files push file_123 --phone-id ph_123
+Delivery  <delivery-id>
+File      photo.jpg
+Status    dispatched
+.sp
+# Standard error:
+→ Pushing file_123 to phone ph_123
+pushed without requesting delivery receipt. In the future, add --wait if you want the cli to wait for delivery confirmation and report result.
+.sp
+# Exit status: 0
+.EE
+
+.PP
+\fBSample 2\fP
+
+.EX
+user@host ~ % axilio files push file_123 --phone-id ph_123 --collection Pictures
+Delivery  <delivery-id>
+File      photo.jpg
+Status    dispatched
+.sp
+# Standard error:
+→ Pushing file_123 to phone ph_123
+pushed without requesting delivery receipt. In the future, add --wait if you want the cli to wait for delivery confirmation and report result.
+.sp
+# Exit status: 0
+# Notes: The phone receives the file in Pictures. A captured file is
+#        deliverable by its id just like an upload.
+.EE
+
+.PP
+\fBSample 3\fP
+
+.EX
+user@host ~ % axilio files push file_123 --phone-id ph_123 --wait --timeout 2m
+Delivery  <delivery-id>
+File      photo.jpg
+Status    delivered
+.sp
+# Standard error:
+→ Pushing file_123 to phone ph_123
+.sp
+# Exit status: 0
+# Notes: With --wait, the command returns only after delivered, failed,
+#        or the two-minute deadline.
+.EE
+
+.SS upload
+.EX
+axilio files upload <path> [flags]
+.EE
+
+.PP
+Register a local file, upload its bytes, and verify them, leaving a
+ready file in the library (source=upload).
+
+.PP
+Use \fBaxilio files push\fR to send it to a phone, or \fBaxilio phone send\fR to
+do both in one step. The stored filename defaults to the local basename
+and MIME type is inferred from the extension; --filename and --mime-type
+override those values. The library stores files up to 1 GiB, including
+files too large to deliver to a phone (phone delivery is limited to 100
+MiB per file).
+
+.PP
+\fBCommand options\fP
+.IP \(bu 2
+\fB--filename\fP=\fIvalue\fP - Stored filename; omitted uses the local
+file's basename
+.IP \(bu 2
+\fB--mime-type\fP=\fIvalue\fP - Stored MIME type; omitted infers it from the
+file extension
+
+.PP
+\fBGlobal-option behavior\fP
+.IP \(bu 2
+\fB--api-key\fP=\fIvalue\fP - API key for the file-upload request; overrides
+AXILIO_API_KEY and the saved key
+.IP \(bu 2
+\fB--base-url\fP=\fIvalue\fP - API host for the file-upload request;
+overrides AXILIO_BASE_URL and saved base-url
+.IP \(bu 2
+\fB--no-color\fP - Disable ANSI color in the human-readable form of the
+stored-file result
+.IP \(bu 2
+\fB--org\fP=\fIvalue\fP - OAuth org for the file-upload request; overrides
+AXILIO_ORG and the saved active org; API keys ignore it
+.IP \(bu 2
+\fB-o\fP, \fB--output\fP=\fIvalue\fP - Render the stored-file result as table
+or json (default "table")
+.IP \(bu 2
+\fB-q\fP, \fB--quiet\fP - Suppress upload progress; the stored-file result
+remains on stdout
+
+.PP
+\fBExamples and expected output\fP
+
+.PP
+\fBSample 1\fP
+
+.EX
+user@host ~ % axilio files upload ./photo.jpg
+ID        <file-id>
+Filename  photo.jpg
+Size      2.0 MiB
+Type      image/jpeg
+Source    upload
+Status    ready
+.sp
+# Standard error:
+→ Uploading photo.jpg
+.sp
+# Exit status: 0
+.EE
+
+.PP
+\fBSample 2\fP
+
+.EX
+user@host ~ % axilio files upload ./asset --filename photo.jpg --mime-type image/jpeg
+ID        <file-id>
+Filename  photo.jpg
+Size      2.0 MiB
+Type      image/jpeg
+Source    upload
+Status    ready
+.sp
+# Standard error:
+→ Uploading asset
+.sp
+# Exit status: 0
+# Notes: --filename and --mime-type override values inferred from the
+#        local path. The alias `files add` does the same.
 .EE
 
 .SH help
@@ -3964,7 +4203,7 @@ axilio sessions start
 axilio sessions current
 axilio sessions get sess_123
 axilio sessions trace sess_123
-axilio sessions downloads sess_123
+axilio sessions files sess_123
 axilio sessions stop sess_123
 .EE
 
@@ -4180,79 +4419,80 @@ user@host ~ % axilio sessions current -o json
 #        session, stdout is empty and exit status is 4.
 .EE
 
-.SS downloads
+.SS files
 .EX
-axilio sessions downloads <session-id> [flags]
+axilio sessions files <session-id> [flags]
 .EE
 
 .PP
-List one session's captured downloads, newest first — the direct answer
-to "what did this session download".
+List one session's captured files, newest first — the direct answer to
+"what did this session capture".
 
 .PP
 Rows appear at detection, before the bytes finish moving, so a caller
 waiting on a file watches its capture state progress rather than an
-empty list. Save a ready capture with \fBdownloads get\fR\&. Filters and
-paging match \fBdownloads list\fR\&.
+empty list. Save a ready file with \fBfiles download\fR\&. Filters and paging
+match \fBfiles list\fR\&.
 
 .PP
 \fBCommand options\fP
 .IP \(bu 2
-\fB--created-after\fP=\fIvalue\fP - Only captures registered at or after
-this RFC 3339 time
+\fB--created-after\fP=\fIvalue\fP - Only files registered at or after this
+RFC 3339 time
 .IP \(bu 2
-\fB--created-before\fP=\fIvalue\fP - Only captures registered at or before
-this RFC 3339 time
+\fB--created-before\fP=\fIvalue\fP - Only files registered at or before this
+RFC 3339 time
 .IP \(bu 2
-\fB--limit\fP=\fInumber\fP - Maximum captures in this page (1-100) (default
+\fB--limit\fP=\fInumber\fP - Maximum files in this page (1-100) (default
 "50")
 .IP \(bu 2
-\fB--max-size\fP=\fInumber\fP - Only captures at most this many bytes; 0
-means no bound
+\fB--max-size\fP=\fInumber\fP - Only files at most this many bytes; 0 means
+no bound
 .IP \(bu 2
-\fB--mime\fP=\fIvalue\fP - Only captures of exactly this media type, e.g.
+\fB--mime\fP=\fIvalue\fP - Only files of exactly this media type, e.g.
 image/png
 .IP \(bu 2
-\fB--min-size\fP=\fInumber\fP - Only captures at least this many bytes; 0
-means no bound
+\fB--min-size\fP=\fInumber\fP - Only files at least this many bytes; 0 means
+no bound
 .IP \(bu 2
-\fB--offset\fP=\fInumber\fP - Number of matching captures to skip before
-this page
+\fB--offset\fP=\fInumber\fP - Number of matching files to skip before this
+page
 .IP \(bu 2
 \fB--search\fP=\fIvalue\fP - Filter filenames by case-insensitive substring
 
 .PP
 \fBGlobal-option behavior\fP
 .IP \(bu 2
-\fB--api-key\fP=\fIvalue\fP - API key for the session-download request;
+\fB--api-key\fP=\fIvalue\fP - API key for the session-files request;
 overrides AXILIO_API_KEY and the saved key
 .IP \(bu 2
-\fB--base-url\fP=\fIvalue\fP - API host for the session-download request;
+\fB--base-url\fP=\fIvalue\fP - API host for the session-files request;
 overrides AXILIO_BASE_URL and saved base-url
 .IP \(bu 2
 \fB--no-color\fP - Disable ANSI color in the human-readable form of the
-session-download result
+session-files result
 .IP \(bu 2
-\fB--org\fP=\fIvalue\fP - OAuth org for the session-download request;
-overrides AXILIO_ORG and the saved active org; API keys ignore it
+\fB--org\fP=\fIvalue\fP - OAuth org for the session-files request; overrides
+AXILIO_ORG and the saved active org; API keys ignore it
 .IP \(bu 2
-\fB-o\fP, \fB--output\fP=\fIvalue\fP - Render the session-download result as
+\fB-o\fP, \fB--output\fP=\fIvalue\fP - Render the session-files result as
 table or json (default "table")
 .IP \(bu 2
-\fB-q\fP, \fB--quiet\fP - Suppress stderr notes for the session-download
-request; the session-download result remains on stdout
+\fB-q\fP, \fB--quiet\fP - Suppress stderr notes for the session-files
+request; the session-files result remains on stdout
 
 .PP
 \fBExamples and expected output\fP
 
 .EX
-user@host ~ % axilio sessions downloads sess_123
-ID       FILENAME     SIZE     TYPE       STATE  SESSION  CREATED
-<dl-id>  receipt.png  2.0 KiB  image/png  ready  sess_123 <timestamp>
+user@host ~ % axilio sessions files sess_123
+ID         FILENAME     SIZE     TYPE       SOURCE   STATE  SESSION   CREATED
+<file-id>  receipt.png  2.0 KiB  image/png  capture  ready  sess_123  <timestamp>
 .sp
 # Exit status: 0
 # Notes: Rows appear at detection, before the bytes finish moving; watch
-#        STATE progress to ready, then save with `downloads get`.
+#        STATE progress to ready, then save with `files download`. The
+#        alias `sessions downloads` does the same.
 .EE
 
 .SS get
@@ -4835,439 +5075,6 @@ user@host ~ % brew upgrade axilio
 .sp
 # External behavior: Output and exit status are owned by Homebrew, not
 #                    the axilio CLI.
-.EE
-
-.SH uploads
-.EX
-axilio uploads
-.EE
-
-.PP
-Manage the org file library. Files live here until deleted and can be
-pushed to any phone the org holds, so one upload serves many phones.
-\fBadd\fR stores a local file, \fBlist\fR discovers uploads and quota, \fBpush\fR
-delivers a stored upload, and \fBdelete\fR frees library quota. \fBphone send\fR
-combines add and push for the selected session's phone.
-
-.PP
-Running \fBaxilio uploads\fR without a subcommand is equivalent to \fBaxilio
-uploads --help\fR: it only displays this help and does not add, list,
-push, or delete uploads. Global flags shown here therefore have no
-effect. Pass flags to an uploads subcommand instead.
-
-.PP
-\fBGlobal-option behavior\fP
-.IP \(bu 2
-\fB--api-key\fP, \fB--base-url\fP, \fB--no-color\fP, \fB--org\fP, \fB--output\fP
-/ \fB-o\fP, \fB--quiet\fP / \fB-q\fP - No effect on uploads command; bare
-axilio uploads only displays this help
-
-.PP
-\fBWorkflow examples\fP
-
-.EX
-axilio uploads list
-axilio uploads add ./photo.jpg
-axilio uploads push upl_123 --phone-id ph_123
-axilio uploads delete upl_123 --yes
-.EE
-
-.SS list
-.EX
-axilio uploads list [flags]
-.EE
-
-.PP
-List uploads and standing storage quota for the active organization.
-
-.PP
-Results include upload ID, filename, size, MIME type, status, and
-creation time. Page with --limit and --offset, search filenames by
-case-insensitive substring, and sort by created_at, filename, or
-size_bytes in asc or desc order. Omitting sort/order uses server
-defaults.
-
-.PP
-\fBCommand options\fP
-.IP \(bu 2
-\fB--limit\fP=\fInumber\fP - Maximum files in this page (1-100) (default
-"50")
-.IP \(bu 2
-\fB--offset\fP=\fInumber\fP - Number of matching files to skip before this
-page
-.IP \(bu 2
-\fB--order\fP=\fIvalue\fP - Sort direction: asc or desc; omitted uses server
-default
-.IP \(bu 2
-\fB--search\fP=\fIvalue\fP - Filter filenames by case-insensitive substring
-.IP \(bu 2
-\fB--sort\fP=\fIvalue\fP - Sort key: created_at, filename, or size_bytes;
-omitted uses server default
-
-.PP
-\fBGlobal-option behavior\fP
-.IP \(bu 2
-\fB--api-key\fP=\fIvalue\fP - API key for the upload-list request; overrides
-AXILIO_API_KEY and the saved key
-.IP \(bu 2
-\fB--base-url\fP=\fIvalue\fP - API host for the upload-list request;
-overrides AXILIO_BASE_URL and saved base-url
-.IP \(bu 2
-\fB--no-color\fP - Disable ANSI color in the human-readable form of the
-upload-list result
-.IP \(bu 2
-\fB--org\fP=\fIvalue\fP - OAuth org for the upload-list request; overrides
-AXILIO_ORG and the saved active org; API keys ignore it
-.IP \(bu 2
-\fB-o\fP, \fB--output\fP=\fIvalue\fP - Render the upload-list result as table
-or json (default "table")
-.IP \(bu 2
-\fB-q\fP, \fB--quiet\fP - Suppress stderr notes for the upload-list
-request; the upload-list result remains on stdout
-
-.PP
-\fBExamples and expected output\fP
-
-.PP
-\fBSample 1\fP
-
-.EX
-user@host ~ % axilio uploads list
-ID          FILENAME   SIZE     TYPE        STATUS  CREATED
-<upload-id> photo.jpg  2.0 MiB  image/jpeg  ready   <timestamp>
-.sp
-# Standard error:
-1 of 10000 files, 2.0 MiB of 50.0 GiB used
-.sp
-# Exit status: 0
-# Notes: An empty page still reports quota usage; the current global
-#        limits are 10000 files and 50 GiB.
-.EE
-
-.PP
-\fBSample 2\fP
-
-.EX
-user@host ~ % axilio uploads list --search receipt --limit 20 --offset 0
-ID          FILENAME     SIZE      TYPE       STATUS  CREATED
-<upload-id> receipt.jpg  512.0 KiB image/jpeg ready   <timestamp>
-.sp
-# Standard error:
-1 of 10000 files, 512.0 KiB of 50.0 GiB used
-.sp
-# Exit status: 0
-# Notes: Results and bytes used vary by organization; the limits are
-#        global.
-.EE
-
-.PP
-\fBSample 3\fP
-
-.EX
-user@host ~ % axilio uploads list --sort filename --order asc
-ID          FILENAME   SIZE     TYPE        STATUS  CREATED
-<upload-id> photo.jpg  2.0 MiB  image/jpeg  ready   <timestamp>
-.sp
-# Standard error:
-1 of 10000 files, 2.0 MiB of 50.0 GiB used
-.sp
-# Exit status: 0
-# Notes: Rows are sorted by filename ascending; results and bytes used
-#        vary by organization.
-.EE
-
-.PP
-\fBSample 4\fP
-
-.EX
-user@host ~ % axilio uploads list -o json
-{
-  "files": [
-    {
-      "id": "<upload-id>",
-      "filename": "photo.jpg",
-      "size_bytes": 2097152,
-      "mime_type": "image/jpeg",
-      "status": "ready",
-      "created_at": "<timestamp>"
-    }
-  ],
-  "total": 1,
-  "usage": {
-    "file_count": 1,
-    "file_limit": 10000,
-    "total_bytes": 2097152,
-    "byte_limit": 53687091200
-  }
-}
-.sp
-# Exit status: 0
-# Notes: Representative response; files, result count, and bytes used
-#        vary by organization; limits are global.
-.EE
-
-.SS add
-.EX
-axilio uploads add <path> [flags]
-.EE
-
-.PP
-Register a local file, upload its bytes, and verify them, leaving a
-ready file in the library.
-
-.PP
-Use \fBaxilio uploads push\fR to send it to a phone, or \fBaxilio phone send\fR
-to do both in one step. The stored filename defaults to the local
-basename and MIME type is inferred from the extension; --filename and
---mime-type override those values. The library stores files up to 1 GiB,
-including files too large to deliver to a phone (phone delivery is
-limited to 100 MiB per file).
-
-.PP
-\fBCommand options\fP
-.IP \(bu 2
-\fB--filename\fP=\fIvalue\fP - Stored filename; omitted uses the local
-file's basename
-.IP \(bu 2
-\fB--mime-type\fP=\fIvalue\fP - Stored MIME type; omitted infers it from the
-file extension
-
-.PP
-\fBGlobal-option behavior\fP
-.IP \(bu 2
-\fB--api-key\fP=\fIvalue\fP - API key for the file-upload request; overrides
-AXILIO_API_KEY and the saved key
-.IP \(bu 2
-\fB--base-url\fP=\fIvalue\fP - API host for the file-upload request;
-overrides AXILIO_BASE_URL and saved base-url
-.IP \(bu 2
-\fB--no-color\fP - Disable ANSI color in the human-readable form of the
-stored-upload result
-.IP \(bu 2
-\fB--org\fP=\fIvalue\fP - OAuth org for the file-upload request; overrides
-AXILIO_ORG and the saved active org; API keys ignore it
-.IP \(bu 2
-\fB-o\fP, \fB--output\fP=\fIvalue\fP - Render the stored-upload result as
-table or json (default "table")
-.IP \(bu 2
-\fB-q\fP, \fB--quiet\fP - Suppress upload progress; the stored-upload
-result remains on stdout
-
-.PP
-\fBExamples and expected output\fP
-
-.PP
-\fBSample 1\fP
-
-.EX
-user@host ~ % axilio uploads add ./photo.jpg
-ID        <upload-id>
-Filename  photo.jpg
-Size      2.0 MiB
-Type      image/jpeg
-Status    ready
-.sp
-# Standard error:
-→ Uploading photo.jpg
-.sp
-# Exit status: 0
-.EE
-
-.PP
-\fBSample 2\fP
-
-.EX
-user@host ~ % axilio uploads add ./asset --filename photo.jpg --mime-type image/jpeg
-ID        <upload-id>
-Filename  photo.jpg
-Size      2.0 MiB
-Type      image/jpeg
-Status    ready
-.sp
-# Standard error:
-→ Uploading asset
-.sp
-# Exit status: 0
-# Notes: --filename and --mime-type override values inferred from the
-#        local path.
-.EE
-
-.SS delete
-.EX
-axilio uploads delete <upload-id> [flags]
-.EE
-
-.PP
-Delete an upload from the active organization's library and free its
-storage quota.
-
-.PP
-Use \fBuploads list\fR to discover the upload ID. Deletion also schedules
-removal from every phone holding or receiving a copy. Without --yes,
-table mode prompts only when stdin is a terminal. Redirected, JSON, and
-quiet execution do not prompt and require --yes. The alias \fBuploads rm\fR
-performs the same operation.
-
-.PP
-\fBCommand options\fP
-.IP \(bu 2
-\fB-y\fP, \fB--yes\fP - Delete without prompting; required in JSON, quiet,
-or redirected execution
-
-.PP
-\fBGlobal-option behavior\fP
-.IP \(bu 2
-\fB--no-color\fP - No effect on uploads delete command
-.IP \(bu 2
-\fB--api-key\fP=\fIvalue\fP - API key for the upload-delete request;
-overrides AXILIO_API_KEY and the saved key
-.IP \(bu 2
-\fB--base-url\fP=\fIvalue\fP - API host for the upload-delete request;
-overrides AXILIO_BASE_URL and saved base-url
-.IP \(bu 2
-\fB--org\fP=\fIvalue\fP - OAuth org for the upload-delete request; overrides
-AXILIO_ORG and the saved active org; API keys ignore it
-.IP \(bu 2
-\fB-o\fP, \fB--output\fP=\fIvalue\fP - Emit a human confirmation or JSON
-deletion result (default "table")
-.IP \(bu 2
-\fB-q\fP, \fB--quiet\fP - Suppress the prompt and human confirmation;
---yes is required; JSON still prints
-
-.PP
-\fBExamples and expected output\fP
-
-.PP
-\fBSample 1\fP
-
-.EX
-user@host ~ % axilio uploads delete upl_123
-Deleted upl_123
-.sp
-# Standard error:
-Delete upload upl_123? Also recall it from phones holding or receiving a copy? [y/N]
-.sp
-# Exit status: 0
-# Notes: Table mode prompts only when stdin is a terminal. Redirected,
-#        JSON, and quiet execution require --yes.
-.EE
-
-.PP
-\fBSample 2\fP
-
-.EX
-user@host ~ % axilio uploads rm upl_123 --yes
-Deleted upl_123
-.sp
-# Exit status: 0
-.EE
-
-.SS push
-.EX
-axilio uploads push <upload-id> [flags]
-.EE
-
-.PP
-Send a stored library file to a phone's media library.
-
-.PP
-Unlike \fBaxilio phone send\fR this uploads nothing, so the same file can be
-pushed to many phones without re-uploading it or consuming more quota.
---phone-id is required and can be discovered with \fBphones mine\fR or
-\fBsessions list --remote\fR\&. The collection is inferred unless DCIM,
-Pictures, or Movies is selected. Phone delivery is limited to 100 MiB
-per file; the server rejects a stored file above that even though the
-library holds it. By default the command returns after dispatch; --wait
-blocks for delivered or failed, and --timeout applies only with --wait.
-
-.PP
-\fBCommand options\fP
-.IP \(bu 2
-\fB--collection\fP=\fIvalue\fP - Target DCIM, Pictures, or Movies; omitted
-infers from media type
-.IP \(bu 2
-\fB--phone-id\fP=\fIvalue\fP - Target phone ID from \fBphones mine\fR or remote
-sessions (required)
-.IP \(bu 2
-\fB--timeout\fP=\fIduration\fP - Maximum delivery wait, such as 30s, 1m30s,
-or 2m; applies only with --wait (default 1m). Units: ns, us/µs, ms, s,
-m, h.
-.IP \(bu 2
-\fB--wait\fP - Block until the phone reports delivered or failed instead
-of returning at dispatch
-
-.PP
-\fBGlobal-option behavior\fP
-.IP \(bu 2
-\fB--api-key\fP=\fIvalue\fP - API key for the file-delivery request;
-overrides AXILIO_API_KEY and the saved key
-.IP \(bu 2
-\fB--base-url\fP=\fIvalue\fP - API host for the file-delivery request;
-overrides AXILIO_BASE_URL and saved base-url
-.IP \(bu 2
-\fB--no-color\fP - Disable ANSI color in the human-readable form of the
-delivery result
-.IP \(bu 2
-\fB--org\fP=\fIvalue\fP - OAuth org for the file-delivery request; overrides
-AXILIO_ORG and the saved active org; API keys ignore it
-.IP \(bu 2
-\fB-o\fP, \fB--output\fP=\fIvalue\fP - Render the delivery result as table or
-json (default "table")
-.IP \(bu 2
-\fB-q\fP, \fB--quiet\fP - Suppress delivery progress and notes; the
-delivery result remains on stdout
-
-.PP
-\fBExamples and expected output\fP
-
-.PP
-\fBSample 1\fP
-
-.EX
-user@host ~ % axilio uploads push upl_123 --phone-id ph_123
-Delivery  <delivery-id>
-File      photo.jpg
-Status    dispatched
-.sp
-# Standard error:
-→ Pushing upl_123 to phone ph_123
-pushed without requesting delivery receipt. In the future, add --wait if you want the cli to wait for delivery confirmation and report result.
-.sp
-# Exit status: 0
-.EE
-
-.PP
-\fBSample 2\fP
-
-.EX
-user@host ~ % axilio uploads push upl_123 --phone-id ph_123 --collection Pictures
-Delivery  <delivery-id>
-File      photo.jpg
-Status    dispatched
-.sp
-# Standard error:
-→ Pushing upl_123 to phone ph_123
-pushed without requesting delivery receipt. In the future, add --wait if you want the cli to wait for delivery confirmation and report result.
-.sp
-# Exit status: 0
-# Notes: The phone receives the file in Pictures.
-.EE
-
-.PP
-\fBSample 3\fP
-
-.EX
-user@host ~ % axilio uploads push upl_123 --phone-id ph_123 --wait --timeout 2m
-Delivery  <delivery-id>
-File      photo.jpg
-Status    delivered
-.sp
-# Standard error:
-→ Pushing upl_123 to phone ph_123
-.sp
-# Exit status: 0
-# Notes: With --wait, the command returns only after delivered, failed,
-#        or the two-minute deadline.
 .EE
 
 .SH usage

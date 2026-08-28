@@ -85,16 +85,16 @@ func fakeAPI(t *testing.T) *httptest.Server {
 			w.Header().Set("Content-Type", "application/octet-stream")
 			_, _ = io.WriteString(w, "captured-bytes")
 			return
-		case strings.Contains(p, "/phones/sessions/") && strings.HasSuffix(p, "/downloads"):
-			body = `{"downloads":[
-				{"id":"d1","filename":"receipt.png","mime_type":"image/png","size_bytes":2048,"capture_state":"ready","preview_state":"ready","on_phone_count":1,"session_id":"s1","created_at":"2026-08-22T10:00:00Z","download_url":"http://` + r.Host + `/blob"}],
-				"total":1}`
-		case strings.HasSuffix(p, "/downloads") && r.Method == http.MethodGet:
-			body = `{"downloads":[
-				{"id":"d1","filename":"receipt.png","mime_type":"image/png","size_bytes":2048,"capture_state":"ready","preview_state":"ready","on_phone_count":1,"session_id":"s1","created_at":"2026-08-22T10:00:00Z","download_url":"http://` + r.Host + `/blob"},
-				{"id":"d2","filename":"clip.mp4","mime_type":"video/mp4","size_bytes":9999,"capture_state":"skipped_size","capture_error":"file exceeds the capture ceiling","preview_state":"unavailable","on_phone_count":0,"session_id":"s1","created_at":"2026-08-22T09:00:00Z"}],
-				"total":2}`
-		case strings.Contains(p, "/downloads/") && r.Method == http.MethodDelete:
+		case strings.Contains(p, "/phones/sessions/") && strings.HasSuffix(p, "/files"):
+			body = `{"files":[
+				{"id":"d1","source":"capture","surface":"phone","filename":"receipt.png","mime_type":"image/png","size_bytes":2048,"status":"ready","capture_state":"ready","preview_state":"ready","on_phone_count":1,"session_id":"s1","created_at":"2026-08-22T10:00:00Z","download_url":"http://` + r.Host + `/blob"}],
+				"total":1,"usage":{"file_count":1,"file_limit":10000,"total_bytes":2048,"byte_limit":53687091200}}`
+		case strings.HasSuffix(p, "/files") && r.Method == http.MethodGet:
+			body = `{"files":[
+				{"id":"d1","source":"capture","surface":"phone","filename":"receipt.png","mime_type":"image/png","size_bytes":2048,"status":"ready","capture_state":"ready","preview_state":"ready","on_phone_count":1,"session_id":"s1","created_at":"2026-08-22T10:00:00Z","download_url":"http://` + r.Host + `/blob"},
+				{"id":"d2","source":"capture","surface":"phone","filename":"clip.mp4","mime_type":"video/mp4","size_bytes":9999,"status":"uploading","capture_state":"skipped_size","capture_error":"file exceeds the capture ceiling","preview_state":"unavailable","on_phone_count":0,"session_id":"s1","created_at":"2026-08-22T09:00:00Z"}],
+				"total":2,"usage":{"file_count":2,"file_limit":10000,"total_bytes":12047,"byte_limit":53687091200}}`
+		case strings.Contains(p, "/files/") && r.Method == http.MethodDelete:
 			body = `{"message":"file deleted","phones_pending_removal":2}`
 		case strings.HasSuffix(p, "/code/restore") && r.Method == http.MethodPost:
 			// workflow code restore: POST /workflows/{id}/code/restore.
