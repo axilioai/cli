@@ -306,11 +306,11 @@ var commandDocumentationByKey = map[string]CommandDocumentation{
 		"axilio sessions current",
 		"axilio sessions get sess_123",
 		"axilio sessions trace sess_123",
-		"axilio sessions downloads sess_123",
+		"axilio sessions files sess_123",
 		"axilio sessions stop sess_123",
 	),
-	"sessions downloads": {Samples: []CommandSample{
-		sampleWithNote("axilio sessions downloads sess_123", "ID       FILENAME     SIZE     TYPE       STATE  SESSION  CREATED\n<dl-id>  receipt.png  2.0 KiB  image/png  ready  sess_123 <timestamp>", "none", "Rows appear at detection, before the bytes finish moving; watch STATE progress to ready, then save with `downloads get`."),
+	"sessions files": {Samples: []CommandSample{
+		sampleWithNote("axilio sessions files sess_123", "ID         FILENAME     SIZE     TYPE       SOURCE   STATE  SESSION   CREATED\n<file-id>  receipt.png  2.0 KiB  image/png  capture  ready  sess_123  <timestamp>", "none", "Rows appear at detection, before the bytes finish moving; watch STATE progress to ready, then save with `files download`. The alias `sessions downloads` does the same."),
 	}},
 	"sessions list": {Samples: []CommandSample{
 		sampleWithNote("axilio sessions list", "   SESSION       PHONE       TYPE\n*  <session-id>  <phone-id>  android", "none", "With no sessions saved locally, stdout explains how to start one and exit status is 0."),
@@ -549,48 +549,35 @@ var commandDocumentationByKey = map[string]CommandDocumentation{
 	"billing plan": {Samples: []CommandSample{
 		sampleWithNote("axilio billing plan", "Plan                 Pro (pro)\nStatus               active\nBilling cycle        monthly\nPrice                $20.00/mo\nIncluded / cycle     $10.00\nMax concurrent runs  5\nCurrent period       <timestamp> → <timestamp>", "none", "Cancellation, pending-downgrade, and trial rows appear only when set; without an active subscription the command fails with the API's not-found error."),
 	}},
-	"uploads": workflow(
-		"axilio uploads list",
-		"axilio uploads add ./photo.jpg",
-		"axilio uploads push upl_123 --phone-id ph_123",
-		"axilio uploads delete upl_123 --yes",
+	"files": workflow(
+		"axilio files list",
+		"axilio files upload ./photo.jpg",
+		"axilio files download file_123",
+		"axilio files push file_123 --phone-id ph_123",
+		"axilio files delete file_123 --yes",
 	),
-	"uploads add": {Samples: []CommandSample{
-		sample("axilio uploads add ./photo.jpg", "ID        <upload-id>\nFilename  photo.jpg\nSize      2.0 MiB\nType      image/jpeg\nStatus    ready", "→ Uploading photo.jpg"),
-		sampleWithNote("axilio uploads add ./asset --filename photo.jpg --mime-type image/jpeg", "ID        <upload-id>\nFilename  photo.jpg\nSize      2.0 MiB\nType      image/jpeg\nStatus    ready", "→ Uploading asset", "--filename and --mime-type override values inferred from the local path."),
+	"files upload": {Samples: []CommandSample{
+		sample("axilio files upload ./photo.jpg", "ID        <file-id>\nFilename  photo.jpg\nSize      2.0 MiB\nType      image/jpeg\nSource    upload\nStatus    ready", "→ Uploading photo.jpg"),
+		sampleWithNote("axilio files upload ./asset --filename photo.jpg --mime-type image/jpeg", "ID        <file-id>\nFilename  photo.jpg\nSize      2.0 MiB\nType      image/jpeg\nSource    upload\nStatus    ready", "→ Uploading asset", "--filename and --mime-type override values inferred from the local path. The alias `files add` does the same."),
 	}},
-	"uploads list": {Samples: []CommandSample{
-		sampleWithNote("axilio uploads list", "ID          FILENAME   SIZE     TYPE        STATUS  CREATED\n<upload-id> photo.jpg  2.0 MiB  image/jpeg  ready   <timestamp>", "1 of 10000 files, 2.0 MiB of 50.0 GiB used", "An empty page still reports quota usage; the current global limits are 10000 files and 50 GiB."),
-		sampleWithNote("axilio uploads list --search receipt --limit 20 --offset 0", "ID          FILENAME     SIZE      TYPE       STATUS  CREATED\n<upload-id> receipt.jpg  512.0 KiB image/jpeg ready   <timestamp>", "1 of 10000 files, 512.0 KiB of 50.0 GiB used", "Results and bytes used vary by organization; the limits are global."),
-		sampleWithNote("axilio uploads list --sort filename --order asc", "ID          FILENAME   SIZE     TYPE        STATUS  CREATED\n<upload-id> photo.jpg  2.0 MiB  image/jpeg  ready   <timestamp>", "1 of 10000 files, 2.0 MiB of 50.0 GiB used", "Rows are sorted by filename ascending; results and bytes used vary by organization."),
-		sampleWithNote("axilio uploads list -o json", "{\n  \"files\": [\n    {\n      \"id\": \"<upload-id>\",\n      \"filename\": \"photo.jpg\",\n      \"size_bytes\": 2097152,\n      \"mime_type\": \"image/jpeg\",\n      \"status\": \"ready\",\n      \"created_at\": \"<timestamp>\"\n    }\n  ],\n  \"total\": 1,\n  \"usage\": {\n    \"file_count\": 1,\n    \"file_limit\": 10000,\n    \"total_bytes\": 2097152,\n    \"byte_limit\": 53687091200\n  }\n}", "none", "Representative response; files, result count, and bytes used vary by organization; limits are global."),
+	"files list": {Samples: []CommandSample{
+		sampleWithNote("axilio files list", "ID         FILENAME   SIZE     TYPE        SOURCE   STATE  SESSION       CREATED\n<file-id>  photo.jpg  2.0 MiB  image/jpeg  upload   ready         <timestamp>", "1 of 10000 files, 2.0 MiB of 50.0 GiB used", "An empty page still reports quota usage; the current global limits are 10000 files and 50 GiB."),
+		sampleWithNote("axilio files list --source capture --session ses_123", "ID         FILENAME     SIZE     TYPE       SOURCE   STATE  SESSION  CREATED\n<file-id>  receipt.png  2.0 KiB  image/png  capture  ready  ses_123  <timestamp>", "1 of 10000 files, 2.0 KiB of 50.0 GiB used", "--source is upload or capture; --surface (phone) and --session further narrow captures. A skipped or failed capture is a visible row with its reason in STATE."),
+		sampleWithNote("axilio files list --search receipt --sort source --order asc", "ID         FILENAME     SIZE      TYPE       SOURCE   STATE  SESSION  CREATED\n<file-id>  receipt.jpg  512.0 KiB image/jpeg upload   ready         <timestamp>", "1 of 10000 files, 512.0 KiB of 50.0 GiB used", "sort=source groups uploads and captures; results and bytes used vary by organization."),
+		sampleWithNote("axilio files list -o json", "{\n  \"files\": [\n    {\n      \"id\": \"<file-id>\",\n      \"source\": \"upload\",\n      \"filename\": \"photo.jpg\",\n      \"size_bytes\": 2097152,\n      \"mime_type\": \"image/jpeg\",\n      \"status\": \"ready\",\n      \"created_at\": \"<timestamp>\"\n    }\n  ],\n  \"total\": 1,\n  \"usage\": {\n    \"file_count\": 1,\n    \"file_limit\": 10000,\n    \"total_bytes\": 2097152,\n    \"byte_limit\": 53687091200\n  }\n}", "none", "Representative response; a capture row also carries surface, session_id, and capture_state. Files, result count, and bytes used vary by organization; limits are global."),
 	}},
-	"uploads push": {Samples: []CommandSample{
-		sample("axilio uploads push upl_123 --phone-id ph_123", "Delivery  <delivery-id>\nFile      photo.jpg\nStatus    dispatched", "→ Pushing upl_123 to phone ph_123\npushed without requesting delivery receipt. In the future, add --wait if you want the cli to wait for delivery confirmation and report result."),
-		sampleWithNote("axilio uploads push upl_123 --phone-id ph_123 --collection Pictures", "Delivery  <delivery-id>\nFile      photo.jpg\nStatus    dispatched", "→ Pushing upl_123 to phone ph_123\npushed without requesting delivery receipt. In the future, add --wait if you want the cli to wait for delivery confirmation and report result.", "The phone receives the file in Pictures."),
-		sampleWithNote("axilio uploads push upl_123 --phone-id ph_123 --wait --timeout 2m", "Delivery  <delivery-id>\nFile      photo.jpg\nStatus    delivered", "→ Pushing upl_123 to phone ph_123", "With --wait, the command returns only after delivered, failed, or the two-minute deadline."),
+	"files download": {Samples: []CommandSample{
+		sample("axilio files download file_123", "Saved receipt.png (2.0 KiB)", "→ Saving receipt.png to receipt.png"),
+		sampleWithNote("axilio files download file_123 --out ./captures/receipt.png --force", "Saved ./captures/receipt.png (2.0 KiB)", "→ Saving receipt.png to ./captures/receipt.png", "Works for any source. Without --force an existing destination is refused. The alias `files get` does the same."),
 	}},
-	"uploads delete": {Samples: []CommandSample{
-		sampleWithNote("axilio uploads delete upl_123", "Deleted upl_123", "Delete upload upl_123? Also recall it from phones holding or receiving a copy? [y/N]", "Table mode prompts only when stdin is a terminal. Redirected, JSON, and quiet execution require --yes."),
-		sample("axilio uploads rm upl_123 --yes", "Deleted upl_123", "none"),
+	"files push": {Samples: []CommandSample{
+		sample("axilio files push file_123 --phone-id ph_123", "Delivery  <delivery-id>\nFile      photo.jpg\nStatus    dispatched", "→ Pushing file_123 to phone ph_123\npushed without requesting delivery receipt. In the future, add --wait if you want the cli to wait for delivery confirmation and report result."),
+		sampleWithNote("axilio files push file_123 --phone-id ph_123 --collection Pictures", "Delivery  <delivery-id>\nFile      photo.jpg\nStatus    dispatched", "→ Pushing file_123 to phone ph_123\npushed without requesting delivery receipt. In the future, add --wait if you want the cli to wait for delivery confirmation and report result.", "The phone receives the file in Pictures. A captured file is deliverable by its id just like an upload."),
+		sampleWithNote("axilio files push file_123 --phone-id ph_123 --wait --timeout 2m", "Delivery  <delivery-id>\nFile      photo.jpg\nStatus    delivered", "→ Pushing file_123 to phone ph_123", "With --wait, the command returns only after delivered, failed, or the two-minute deadline."),
 	}},
-	"downloads": workflow(
-		"axilio downloads list",
-		"axilio downloads get dl_123",
-		"axilio downloads delete dl_123 --yes",
-	),
-	"downloads list": {Samples: []CommandSample{
-		sampleWithNote("axilio downloads list", "ID       FILENAME     SIZE     TYPE       STATE  SESSION      CREATED\n<dl-id>  receipt.png  2.0 KiB  image/png  ready  <session-id> <timestamp>", "none", "A skipped or failed capture is a visible row with its reason in STATE, not an absence."),
-		sample("axilio downloads list --session ses_123 --mime image/png --sort size_bytes --order desc", "ID       FILENAME     SIZE     TYPE       STATE  SESSION      CREATED\n<dl-id>  receipt.png  2.0 KiB  image/png  ready  ses_123      <timestamp>", "none"),
-		sampleWithNote("axilio downloads list -o json", "{\n  \"downloads\": [\n    {\n      \"id\": \"<dl-id>\",\n      \"filename\": \"receipt.png\",\n      \"size_bytes\": 2048,\n      \"mime_type\": \"image/png\",\n      \"capture_state\": \"ready\",\n      \"session_id\": \"<session-id>\",\n      \"download_url\": \"<signed-url>\",\n      \"created_at\": \"<timestamp>\"\n    }\n  ],\n  \"total\": 1\n}", "none", "Representative response; signed URLs are short-lived, re-list to refresh an expired one."),
-	}},
-	"downloads get": {Samples: []CommandSample{
-		sample("axilio downloads get dl_123", "Saved receipt.png (2.0 KiB)", "→ Saving receipt.png to receipt.png"),
-		sampleWithNote("axilio downloads get dl_123 --out ./captures/receipt.png --force", "Saved ./captures/receipt.png (2.0 KiB)", "→ Saving receipt.png to ./captures/receipt.png", "Without --force an existing destination is refused."),
-	}},
-	"downloads delete": {Samples: []CommandSample{
-		sampleWithNote("axilio downloads delete dl_123", "Deleted dl_123", "Delete download dl_123? Also recall it from phones holding or receiving a copy? [y/N]", "Table mode prompts only when stdin is a terminal. Redirected, JSON, and quiet execution require --yes."),
-		sample("axilio downloads rm dl_123 --yes", "Deleted dl_123", "none"),
+	"files delete": {Samples: []CommandSample{
+		sampleWithNote("axilio files delete file_123", "Deleted file_123", "Delete file file_123? Also recall it from phones holding or receiving a copy? [y/N]", "Table mode prompts only when stdin is a terminal. Redirected, JSON, and quiet execution require --yes."),
+		sample("axilio files rm file_123 --yes", "Deleted file_123", "none"),
 	}},
 
 	// Commands Cobra generates. Their samples model installation and use

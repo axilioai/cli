@@ -264,9 +264,8 @@ func buildGlobalFlagHelp() map[string]commandGlobalFlagHelp {
 		"runs":      helpOnlyCommandHelp("runs"),
 		"usage":     helpOnlyCommandHelp("usage"),
 		"api-keys":  helpOnlyCommandHelp("api-keys"),
-		"uploads":   helpOnlyCommandHelp("uploads"),
+		"files":     helpOnlyCommandHelp("files"),
 		"billing":   helpOnlyCommandHelp("billing"),
-		"downloads": helpOnlyCommandHelp("downloads"),
 		"help": {
 			apiKey:          "No effect on help command or the help content it renders",
 			baseURL:         "No effect on help command or the help content it renders",
@@ -363,34 +362,27 @@ func buildGlobalFlagHelp() map[string]commandGlobalFlagHelp {
 		"Suppress optional notes; the created key and save-now warning remain visible")
 	help["api-keys delete"] = apiActionHelp("API-key deletion", true)
 
-	help["uploads add"] = apiResultHelp("the file-upload request", "the stored-upload result")
-	help["uploads add"] = withQuiet(help["uploads add"],
-		"Suppress upload progress; the stored-upload result remains on stdout")
-	help["uploads list"] = apiResultHelp("the upload-list request", "the upload-list result")
-	help["uploads push"] = apiResultHelp("the file-delivery request", "the delivery result")
-	help["uploads push"] = withQuiet(help["uploads push"],
+	help["files upload"] = apiResultHelp("the file-upload request", "the stored-file result")
+	help["files upload"] = withQuiet(help["files upload"],
+		"Suppress upload progress; the stored-file result remains on stdout")
+	help["files list"] = apiResultHelp("the file-list request", "the file-list result")
+	help["files download"] = apiResultHelp("the file-list and signed-URL requests", "the saved-file result")
+	help["files download"] = withQuiet(help["files download"],
+		"Suppress save progress; the saved-file result remains on stdout")
+	help["files push"] = apiResultHelp("the file-delivery request", "the delivery result")
+	help["files push"] = withQuiet(help["files push"],
 		"Suppress delivery progress and notes; the delivery result remains on stdout")
-	help["uploads delete"] = apiResultHelp("the upload-delete request", "the deletion result")
-	help["uploads delete"] = withOutput(help["uploads delete"],
+	help["files delete"] = apiResultHelp("the file-delete request", "the deletion result")
+	help["files delete"] = withOutput(help["files delete"],
 		"Emit a human confirmation or JSON deletion result",
 		"Suppress the prompt and human confirmation; --yes is required; JSON still prints")
-	help["uploads delete"] = withNoColor(help["uploads delete"],
-		"No effect on uploads delete command; its human confirmation is unstyled")
+	help["files delete"] = withNoColor(help["files delete"],
+		"No effect on files delete command; its human confirmation is unstyled")
 
 	help["billing balance"] = apiResultHelp("the balance request", "the balance result")
 	help["billing plan"] = apiResultHelp("the subscription request", "the plan result")
 
-	help["downloads list"] = apiResultHelp("the download-list request", "the download-list result")
-	help["sessions downloads"] = apiResultHelp("the session-download request", "the session-download result")
-	help["downloads get"] = apiResultHelp("the download-list and signed-URL requests", "the saved-file result")
-	help["downloads get"] = withQuiet(help["downloads get"],
-		"Suppress save progress; the saved-file result remains on stdout")
-	help["downloads delete"] = apiResultHelp("the download-delete request", "the deletion result")
-	help["downloads delete"] = withOutput(help["downloads delete"],
-		"Emit a human confirmation or JSON deletion result",
-		"Suppress the prompt and human confirmation; --yes is required; JSON still prints")
-	help["downloads delete"] = withNoColor(help["downloads delete"],
-		"No effect on downloads delete command; its human confirmation is unstyled")
+	help["sessions files"] = apiResultHelp("the session-files request", "the session-files result")
 
 	for _, shell := range []string{"bash", "zsh", "fish", "powershell"} {
 		key := "completion " + shell

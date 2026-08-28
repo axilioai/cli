@@ -18,8 +18,11 @@ import (
 )
 
 const (
-	applicationCommandCount = 77
-	applicationFlagCount    = 127
+	// AXI-1911 unified `uploads` + `downloads` (+ `sessions downloads`) into one
+	// `files` command group (+ `sessions files`): fewer command nodes, and the
+	// merged `files list` filter set nets out a few flags.
+	applicationCommandCount = 74
+	applicationFlagCount    = 123
 )
 
 func TestApplicationHelpMetadata(t *testing.T) {
@@ -337,11 +340,12 @@ func TestRenderedHelpContracts(t *testing.T) {
 			},
 		},
 		{
-			name: "uploads",
-			args: []string{"uploads", "--help"},
+			name: "files",
+			args: []string{"files", "--help"},
 			want: []string{
-				"add",
+				"upload",
 				"list",
+				"download",
 				"push",
 				"delete",
 				"phone send",
