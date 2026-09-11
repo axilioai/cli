@@ -291,6 +291,9 @@ func buildGlobalFlagHelp() map[string]commandGlobalFlagHelp {
 	}
 	help["sessions get"] = apiResultHelp("the session-detail request", "the session-detail result")
 	help["sessions trace"] = apiResultHelp("the telemetry-frames requests", "the trace result")
+	help["sessions recording"] = apiResultHelp("the recording-status request and the presigned download", "the recording result")
+	help["sessions recording"] = withQuiet(help["sessions recording"],
+		"Suppress wait and save progress and the status guidance; the recording result remains on stdout")
 	help["sessions current"] = localResultHelp("sessions current", "session resolution", "the current-session result")
 	help["sessions start"] = apiResultHelp("the phone-allocation request", "the allocated-session result")
 	help["sessions start"] = withOutput(help["sessions start"],

@@ -208,6 +208,7 @@ Precedence rules:
 | `phones list` | List phones you can start a session on right now (shared pool + your free dedicated phones). |
 | `phones mine` | List your org's dedicated phones, including ones currently in use (find a `phone_id` to pin). |
 | `sessions start` / `stop` / `list` / `current` | Start, stop, and inspect phone sessions. |
+| `sessions recording <id>` | Look up a session recording's status and URL, or download the MP4 with `--out` (`--wait` polls while it is still processing). |
 | `phone observe` / `find` / `find-text` / `tap` / `long-press` / `swipe` / `type` / `key` / `screenshot` / `wait-for` | Observe and control the selected phone session. |
 | `phone send` | Upload a local image/video and push it to the selected session's phone. |
 | `workflows list` | Discover workflow IDs by recency or name search. |
