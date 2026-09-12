@@ -370,7 +370,7 @@ axilio phone send ./photo.jpg --wait          # add + push to selected session
 axilio uploads add ./clip.mp4                  # store once
 axilio uploads list                            # discover id and quota
 axilio uploads push <upload-id> --phone-id <phone-id> --wait
-axilio uploads delete <upload-id> --yes        # recalls copies held/received on phones
+axilio uploads delete <upload-id> --yes        # library only; copies on phones stay
 ```
 
 ## Shell completions

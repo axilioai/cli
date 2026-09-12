@@ -1005,7 +1005,7 @@ file has a source: \fBupload\fR (you put it in) or \fBcapture\fR (a session
 pulled it off a phone). \fBupload\fR stores a local file, \fBlist\fR discovers
 files and quota (filter by --source/--surface/--session), \fBdownload\fR
 saves a file's bytes locally, \fBpush\fR delivers a stored file to a phone,
-and \fBdelete\fR frees quota and recalls delivered copies. \fBphone send\fR
+and \fBdelete\fR frees quota (copies already on phones stay). \fBphone send\fR
 combines upload and push for the selected session's phone.
 
 .PP
@@ -1201,12 +1201,12 @@ Delete a file from the active organization's library and free its
 storage quota.
 
 .PP
-Works for any source. Deletion also recalls every copy delivered to
-phones; for a capture, the source phone's own copy from the capture
-session is outside the recall. Use \fBfiles list\fR to discover the file ID.
-Without --yes, table mode prompts only when stdin is a terminal.
-Redirected, JSON, and quiet execution do not prompt and require --yes.
-The alias \fBfiles rm\fR performs the same operation.
+Works for any source. Copies already on phones, pushed or captured, are
+not removed; removing a file from a phone is a separate operation. Use
+\fBfiles list\fR to discover the file ID. Without --yes, table mode prompts
+only when stdin is a terminal. Redirected, JSON, and quiet execution do
+not prompt and require --yes. The alias \fBfiles rm\fR performs the same
+operation.
 
 .PP
 \fBCommand options\fP
@@ -1245,7 +1245,7 @@ user@host ~ % axilio files delete file_123
 Deleted file_123
 .sp
 # Standard error:
-Delete file file_123? Also recall it from phones holding or receiving a copy? [y/N]
+Delete file file_123 from the library? Copies on phones are not removed. [y/N]
 .sp
 # Exit status: 0
 # Notes: Table mode prompts only when stdin is a terminal. Redirected,
