@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -92,7 +93,8 @@ func TestFilesDeleteJSON(t *testing.T) {
 		t.Fatalf("files delete: %v", err)
 	}
 	got := mustJSON(t, out)
-	if got["id"] != "d1" || got["deleted"] != true || got["phones_pending_removal"] != float64(2) {
-		t.Fatalf("unexpected payload: %v", got)
+	want := map[string]any{"id": "d1", "deleted": true}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("payload = %v, want %v", got, want)
 	}
 }

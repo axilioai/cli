@@ -583,7 +583,7 @@ var commandDocumentationByKey = map[string]CommandDocumentation{
 		sampleWithNote("axilio files push file_123 --phone-id ph_123 --wait --timeout 2m", "Delivery  <delivery-id>\nFile      photo.jpg\nStatus    delivered", "→ Pushing file_123 to phone ph_123", "With --wait, the command returns only after delivered, failed, or the two-minute deadline."),
 	}},
 	"files delete": {Samples: []CommandSample{
-		sampleWithNote("axilio files delete file_123", "Deleted file_123", "Delete file file_123? Also recall it from phones holding or receiving a copy? [y/N]", "Table mode prompts only when stdin is a terminal. Redirected, JSON, and quiet execution require --yes."),
+		sampleWithNote("axilio files delete file_123", "Deleted file_123", "Delete file file_123 from the library? Copies on phones are not removed. [y/N]", "Table mode prompts only when stdin is a terminal. Redirected, JSON, and quiet execution require --yes."),
 		sample("axilio files rm file_123 --yes", "Deleted file_123", "none"),
 	}},
 

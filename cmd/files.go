@@ -8,12 +8,13 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/spf13/cobra"
+
 	"github.com/axilioai/cli/internal/exit"
 	"github.com/axilioai/cli/internal/output"
 	platformgo "github.com/axilioai/platform-go"
 	"github.com/axilioai/platform-go/client"
 	files "github.com/axilioai/platform-go/drivers/files"
-	"github.com/spf13/cobra"
 )
 
 // maxFilesListLimit mirrors the backend's files-list page bound.
@@ -44,7 +45,7 @@ func filesCmd() *cobra.Command {
 			"it off a phone). `upload` stores a local file, `list` discovers files and " +
 			"quota (filter by --source/--surface/--session), `download` saves a file's " +
 			"bytes locally, `push` delivers a stored file to a phone, and `delete` frees " +
-			"quota and recalls delivered copies. `phone send` combines upload and push " +
+			"quota (copies already on phones stay). `phone send` combines upload and push " +
 			"for the selected session's phone.\n\n" +
 			"Running `axilio files` without a subcommand is equivalent to " +
 			"`axilio files --help`: it only displays this help. Global flags shown here " +
@@ -484,11 +485,11 @@ func filesPushCmd() *cobra.Command {
 	return cmd
 }
 
-// deletedFile is the JSON shape of a successful `files delete`.
+// deletedFile is the JSON shape of a successful `files delete`. A library
+// delete touches no phone, so there is nothing to report beyond the fact.
 type deletedFile struct {
-	ID                   string `json:"id"`
-	Deleted              bool   `json:"deleted"`
-	PhonesPendingRemoval int64  `json:"phones_pending_removal"`
+	ID      string `json:"id"`
+	Deleted bool   `json:"deleted"`
 }
 
 func filesDeleteCmd() *cobra.Command {
@@ -498,9 +499,9 @@ func filesDeleteCmd() *cobra.Command {
 		Aliases: []string{"rm"},
 		Short:   "Delete a file from the library and free its quota.",
 		Long: "Delete a file from the active organization's library and free its storage " +
-			"quota. Works for any source. Deletion also recalls every copy delivered to " +
-			"phones; for a capture, the source phone's own copy from the capture session " +
-			"is outside the recall. Use `files list` to discover the file ID. Without " +
+			"quota. Works for any source. Copies already on phones, pushed or captured, " +
+			"are not removed; removing a file from a phone is a separate operation. " +
+			"Use `files list` to discover the file ID. Without " +
 			"--yes, table mode prompts only when stdin is a terminal. Redirected, JSON, " +
 			"and quiet execution do not prompt and require --yes. The alias `files rm` " +
 			"performs the same operation.",
@@ -513,26 +514,19 @@ func filesDeleteCmd() *cobra.Command {
 			id := args[0]
 			p := printer()
 			prompt := fmt.Sprintf(
-				"Delete file %s? Also recall it from phones holding or receiving a copy?", id)
+				"Delete file %s from the library? Copies on phones are not removed.", id)
 			if !yes && !p.Confirm(prompt) {
 				if err := p.Err(); err != nil {
 					return err
 				}
 				return exit.Usagef("aborted (pass --yes to delete non-interactively)")
 			}
-			resp, err := cl.Files.Delete(cmd.Context(), &platformgo.FilesDeleteRequest{FileID: id})
-			if err != nil {
+			if _, err := cl.Files.Delete(cmd.Context(), &platformgo.FilesDeleteRequest{FileID: id}); err != nil {
 				return err
 			}
 			out := deletedFile{ID: id, Deleted: true}
-			if resp != nil {
-				out.PhonesPendingRemoval = resp.PhonesPendingRemoval
-			}
 			return p.Emit(out, func() {
 				p.Ack("Deleted %s", id)
-				if out.PhonesPendingRemoval > 0 {
-					p.Note("recall scheduled on %d phone(s)", out.PhonesPendingRemoval)
-				}
 			})
 		},
 	}
