@@ -20,9 +20,10 @@ import (
 const (
 	// AXI-1911 unified `uploads` + `downloads` (+ `sessions downloads`) into one
 	// `files` command group (+ `sessions files`): fewer command nodes, and the
-	// merged `files list` filter set nets out a few flags.
-	applicationCommandCount = 74
-	applicationFlagCount    = 123
+	// merged `files list` filter set nets out a few flags. AXI-1802 added
+	// `sessions recording` (--out, --wait, --timeout, --force).
+	applicationCommandCount = 75
+	applicationFlagCount    = 127
 )
 
 func TestApplicationHelpMetadata(t *testing.T) {

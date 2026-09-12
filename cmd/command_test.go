@@ -8,11 +8,16 @@ import (
 	"net/http/httptest"
 	"os"
 	"strings"
+	"sync/atomic"
 	"testing"
 
 	"github.com/axilioai/cli/internal/exit"
 	"github.com/zalando/go-keyring"
 )
+
+// recordingPolls counts recording status lookups for the s-late session so a
+// test can prove --wait re-polls rather than trusting the first answer.
+var recordingPolls atomic.Int32
 
 // fakeAPI is an httptest server that routes on path substring and returns canned
 // JSON, so the real command path (cobra -> SDK -> HTTP) runs end-to-end with no
@@ -85,6 +90,56 @@ func fakeAPI(t *testing.T) *httptest.Server {
 			w.Header().Set("Content-Type", "application/octet-stream")
 			_, _ = io.WriteString(w, "captured-bytes")
 			return
+		case strings.HasSuffix(p, "/recording.mp4"):
+			// Stands in for the storage service behind a recording's presigned URL.
+			w.Header().Set("Content-Type", "video/mp4")
+			_, _ = io.WriteString(w, "mp4-bytes")
+			return
+		case strings.HasSuffix(p, "/recording-redirect"):
+			http.Redirect(w, r, "/recording.mp4", http.StatusFound)
+			return
+		case strings.HasSuffix(p, "/recording-gone"):
+			http.Error(w, "expired", http.StatusForbidden)
+			return
+		case strings.HasSuffix(p, "/recording-cut"):
+			// Advertise more bytes than are sent, then drop the connection, so
+			// the client sees a body that ends early.
+			w.Header().Set("Content-Length", "1024")
+			_, _ = io.WriteString(w, "partial")
+			if hj, ok := w.(http.Hijacker); ok {
+				if conn, _, err := hj.Hijack(); err == nil {
+					_ = conn.Close()
+				}
+			}
+			return
+		case strings.Contains(p, "/phones/sessions/") && strings.HasSuffix(p, "/recording"):
+			// Recording status keyed by session id: s1 ready, s-pending pending,
+			// s-expired expired, s-late pending on the first call then ready, and
+			// s-gone/s-redirect/s-cut ready with URLs that exercise the download
+			// failure modes.
+			id := strings.TrimSuffix(strings.TrimPrefix(p[strings.Index(p, "/phones/sessions/")+len("/phones/sessions/"):], ""), "/recording")
+			base := "http://" + r.Host
+			switch id {
+			case "s-pending":
+				body = `{"status":"pending"}`
+			case "s-expired":
+				body = `{"status":"expired"}`
+			case "s-late":
+				recordingPolls.Add(1)
+				if recordingPolls.Load() < 3 {
+					body = `{"status":"pending"}`
+				} else {
+					body = `{"status":"ready","url":"` + base + `/recording.mp4"}`
+				}
+			case "s-gone":
+				body = `{"status":"ready","url":"` + base + `/recording-gone"}`
+			case "s-redirect":
+				body = `{"status":"ready","url":"` + base + `/recording-redirect"}`
+			case "s-cut":
+				body = `{"status":"ready","url":"` + base + `/recording-cut"}`
+			default:
+				body = `{"status":"ready","url":"` + base + `/recording.mp4"}`
+			}
 		case strings.Contains(p, "/phones/sessions/") && strings.HasSuffix(p, "/files"):
 			body = `{"files":[
 				{"id":"d1","source":"capture","surface":"phone","filename":"receipt.png","mime_type":"image/png","size_bytes":2048,"status":"ready","capture_state":"ready","preview_state":"ready","on_phone_count":1,"session_id":"s1","created_at":"2026-08-22T10:00:00Z","download_url":"http://` + r.Host + `/blob"}],

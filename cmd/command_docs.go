@@ -306,9 +306,16 @@ var commandDocumentationByKey = map[string]CommandDocumentation{
 		"axilio sessions current",
 		"axilio sessions get sess_123",
 		"axilio sessions trace sess_123",
+		"axilio sessions recording sess_123 --wait --out session.mp4",
 		"axilio sessions files sess_123",
 		"axilio sessions stop sess_123",
 	),
+	"sessions recording": {Samples: []CommandSample{
+		sampleWithNote("axilio sessions recording sess_123", "Session    sess_123\nRecording  ready\nURL        <recording-url>", "The URL is short-lived; download with --out <path> or re-run for a fresh one.", "Status is ready, pending, or expired, and all three exit 0 so a caller can branch on the status. A pending recording prints a hint to re-run with --wait; an expired one says it can no longer be downloaded."),
+		sampleWithNote("axilio sessions recording sess_123 -o json", "{\n  \"session_id\": \"sess_123\",\n  \"status\": \"ready\",\n  \"url\": \"<recording-url>\"\n}", "none", "url is present only when status is ready."),
+		sampleWithNote("axilio sessions recording sess_123 --wait --out session.mp4", "Saved session.mp4 (12.4 MiB)", "→ Recording for sess_123 is still being processed; waiting\n→ Saving recording for sess_123 to session.mp4", "--wait polls a pending recording every few seconds until it is ready, expired, or --timeout (default 10m) elapses; the timeout exits with status 5. The MP4 is written atomically and the presigned URL is not printed."),
+		sampleWithNote("axilio sessions recording sess_123 --out session.mp4 -o json", "{\n  \"session_id\": \"sess_123\",\n  \"status\": \"ready\",\n  \"path\": \"session.mp4\",\n  \"size_bytes\": 13002752\n}", "none", "A download reports the path it wrote and the byte count instead of the URL. An existing destination is refused unless --force is passed; a pending recording is refused without --wait; an expired one exits with not-found status 4."),
+	}},
 	"sessions files": {Samples: []CommandSample{
 		sampleWithNote("axilio sessions files sess_123", "ID         FILENAME     SIZE     TYPE       SOURCE   STATE  SESSION   CREATED\n<file-id>  receipt.png  2.0 KiB  image/png  capture  ready  sess_123  <timestamp>", "none", "Rows appear at detection, before the bytes finish moving; watch STATE progress to ready, then save with `files download`. The alias `sessions downloads` does the same."),
 	}},
