@@ -180,7 +180,7 @@ func TestSkillCommandExamplesMatchCLI(t *testing.T) {
 		"axilio sessions start --export",
 		"axilio phone tap --query",
 		"axilio phone send",
-		"axilio uploads list",
+		"axilio files list",
 	} {
 		if !strings.Contains(skill, command) {
 			t.Errorf("agent skill missing %q", command)
