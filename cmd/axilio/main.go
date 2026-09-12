@@ -4,6 +4,7 @@ package main
 import (
 	"context"
 	"os"
+	"syscall"
 
 	"github.com/axilioai/cli/cmd"
 	"github.com/axilioai/cli/internal/exit"
@@ -22,6 +23,10 @@ func main() {
 		cmd.Root(),
 		fang.WithoutManpage(),
 		fang.WithoutVersion(),
+		// A first SIGINT/SIGTERM cancels the command context (a second reverts
+		// to a hard kill) so long operations, like a recording download, stop
+		// gracefully and clean up their temporary files.
+		fang.WithNotifySignal(os.Interrupt, syscall.SIGTERM),
 	); err != nil {
 		os.Exit(int(exit.Classify(err)))
 	}

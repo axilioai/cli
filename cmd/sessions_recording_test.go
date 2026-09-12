@@ -1,7 +1,11 @@
 package cmd
 
 import (
+	"context"
 	"errors"
+	"io"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
@@ -223,4 +227,76 @@ func assertNoPartFiles(t *testing.T, dir string) {
 			t.Fatalf("temporary file left behind: %s", e.Name())
 		}
 	}
+}
+
+// --force is inert without --out, so it is a usage error rather than a silent no-op.
+func TestSessionsRecordingForceWithoutOut(t *testing.T) {
+	srv := fakeAPI(t)
+	if _, err := run(t, srv, "sessions", "recording", "s1", "--force"); exit.Classify(err) != exit.Usage {
+		t.Fatalf("--force without --out: got %v, want usage error", err)
+	}
+}
+
+// A destination that appears after the pre-flight check must not be clobbered
+// without --force: the move is a link that fails when dest already exists, so
+// the check and the write are one atomic step.
+func TestSaveRecordingDoesNotClobberWithoutForce(t *testing.T) {
+	body := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = io.WriteString(w, "mp4-bytes")
+	}))
+	defer body.Close()
+	dir := t.TempDir()
+	dest := filepath.Join(dir, "r.mp4")
+	if err := os.WriteFile(dest, []byte("keep"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := saveRecording(context.Background(), body.URL, dest, false); exit.Classify(err) != exit.Usage {
+		t.Fatalf("got %v, want usage error", err)
+	}
+	if b, _ := os.ReadFile(dest); string(b) != "keep" {
+		t.Fatalf("destination was overwritten without --force: %q", b)
+	}
+	assertNoPartFiles(t, dir)
+}
+
+// A redirect must not carry the download off the presigned URL's origin.
+func TestSaveRecordingRejectsCrossOriginRedirect(t *testing.T) {
+	other := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = io.WriteString(w, "internal")
+	}))
+	defer other.Close()
+	origin := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, other.URL+"/x.mp4", http.StatusFound)
+	}))
+	defer origin.Close()
+	dir := t.TempDir()
+	dest := filepath.Join(dir, "r.mp4")
+	_, err := saveRecording(context.Background(), origin.URL+"/rec", dest, false)
+	if err == nil || !strings.Contains(err.Error(), "off its origin") {
+		t.Fatalf("got %v, want a cross-origin redirect refusal", err)
+	}
+	if _, statErr := os.Stat(dest); !errors.Is(statErr, os.ErrNotExist) {
+		t.Fatalf("a refused download created %s", dest)
+	}
+	assertNoPartFiles(t, dir)
+}
+
+// A canceled context (a Ctrl-C in the real command) aborts the download and
+// leaves neither a destination nor a temporary file.
+func TestSaveRecordingCleansUpOnCancel(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = io.WriteString(w, "mp4-bytes")
+	}))
+	defer srv.Close()
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	dir := t.TempDir()
+	dest := filepath.Join(dir, "r.mp4")
+	if _, err := saveRecording(ctx, srv.URL, dest, false); err == nil {
+		t.Fatal("want an error for a canceled download")
+	}
+	if _, statErr := os.Stat(dest); !errors.Is(statErr, os.ErrNotExist) {
+		t.Fatalf("a canceled download created %s", dest)
+	}
+	assertNoPartFiles(t, dir)
 }

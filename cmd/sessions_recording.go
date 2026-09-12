@@ -28,6 +28,9 @@ const (
 	// never fill the disk; a one-hour session at the recorder's bitrate is
 	// well under this.
 	maxRecordingBytes int64 = 8 << 30
+	// maxRecordingRedirects bounds how many hops a presigned URL may redirect
+	// through before the download gives up.
+	maxRecordingRedirects = 10
 )
 
 var recordingPollInterval = 5 * time.Second
@@ -77,6 +80,9 @@ func sessionsRecordingCmd() *cobra.Command {
 			}
 			if timeout <= 0 {
 				return exit.Usagef("--timeout must be positive (got %s)", timeout)
+			}
+			if force && outPath == "" {
+				return exit.Usagef("--force only applies with --out")
 			}
 			if outPath != "" && !force {
 				if _, err := os.Lstat(outPath); err == nil {
@@ -180,10 +186,9 @@ func lookupRecording(ctx context.Context, cl *client.Client, sessionID string, w
 }
 
 // saveRecording streams the presigned URL's body to dest atomically: the bytes
-// land in a temporary file in dest's directory and are renamed into place only
-// after the whole body was read, so a failure at any point leaves either the
-// previous file or nothing, never a truncated MP4. The rename is what honors
-// --force; the caller already refused an existing dest without it.
+// land in a temporary file in dest's directory and are moved into place only
+// after the whole body was read, so a failure or interruption at any point
+// leaves either the previous file or nothing, never a truncated MP4.
 func saveRecording(ctx context.Context, url, dest string, force bool) (int64, error) {
 	dir := filepath.Dir(dest)
 	tmp, err := os.CreateTemp(dir, "."+filepath.Base(dest)+".*.part")
@@ -191,67 +196,88 @@ func saveRecording(ctx context.Context, url, dest string, force bool) (int64, er
 		return 0, fmt.Errorf("creating temporary file in %s: %w", dir, err)
 	}
 	tmpPath := tmp.Name()
-	cleanup := func() {
-		_ = tmp.Close()
-		_ = os.Remove(tmpPath)
-	}
+	// Any early return removes the temp. A signal cancels ctx (fang wires
+	// SIGINT/SIGTERM into the command context), which aborts the request below
+	// so io.Copy returns and this still runs. saved flips once dest owns the
+	// bytes, so the finished file is never removed.
+	saved := false
+	defer func() {
+		if !saved {
+			_ = tmp.Close()
+			_ = os.Remove(tmpPath)
+		}
+	}()
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
-		cleanup()
 		return 0, err
 	}
-	// The presigned URL is self-authorizing; no API key header is sent to it,
-	// and the default client follows the storage service's redirects.
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := recordingHTTPClient().Do(req)
 	if err != nil {
-		cleanup()
 		return 0, fmt.Errorf("fetching recording: %w", err)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		cleanup()
 		return 0, fmt.Errorf("fetching recording: %s (presigned URLs expire; re-run to mint a fresh one)", resp.Status)
 	}
 	written, err := io.Copy(tmp, io.LimitReader(resp.Body, maxRecordingBytes+1))
 	if err != nil {
-		cleanup()
 		return 0, fmt.Errorf("downloading recording: %w", err)
 	}
 	if written > maxRecordingBytes {
-		cleanup()
 		return 0, fmt.Errorf("recording exceeds the %s download limit", humanBytes(maxRecordingBytes))
 	}
 	if resp.ContentLength >= 0 && written != resp.ContentLength {
-		cleanup()
 		return 0, fmt.Errorf("downloading recording: got %d of %d bytes", written, resp.ContentLength)
 	}
 	if err := tmp.Sync(); err != nil {
-		cleanup()
 		return 0, fmt.Errorf("writing recording: %w", err)
 	}
 	if err := tmp.Close(); err != nil {
-		_ = os.Remove(tmpPath)
 		return 0, fmt.Errorf("writing recording: %w", err)
 	}
 	if err := os.Chmod(tmpPath, 0o644); err != nil {
-		_ = os.Remove(tmpPath)
 		return 0, err
 	}
-	if !force {
-		// Re-check right before the rename: the pre-flight check ran before
-		// the download, and a file that appeared meanwhile must not be lost.
-		if _, err := os.Lstat(dest); err == nil {
-			_ = os.Remove(tmpPath)
-			return 0, exit.Usagef("%s already exists; pass --force to overwrite", dest)
-		} else if !errors.Is(err, os.ErrNotExist) {
-			_ = os.Remove(tmpPath)
-			return 0, err
+	// Move the finished bytes into place. --force overwrites; without it the
+	// link fails if dest exists, so a file that appeared during the download is
+	// never silently replaced. Rename/link and the existence test are one
+	// atomic step, which the pre-flight Lstat could not be.
+	if force {
+		if err := os.Rename(tmpPath, dest); err != nil {
+			return 0, fmt.Errorf("saving recording to %s: %w", dest, err)
 		}
-	}
-	if err := os.Rename(tmpPath, dest); err != nil {
+	} else {
+		if err := os.Link(tmpPath, dest); err != nil {
+			if errors.Is(err, os.ErrExist) {
+				return 0, exit.Usagef("%s already exists; pass --force to overwrite", dest)
+			}
+			return 0, fmt.Errorf("saving recording to %s: %w", dest, err)
+		}
 		_ = os.Remove(tmpPath)
-		return 0, fmt.Errorf("saving recording to %s: %w", dest, err)
 	}
+	saved = true
 	return written, nil
+}
+
+// recordingHTTPClient fetches a presigned recording URL. The URL comes from the
+// authenticated API, but a redirect must not carry the request off that origin
+// (onto an internal host, say) or downgrade the transport, so redirects are
+// bounded and pinned to the original URL's host and scheme.
+func recordingHTTPClient() *http.Client {
+	return &http.Client{
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			if len(via) >= maxRecordingRedirects {
+				return fmt.Errorf("recording URL redirected too many times (>%d)", maxRecordingRedirects)
+			}
+			origin := via[0].URL
+			if req.URL.Host != origin.Host {
+				return fmt.Errorf("recording URL redirected off its origin (%s -> %s)", origin.Host, req.URL.Host)
+			}
+			if origin.Scheme == "https" && req.URL.Scheme != "https" {
+				return fmt.Errorf("recording URL redirected to an insecure %s URL", req.URL.Scheme)
+			}
+			return nil
+		},
+	}
 }
