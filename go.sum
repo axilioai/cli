@@ -32,6 +32,8 @@ github.com/axilioai/platform-go v0.12.1-0.20260927070034-eaa930378b1a h1:uwMzlTR
 github.com/axilioai/platform-go v0.12.1-0.20260927070034-eaa930378b1a/go.mod h1:3GenStrK0DkHhhar/CgstItKrAHKxASboDUdqUmLC5k=
 github.com/axilioai/platform-go v0.12.1-0.20260927073313-d77d35894589 h1:BuLfpfTzwtVKV8EtcUnPLoZrG6x9qPYesqtiNXcIVs4=
 github.com/axilioai/platform-go v0.12.1-0.20260927073313-d77d35894589/go.mod h1:3GenStrK0DkHhhar/CgstItKrAHKxASboDUdqUmLC5k=
+github.com/axilioai/platform-go v0.12.1-0.20260927081226-f1aac17a17fd h1:1a8r5C7K4wiNQognoTMYD8xI+7ZV+ZYh8rnpS6yLJjk=
+github.com/axilioai/platform-go v0.12.1-0.20260927081226-f1aac17a17fd/go.mod h1:3GenStrK0DkHhhar/CgstItKrAHKxASboDUdqUmLC5k=
 github.com/aymanbagabas/go-udiff v0.3.1 h1:LV+qyBQ2pqe0u42ZsUEtPiCaUoqgA9gYRDs3vj1nolY=
 github.com/aymanbagabas/go-udiff v0.3.1/go.mod h1:G0fsKmG+P6ylD0r6N/KgQD/nWzgfnl8ZBcNLgcbrw8E=
 github.com/charmbracelet/colorprofile v0.3.3 h1:DjJzJtLP6/NZ8p7Cgjno0CKGr7wwRJGxWUwh2IyhfAI=
