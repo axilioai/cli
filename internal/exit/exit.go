@@ -146,8 +146,12 @@ func fromMobile(c mobile.Code) Code {
 		return Usage
 	case mobile.CodeElementNotFound, mobile.CodeNoAllocation:
 		return NotFound
-	case mobile.CodeTimeout:
+	case mobile.CodeTimeout, mobile.CodeActionTimeout:
 		return Timeout
+	case mobile.CodeStrategyUnavailable:
+		// The locator needs a capability (the accessibility tree) this
+		// session does not have: the caller must change the selector.
+		return Usage
 	case mobile.CodeConnection, mobile.CodeNotConnected, mobile.CodeDeviceOffline:
 		return Unavailable
 	case mobile.CodeCanceled:

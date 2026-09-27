@@ -81,6 +81,22 @@ func elementKV(el mobile.Element) [][2]string {
 	}
 }
 
+// locatorKV renders a locator result: how the target was resolved and where
+// it was when the phone acted.
+func locatorKV(r mobile.LocatorResult) [][2]string {
+	b := r.Bounds
+	kv := [][2]string{
+		{"Resolved by", r.ResolvedBy},
+		{"Center", fmt.Sprintf("%d,%d", b.X+b.Width/2, b.Y+b.Height/2)},
+		{"BBox", fmt.Sprintf("%d,%d %dx%d", b.X, b.Y, b.Width, b.Height)},
+		{"Took", fmt.Sprintf("%dms", r.TookMs)},
+	}
+	if r.ModelName != "" {
+		kv = append(kv, [2]string{"Model", r.ModelName})
+	}
+	return kv
+}
+
 func phoneObserveCmd() *cobra.Command {
 	var engine string
 	cmd := &cobra.Command{
@@ -122,11 +138,12 @@ func phoneFindCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "find <query>",
 		Short: "Locate an element by natural-language query (vision).",
-		Long: "Locate one visible element from a natural-language description and " +
-			"return its text, center, bounding box, confidence, and source. The OCR " +
-			"engine defaults to free, the vision model is selected by the server, " +
-			"and the effective deadline is 10 seconds when --timeout is omitted. A " +
-			"missing target is an error; use `find-text` for a successful empty result.",
+		Long: "Locate one element from a natural-language description. The phone " +
+			"waits for it to appear, up to --timeout (10 seconds when omitted), and " +
+			"returns how it was resolved, its center, bounding box, and the model " +
+			"that found it. The OCR engine defaults to free and the vision model is " +
+			"selected by the server. A target that never appears exits with the " +
+			"timeout code; use `find-text` for a successful empty result.",
 		Args: cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
 			d, err := currentDriver()
@@ -138,12 +155,12 @@ func phoneFindCmd() *cobra.Command {
 			if timeout > 0 {
 				opts = append(opts, mobile.WithTimeout(timeout))
 			}
-			el, err := d.Find(args[0], opts...)
+			res, err := d.Locator(mobile.Query(args[0])).BoundingBox(opts...)
 			if err != nil {
 				return err
 			}
 			p := printer()
-			return p.Emit(el, func() { p.KV(elementKV(*el)) })
+			return p.Emit(res, func() { p.KV(locatorKV(res)) })
 		},
 	}
 	cmd.Flags().StringVar(&engine, "ocr-engine", "", "OCR engine: free or premium; omitted uses free")
@@ -168,10 +185,11 @@ func phoneFindTextCmd() *cobra.Command {
 				return err
 			}
 			defer d.Close()
-			el, err := d.FindText(args[0], exact)
+			screen, err := d.Observe()
 			if err != nil {
 				return err
 			}
+			el := screen.FindText(args[0], exact)
 			p := printer()
 			return p.Emit(el, func() {
 				if el == nil {
@@ -210,7 +228,11 @@ func phoneFindAllTextCmd() *cobra.Command {
 				return err
 			}
 			defer d.Close()
-			els, err := d.FindAllText(contains, pattern, visionOpts(engine, "")...)
+			screen, err := d.Observe(visionOpts(engine, "")...)
+			if err != nil {
+				return err
+			}
+			els, err := screen.FindAllText(contains, pattern)
 			if err != nil {
 				return err
 			}
@@ -246,8 +268,9 @@ func phoneTapCmd() *cobra.Command {
 			"The coordinate form takes x and y as frame-space pixels, with (0,0) " +
 			"at the screen's top-left.\n\n" +
 			"Use --query to find an element by natural-language description and tap " +
-			"its center. If --query and coordinates are both provided, --query takes " +
-			"precedence.\n\n" +
+			"its center in one step: the phone waits for the target to appear (up to " +
+			"5 seconds) before tapping. If --query and coordinates are both provided, " +
+			"--query takes precedence.\n\n" +
 			"Session selection precedence is --session, AXILIO_SESSION, the only " +
 			"locally saved session, the most recently started session, then an " +
 			"ambiguity error.",
@@ -260,15 +283,13 @@ func phoneTapCmd() *cobra.Command {
 			defer d.Close()
 			p := printer()
 			if query != "" {
-				el, err := d.Find(query, visionOpts(engine, model)...)
+				res, err := d.Locator(mobile.Query(query)).Tap(visionOpts(engine, model)...)
 				if err != nil {
 					return err
 				}
-				if err := el.Tap(); err != nil {
-					return err
-				}
-				return p.Emit(map[string]any{"action": "tap", "query": query, "x": el.Center.X, "y": el.Center.Y}, func() {
-					p.Ack("Tapped %q at %d,%d", query, el.Center.X, el.Center.Y)
+				x, y := res.Bounds.X+res.Bounds.Width/2, res.Bounds.Y+res.Bounds.Height/2
+				return p.Emit(map[string]any{"action": "tap", "query": query, "x": x, "y": y, "resolved_by": res.ResolvedBy}, func() {
+					p.Ack("Tapped %q at %d,%d", query, x, y)
 				})
 			}
 			c, err := coordsArg(args)
@@ -451,12 +472,14 @@ func phoneWaitForCmd() *cobra.Command {
 	)
 	cmd := &cobra.Command{
 		Use:   "wait-for <text>",
-		Short: "Poll until text appears (or disappears with --gone).",
-		Long: "Poll OCR until text appears, or until it disappears with --gone. The " +
-			"default match is a case-insensitive substring; --exact requires a " +
-			"case-sensitive exact match. The default timeout is 10 seconds. A timeout " +
-			"returns the CLI timeout exit code (5). Waiting for presence returns the " +
-			"matching element; waiting for absence is action-only.",
+		Short: "Wait until text appears (or disappears with --gone).",
+		Long: "Wait until text appears on the phone, or until it disappears with " +
+			"--gone. The phone does the waiting, re-reading the screen only when it " +
+			"changes, so this is one call rather than a polling loop. The default " +
+			"match is a case-insensitive substring; --exact requires a case-sensitive " +
+			"exact match. The default timeout is 10 seconds (at most 60). A timeout " +
+			"returns the CLI timeout exit code (5). Waiting for presence returns how " +
+			"the text was resolved and where it is; waiting for absence is action-only.",
 		Args: cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
 			d, err := currentDriver()
@@ -464,8 +487,13 @@ func phoneWaitForCmd() *cobra.Command {
 				return err
 			}
 			defer d.Close()
+			var match []mobile.LocatorOption
+			if exact {
+				match = append(match, mobile.Exact())
+			}
+			loc := d.GetByText(args[0], match...)
 			if gone {
-				if err := d.WaitUntilGone(args[0], timeout, exact); err != nil {
+				if _, err := loc.WaitFor(mobile.StateHidden, mobile.WithTimeout(timeout)); err != nil {
 					return err
 				}
 				p := printer()
@@ -473,12 +501,12 @@ func phoneWaitForCmd() *cobra.Command {
 					p.Ack("%q gone", args[0])
 				})
 			}
-			el, err := d.WaitForText(args[0], timeout, exact)
+			res, err := loc.WaitFor(mobile.StateVisible, mobile.WithTimeout(timeout))
 			if err != nil {
 				return err
 			}
 			p := printer()
-			return p.Emit(el, func() { p.KV(elementKV(*el)) })
+			return p.Emit(res, func() { p.KV(locatorKV(*res)) })
 		},
 	}
 	documentedDurationVar(cmd.Flags(), &timeout, "timeout", 10*time.Second, ocrTimeoutHelp)

@@ -2134,14 +2134,14 @@ axilio phone find <query> [flags]
 .EE
 
 .PP
-Locate one visible element from a natural-language description and
-return its text, center, bounding box, confidence, and source.
+Locate one element from a natural-language description.
 
 .PP
-The OCR engine defaults to free, the vision model is selected by the
-server, and the effective deadline is 10 seconds when --timeout is
-omitted. A missing target is an error; use \fBfind-text\fR for a successful
-empty result.
+The phone waits for it to appear, up to --timeout (10 seconds when
+omitted), and returns how it was resolved, its center, bounding box, and
+the model that found it. The OCR engine defaults to free and the vision
+model is selected by the server. A target that never appears exits with
+the timeout code; use \fBfind-text\fR for a successful empty result.
 
 .PP
 \fBCommand options\fP
@@ -2897,8 +2897,9 @@ the screen's top-left.
 
 .PP
 Use --query to find an element by natural-language description and tap
-its center. If --query and coordinates are both provided, --query takes
-precedence.
+its center in one step: the phone waits for the target to appear (up to
+5 seconds) before tapping. If --query and coordinates are both provided,
+--query takes precedence.
 
 .PP
 Session selection precedence is --session, AXILIO_SESSION, the only
@@ -3039,13 +3040,16 @@ axilio phone wait-for <text> [flags]
 .EE
 
 .PP
-Poll OCR until text appears, or until it disappears with --gone.
+Wait until text appears on the phone, or until it disappears with
+--gone.
 
 .PP
-The default match is a case-insensitive substring; --exact requires a
-case-sensitive exact match. The default timeout is 10 seconds. A timeout
-returns the CLI timeout exit code (5). Waiting for presence returns the
-matching element; waiting for absence is action-only.
+The phone does the waiting, re-reading the screen only when it changes,
+so this is one call rather than a polling loop. The default match is a
+case-insensitive substring; --exact requires a case-sensitive exact
+match. The default timeout is 10 seconds (at most 60). A timeout returns
+the CLI timeout exit code (5). Waiting for presence returns how the text
+was resolved and where it is; waiting for absence is action-only.
 
 .PP
 \fBCommand options\fP
