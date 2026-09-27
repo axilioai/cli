@@ -6137,8 +6137,9 @@ API rejected the request as invalid (HTTP 400 or 422).
 permission denied (HTTP 401 or 403).
 
 .PP
-\fB4 (not-found)\fP : A requested resource, phone allocation, or on-screen
-element was not found (HTTP 404).
+\fB4 (not-found)\fP : A requested resource or phone allocation was not
+found (HTTP 404). An on-screen target that never appears is a timeout
+(5).
 
 .PP
 \fB5 (timeout)\fP : The operation exceeded its timeout or deadline (HTTP
