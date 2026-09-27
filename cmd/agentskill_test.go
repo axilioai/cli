@@ -118,11 +118,10 @@ func TestSkillGoLocatorMethodsExist(t *testing.T) {
 // a rename in platform-go breaks the build of this test.
 func TestSkillGoErrorHelpersExist(t *testing.T) {
 	helpers := map[string]func(error) bool{
-		"mobile.IsActionTimeout":       mobile.IsActionTimeout,
-		"mobile.IsStrategyUnavailable": mobile.IsStrategyUnavailable,
-		"mobile.IsTimeout":             mobile.IsTimeout,
-		"mobile.IsDeviceOffline":       mobile.IsDeviceOffline,
-		"mobile.IsRetryable":           mobile.IsRetryable,
+		"mobile.IsActionTimeout": mobile.IsActionTimeout,
+		"mobile.IsTimeout":       mobile.IsTimeout,
+		"mobile.IsDeviceOffline": mobile.IsDeviceOffline,
+		"mobile.IsRetryable":     mobile.IsRetryable,
 	}
 	block := langBlock(t, "go")
 	for name := range helpers {
