@@ -20,8 +20,8 @@ github.com/MarvinJWendt/testza v0.4.2/go.mod h1:mSdhXiKH8sg/gQehJ63bINcCKp7RtYew
 github.com/MarvinJWendt/testza v0.5.2 h1:53KDo64C1z/h/d/stCYCPY69bt/OSwjq5KpFNwi+zB4=
 github.com/MarvinJWendt/testza v0.5.2/go.mod h1:xu53QFE5sCdjtMCKk8YMQ2MnymimEctc4n3EjyIYvEY=
 github.com/atomicgo/cursor v0.0.1/go.mod h1:cBON2QmmrysudxNBFthvMtN32r3jxVRIvzkUiF/RuIk=
-github.com/axilioai/platform-go v0.12.1-0.20260927201207-52274739c584 h1:umsdGFUFNhPvDPWkOXnxLId3NM3hiwAgybFBWl6xKnA=
-github.com/axilioai/platform-go v0.12.1-0.20260927201207-52274739c584/go.mod h1:3GenStrK0DkHhhar/CgstItKrAHKxASboDUdqUmLC5k=
+github.com/axilioai/platform-go v0.12.1-0.20260927202821-fced2a357fcc h1:mCwOYDN2jNuU1X3IRqsRd5OmF/UKK1BmOEZPz0ukD74=
+github.com/axilioai/platform-go v0.12.1-0.20260927202821-fced2a357fcc/go.mod h1:3GenStrK0DkHhhar/CgstItKrAHKxASboDUdqUmLC5k=
 github.com/aymanbagabas/go-udiff v0.3.1 h1:LV+qyBQ2pqe0u42ZsUEtPiCaUoqgA9gYRDs3vj1nolY=
 github.com/aymanbagabas/go-udiff v0.3.1/go.mod h1:G0fsKmG+P6ylD0r6N/KgQD/nWzgfnl8ZBcNLgcbrw8E=
 github.com/charmbracelet/colorprofile v0.3.3 h1:DjJzJtLP6/NZ8p7Cgjno0CKGr7wwRJGxWUwh2IyhfAI=
