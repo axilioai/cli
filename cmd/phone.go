@@ -12,6 +12,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// _phoneWaitDefault is the documented wait for `phone find` and `phone
+// wait-for` when --timeout is omitted or non-positive.
+const _phoneWaitDefault = 10 * time.Second
+
 // flagPhoneSession is the --session override for the phone verbs.
 var flagPhoneSession string
 
@@ -79,6 +83,16 @@ func elementKV(el mobile.Element) [][2]string {
 		{"Confidence", fmt.Sprintf("%.2f", el.Confidence)},
 		{"Source", string(el.Source)},
 	}
+}
+
+// phoneWait is the on-phone wait budget for a --timeout flag value: the
+// flag itself, or _phoneWaitDefault when it is zero or negative (the SDK's
+// own locator default is shorter, and must not apply here).
+func phoneWait(flag time.Duration) time.Duration {
+	if flag <= 0 {
+		return _phoneWaitDefault
+	}
+	return flag
 }
 
 // locatorKV renders a locator result: how the target was resolved and where
@@ -151,10 +165,7 @@ func phoneFindCmd() *cobra.Command {
 				return err
 			}
 			defer d.Close()
-			opts := visionOpts(engine, model)
-			if timeout > 0 {
-				opts = append(opts, mobile.WithTimeout(timeout))
-			}
+			opts := append(visionOpts(engine, model), mobile.WithTimeout(phoneWait(timeout)))
 			res, err := d.Locator(mobile.Query(args[0])).BoundingBox(opts...)
 			if err != nil {
 				return err
@@ -493,7 +504,7 @@ func phoneWaitForCmd() *cobra.Command {
 			}
 			loc := d.GetByText(args[0], match...)
 			if gone {
-				if _, err := loc.WaitFor(mobile.StateHidden, mobile.WithTimeout(timeout)); err != nil {
+				if _, err := loc.WaitFor(mobile.StateHidden, mobile.WithTimeout(phoneWait(timeout))); err != nil {
 					return err
 				}
 				p := printer()
@@ -501,7 +512,7 @@ func phoneWaitForCmd() *cobra.Command {
 					p.Ack("%q gone", args[0])
 				})
 			}
-			res, err := loc.WaitFor(mobile.StateVisible, mobile.WithTimeout(timeout))
+			res, err := loc.WaitFor(mobile.StateVisible, mobile.WithTimeout(phoneWait(timeout)))
 			if err != nil {
 				return err
 			}

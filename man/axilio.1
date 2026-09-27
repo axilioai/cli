@@ -2184,11 +2184,11 @@ found-element result remains on stdout
 
 .EX
 user@host ~ % axilio phone find "the search box"
-Text        Search
-Center      540,620
-BBox        80,560 920x120
-Confidence  0.99
-Source      ocr
+Resolved by  vlm
+Center       540,620
+BBox         80,560 920x120
+Took         1840ms
+Model        vision-default
 .sp
 # Exit status: 0
 .EE
@@ -2198,15 +2198,15 @@ Source      ocr
 
 .EX
 user@host ~ % axilio phone find "settings icon" --ocr-engine premium
-Text
-Center      900,120
-BBox        840,60 120x120
-Confidence  0.98
-Source      vlm
+Resolved by  vlm
+Center       900,120
+BBox         840,60 120x120
+Took         2310ms
+Model        vision-default
 .sp
 # Exit status: 0
-# Notes: Vision-model elements can have no text; coordinates depend on
-#        the current frame.
+# Notes: The phone waits up to --timeout for the target; coordinates
+#        depend on the current frame.
 .EE
 
 .PP
@@ -3092,11 +3092,10 @@ remain on stdout
 
 .EX
 user@host ~ % axilio phone wait-for "Results"
-Text        Results
-Center      540,1120
-BBox        80,1060 920x120
-Confidence  0.98
-Source      ocr
+Resolved by  ocr
+Center       540,1120
+BBox         80,1060 920x120
+Took         2650ms
 .sp
 # Exit status: 0
 .EE
@@ -3116,11 +3115,10 @@ user@host ~ % axilio phone wait-for "Loading" --gone
 
 .EX
 user@host ~ % axilio phone wait-for "Ready" --exact --timeout 30s
-Text        Ready
-Center      540,1120
-BBox        80,1060 920x120
-Confidence  0.98
-Source      ocr
+Resolved by  ocr
+Center       540,1120
+BBox         80,1060 920x120
+Took         12040ms
 .sp
 # Exit status: 0
 # Notes: Exact matching is case-sensitive and waits up to 30 seconds.

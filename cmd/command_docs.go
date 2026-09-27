@@ -385,8 +385,8 @@ var commandDocumentationByKey = map[string]CommandDocumentation{
 		Walkthrough: phoneObserveWalkthrough,
 	},
 	"phone find": {Samples: []CommandSample{
-		sample(`axilio phone find "the search box"`, "Text        Search\nCenter      540,620\nBBox        80,560 920x120\nConfidence  0.99\nSource      ocr", "none"),
-		sampleWithNote(`axilio phone find "settings icon" --ocr-engine premium`, "Text\nCenter      900,120\nBBox        840,60 120x120\nConfidence  0.98\nSource      vlm", "none", "Vision-model elements can have no text; coordinates depend on the current frame."),
+		sample(`axilio phone find "the search box"`, "Resolved by  vlm\nCenter       540,620\nBBox         80,560 920x120\nTook         1840ms\nModel        vision-default", "none"),
+		sampleWithNote(`axilio phone find "settings icon" --ocr-engine premium`, "Resolved by  vlm\nCenter       900,120\nBBox         840,60 120x120\nTook         2310ms\nModel        vision-default", "none", "The phone waits up to --timeout for the target; coordinates depend on the current frame."),
 		sampleWithNote(`axilio phone find "continue button" --timeout 15s -o json`, "{\n  \"text\": \"Continue\",\n  \"center\": {\"x\": 540, \"y\": 1120},\n  \"bbox\": {\"x\": 80, \"y\": 1060, \"width\": 920, \"height\": 120},\n  \"confidence\": 0.98,\n  \"source\": \"ocr\"\n}", "none", "Element content and coordinates depend on the current frame."),
 	}},
 	"phone find-text": {Samples: []CommandSample{
@@ -426,9 +426,9 @@ var commandDocumentationByKey = map[string]CommandDocumentation{
 		sampleWithNote("axilio phone screenshot --out login.png", "Wrote login.png (<bytes> bytes)", "none", "A new file requests mode 0644, subject to the process umask. Overwriting an existing file preserves its mode while replacing its contents."),
 	}},
 	"phone wait-for": {Samples: []CommandSample{
-		sample(`axilio phone wait-for "Results"`, "Text        Results\nCenter      540,1120\nBBox        80,1060 920x120\nConfidence  0.98\nSource      ocr", "none"),
+		sample(`axilio phone wait-for "Results"`, "Resolved by  ocr\nCenter       540,1120\nBBox         80,1060 920x120\nTook         2650ms", "none"),
 		sample(`axilio phone wait-for "Loading" --gone`, `"Loading" gone`, "none"),
-		sampleWithNote(`axilio phone wait-for "Ready" --exact --timeout 30s`, "Text        Ready\nCenter      540,1120\nBBox        80,1060 920x120\nConfidence  0.98\nSource      ocr", "none", "Exact matching is case-sensitive and waits up to 30 seconds."),
+		sampleWithNote(`axilio phone wait-for "Ready" --exact --timeout 30s`, "Resolved by  ocr\nCenter       540,1120\nBBox         80,1060 920x120\nTook         12040ms", "none", "Exact matching is case-sensitive and waits up to 30 seconds."),
 		failedSample(`axilio phone wait-for "Results" --timeout 1s`, "none", "timeout: text not found within deadline: Results", 5, "A wait timeout exits 5."),
 	}},
 	"phone send": {Samples: []CommandSample{
