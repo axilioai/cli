@@ -170,7 +170,7 @@ def main() -> int:
         return 1
 
     print(
-        f"ok — {len(methods)} driver methods, {len(loc_methods)} locator methods, "
+        f"ok: {len(methods)} driver methods, {len(loc_methods)} locator methods, "
         f"{len(exceptions)} exceptions, {len(used_keys)} key name(s) all exist"
     )
     return 0
