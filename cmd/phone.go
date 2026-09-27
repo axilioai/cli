@@ -64,15 +64,26 @@ func currentDriver() (*mobile.MobileDriver, error) {
 	return mobile.ConnectRemote(s.ControlURL), nil
 }
 
-func visionOpts(engine, model string) []mobile.CallOption {
-	var opts []mobile.CallOption
+// observeOpts is the OCR engine for a raw observe: a per-call option.
+func observeOpts(engine string) []mobile.CallOption {
+	if engine == "" {
+		return nil
+	}
+	return []mobile.CallOption{mobile.WithOCREngine(engine)}
+}
+
+// queryLocator builds a natural-language locator. The OCR engine and model
+// are how the target is resolved, so they belong to the locator; the action
+// on it only takes a timeout.
+func queryLocator(d *mobile.MobileDriver, query, engine, model string) *mobile.Locator {
+	opts := []mobile.LocatorOption{mobile.Query(query)}
 	if engine != "" {
-		opts = append(opts, mobile.WithOCREngine(engine))
+		opts = append(opts, mobile.OCREngine(engine))
 	}
 	if model != "" {
-		opts = append(opts, mobile.WithModel(model))
+		opts = append(opts, mobile.Model(model))
 	}
-	return opts
+	return d.Locator(opts...)
 }
 
 func elementKV(el mobile.Element) [][2]string {
@@ -127,7 +138,7 @@ func phoneObserveCmd() *cobra.Command {
 				return err
 			}
 			defer d.Close()
-			screen, err := d.Observe(visionOpts(engine, "")...)
+			screen, err := d.Observe(observeOpts(engine)...)
 			if err != nil {
 				return err
 			}
@@ -165,8 +176,7 @@ func phoneFindCmd() *cobra.Command {
 				return err
 			}
 			defer d.Close()
-			opts := append(visionOpts(engine, model), mobile.WithTimeout(phoneWait(timeout)))
-			res, err := d.Locator(mobile.Query(args[0])).BoundingBox(opts...)
+			res, err := queryLocator(d, args[0], engine, model).BoundingBox(mobile.WithTimeout(phoneWait(timeout)))
 			if err != nil {
 				return err
 			}
@@ -239,7 +249,7 @@ func phoneFindAllTextCmd() *cobra.Command {
 				return err
 			}
 			defer d.Close()
-			screen, err := d.Observe(visionOpts(engine, "")...)
+			screen, err := d.Observe(observeOpts(engine)...)
 			if err != nil {
 				return err
 			}
@@ -294,7 +304,7 @@ func phoneTapCmd() *cobra.Command {
 			defer d.Close()
 			p := printer()
 			if query != "" {
-				res, err := d.Locator(mobile.Query(query)).Tap(visionOpts(engine, model)...)
+				res, err := queryLocator(d, query, engine, model).Tap()
 				if err != nil {
 					return err
 				}
