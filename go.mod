@@ -3,7 +3,7 @@ module github.com/axilioai/cli
 go 1.26.6
 
 require (
-	github.com/axilioai/platform-go v0.12.1-0.20260927204446-dadd644a1ca9
+	github.com/axilioai/platform-go v0.13.0
 	github.com/charmbracelet/fang v1.0.0
 	github.com/coder/websocket v1.8.15
 	github.com/cpuguy83/go-md2man/v2 v2.0.6
