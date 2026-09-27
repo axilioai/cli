@@ -35,7 +35,7 @@ SKILL_URL = os.environ.get("AXILIO_SKILL_URL", "https://api.axilio.ai/api/v1/ski
 # Floors guard against a vacuous pass: if a regex silently stops matching, the
 # check would "succeed" while verifying nothing.
 MIN_DRIVER_METHODS = 8
-MIN_ELEMENT_METHODS = 4
+MIN_LOCATOR_METHODS = 8
 MIN_EXCEPTIONS = 4
 
 
@@ -77,7 +77,7 @@ def main() -> int:
     try:
         from axilio.drivers import mobile
         from axilio.drivers.mobile import MobileDriver
-        from axilio.drivers.mobile.types import Element
+        from axilio.drivers.mobile import Locator
         from axilio.platform import Client
     except ImportError as e:  # pragma: no cover
         print(f"FAIL: cannot import the axilio SDK: {e}", file=sys.stderr)
@@ -108,17 +108,18 @@ def main() -> int:
             )
             errors += 1
 
-    # 2. el.<method>() — the chained element actions
-    el_methods = documented(block, "el")
-    if len(el_methods) < MIN_ELEMENT_METHODS:
+    # 2. loc.<method>(): the locator refinements and actions (Element is
+    # plain data now; acting goes through a locator)
+    loc_methods = documented(block, "loc")
+    if len(loc_methods) < MIN_LOCATOR_METHODS:
         fail(
-            f"only found {len(el_methods)} documented el.* methods ({el_methods}) — "
+            f"only found {len(loc_methods)} documented loc.* methods ({loc_methods}): "
             "the parse is probably broken"
         )
         errors += 1
-    for name in el_methods:
-        if not hasattr(Element, name):
-            fail(f"the hosted skill documents el.{name}(), which does not exist on Element")
+    for name in loc_methods:
+        if not hasattr(Locator, name):
+            fail(f"the hosted skill documents loc.{name}(), which does not exist on Locator")
             errors += 1
 
     # 3. mobile.<Exception> — the error-handling guidance
@@ -169,7 +170,7 @@ def main() -> int:
         return 1
 
     print(
-        f"ok — {len(methods)} driver methods, {len(el_methods)} element actions, "
+        f"ok — {len(methods)} driver methods, {len(loc_methods)} locator methods, "
         f"{len(exceptions)} exceptions, {len(used_keys)} key name(s) all exist"
     )
     return 0
