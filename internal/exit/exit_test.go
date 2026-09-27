@@ -25,9 +25,10 @@ func TestClassify(t *testing.T) {
 		// driver taxonomy
 		{"driver unauthorized", &mobile.Error{Code: mobile.CodeUnauthorized}, Auth},
 		{"driver invalid args", &mobile.Error{Code: mobile.CodeInvalidArgs}, Usage},
-		{"driver element not found", &mobile.Error{Code: mobile.CodeElementNotFound}, NotFound},
 		{"driver no allocation", &mobile.Error{Code: mobile.CodeNoAllocation}, NotFound},
 		{"driver timeout", &mobile.Error{Code: mobile.CodeTimeout}, Timeout},
+		{"locator auto-wait timeout", &mobile.Error{Code: mobile.CodeActionTimeout}, Timeout},
+		{"locator needs a capability the session lacks", &mobile.Error{Code: mobile.CodeStrategyUnavailable}, Usage},
 		{"driver connection", &mobile.Error{Code: mobile.CodeConnection}, Unavailable},
 		{"driver not connected", &mobile.Error{Code: mobile.CodeNotConnected}, Unavailable},
 		{"driver device offline", &mobile.Error{Code: mobile.CodeDeviceOffline}, Unavailable},
@@ -72,9 +73,10 @@ func TestClassify(t *testing.T) {
 // deliberately treat as generic.
 func TestEveryDriverCodeMapped(t *testing.T) {
 	specific := []mobile.Code{
-		mobile.CodeUnauthorized, mobile.CodeInvalidArgs, mobile.CodeElementNotFound,
+		mobile.CodeUnauthorized, mobile.CodeInvalidArgs,
 		mobile.CodeNoAllocation, mobile.CodeTimeout, mobile.CodeConnection,
 		mobile.CodeNotConnected, mobile.CodeDeviceOffline, mobile.CodeCanceled,
+		mobile.CodeActionTimeout, mobile.CodeStrategyUnavailable,
 	}
 	for _, c := range specific {
 		if got := fromMobile(c); got == Err {

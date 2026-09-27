@@ -92,21 +92,23 @@ func TestSkillGoDriverMethodsExist(t *testing.T) {
 	}
 }
 
-// TestSkillGoElementMethodsExist checks the chained element actions the Go section
-// names (el.Tap, el.TypeInto, ...) against the real Element.
-func TestSkillGoElementMethodsExist(t *testing.T) {
+// TestSkillGoLocatorMethodsExist checks the locator refinements and actions the
+// Go section names (loc.Tap, loc.Fill, loc.WaitFor, ...) against the real
+// Locator. Element is plain data now; acting goes through a locator.
+func TestSkillGoLocatorMethodsExist(t *testing.T) {
 	block := langBlock(t, "go")
-	methods := documentedMethods(block, "el")
-	// Floor guards against a vacuous pass: the skill documents four chained
-	// actions, so a parse finding fewer has silently stopped checking them.
-	if len(methods) < 4 {
-		t.Fatalf("only found %d documented el.X() methods (%v) — the parse is probably broken, "+
+	methods := documentedMethods(block, "loc")
+	// Floor guards against a vacuous pass: the skill documents the locator's
+	// refinements and actions, so a parse finding fewer has silently stopped
+	// checking them.
+	if len(methods) < 8 {
+		t.Fatalf("only found %d documented loc.X() methods (%v): the parse is probably broken, "+
 			"which would make this test vacuous", len(methods), methods)
 	}
-	typ := reflect.TypeOf(mobile.Element{})
+	typ := reflect.TypeOf(&mobile.Locator{})
 	for _, name := range methods {
 		if _, ok := typ.MethodByName(name); !ok {
-			t.Errorf("the hosted skill documents el.%s(), which does not exist on mobile.Element", name)
+			t.Errorf("the hosted skill documents loc.%s(), which does not exist on *mobile.Locator", name)
 		}
 	}
 }
@@ -116,10 +118,10 @@ func TestSkillGoElementMethodsExist(t *testing.T) {
 // a rename in platform-go breaks the build of this test.
 func TestSkillGoErrorHelpersExist(t *testing.T) {
 	helpers := map[string]func(error) bool{
-		"mobile.IsElementNotFound": mobile.IsElementNotFound,
-		"mobile.IsTimeout":         mobile.IsTimeout,
-		"mobile.IsDeviceOffline":   mobile.IsDeviceOffline,
-		"mobile.IsRetryable":       mobile.IsRetryable,
+		"mobile.IsActionTimeout": mobile.IsActionTimeout,
+		"mobile.IsTimeout":       mobile.IsTimeout,
+		"mobile.IsDeviceOffline": mobile.IsDeviceOffline,
+		"mobile.IsRetryable":     mobile.IsRetryable,
 	}
 	block := langBlock(t, "go")
 	for name := range helpers {

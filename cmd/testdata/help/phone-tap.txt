@@ -2,8 +2,9 @@ Perform a tap action on the selected phone.
 
   The coordinate form takes x and y as frame-space pixels, with (0,0) at the screen's top-left.
 
-  Use --query to find an element by natural-language description and tap its center. If --query and coordinates are both
-  provided, --query takes precedence.
+  Use --query to find an element by natural-language description and tap its center in one step: the phone waits for the
+  target to appear (up to 5 seconds) before tapping. If --query and coordinates are both provided, --query takes
+  precedence.
 
   Session selection precedence is --session, AXILIO_SESSION, the only locally saved session, the most recently started
   session, then an ambiguity error.
