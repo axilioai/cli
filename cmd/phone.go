@@ -164,6 +164,9 @@ func phoneFindCmd() *cobra.Command {
 			if len(args) == 1 {
 				lf.query = args[0]
 			}
+			if err := lf.validate(); err != nil {
+				return err
+			}
 			d, err := currentDriver()
 			if err != nil {
 				return err
@@ -298,6 +301,11 @@ func phoneTapCmd() *cobra.Command {
 			"ambiguity error.",
 		Args: cobra.MaximumNArgs(2),
 		RunE: func(_ *cobra.Command, args []string) error {
+			if lf.hasSelector() {
+				if err := lf.validate(); err != nil {
+					return err
+				}
+			}
 			d, err := currentDriver()
 			if err != nil {
 				return err
@@ -516,6 +524,9 @@ func phoneWaitForCmd() *cobra.Command {
 		RunE: func(_ *cobra.Command, args []string) error {
 			if len(args) == 1 {
 				lf.text = args[0]
+			}
+			if err := lf.validate(); err != nil {
+				return err
 			}
 			d, err := currentDriver()
 			if err != nil {

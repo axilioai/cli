@@ -317,3 +317,27 @@ func TestSessionsStartAccessibilityErrors(t *testing.T) {
 		t.Fatalf("both flags: exit = %d, want usage (2): %v", got, err)
 	}
 }
+
+// A bad locator invocation is a usage error even with no session to drive:
+// the flags are checked before the session is resolved.
+func TestPhoneLocatorValidationPrecedesSessionResolution(t *testing.T) {
+	cases := [][]string{
+		{"phone", "find"},
+		{"phone", "wait-for"},
+		{"phone", "find", "--role", "button", "--strategy", "magic"},
+		{"phone", "tap", "--role", "button", "--strategy", "magic"},
+		{"phone", "wait-for", "--id", "x", "--strategy", "magic"},
+	}
+	for _, args := range cases {
+		t.Run(strings.Join(args, " "), func(t *testing.T) {
+			t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+			t.Setenv(session.EnvVar, "")
+			root := Root()
+			root.SetArgs(args)
+			err := root.Execute()
+			if got := exit.Classify(err); got != exit.Usage {
+				t.Fatalf("exit = %d, want usage (2): %v", got, err)
+			}
+		})
+	}
+}

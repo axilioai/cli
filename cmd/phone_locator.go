@@ -40,11 +40,27 @@ func (f *locatorFlags) hasSelector() bool {
 	return f.text != "" || f.query != "" || f.role != "" || f.name != "" || f.id != ""
 }
 
-// build turns the flags into a locator. It is a usage error to pass no
-// selector at all, or an unknown --strategy.
-func (f *locatorFlags) build(d *mobile.MobileDriver) (*mobile.Locator, error) {
+// validate rejects a missing target or an unknown --strategy as a usage
+// error. Commands call it before resolving a session, so a bad invocation
+// exits 2 even on a machine with no active session.
+func (f *locatorFlags) validate() error {
 	if !f.hasSelector() {
-		return nil, exit.Usagef("pass a target: a query, text, --role, --name, or --id")
+		return exit.Usagef("pass a target: a query, text, --role, --name, or --id")
+	}
+	if f.strategy != "" {
+		s, err := oneOf("--strategy", f.strategy, _strategyValues)
+		if err != nil {
+			return err
+		}
+		f.strategy = s
+	}
+	return nil
+}
+
+// build turns the flags into a locator, validating them first.
+func (f *locatorFlags) build(d *mobile.MobileDriver) (*mobile.Locator, error) {
+	if err := f.validate(); err != nil {
+		return nil, err
 	}
 	var opts []mobile.LocatorOption
 	add := func(v string, opt func(string) mobile.LocatorOption) {
@@ -63,11 +79,7 @@ func (f *locatorFlags) build(d *mobile.MobileDriver) (*mobile.Locator, error) {
 		opts = append(opts, mobile.Exact())
 	}
 	if f.strategy != "" {
-		s, err := oneOf("--strategy", f.strategy, _strategyValues)
-		if err != nil {
-			return nil, err
-		}
-		opts = append(opts, mobile.Strategy(mobile.LocatorStrategy(s)))
+		opts = append(opts, mobile.Strategy(mobile.LocatorStrategy(f.strategy)))
 	}
 	return d.Locator(opts...), nil
 }
