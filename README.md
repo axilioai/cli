@@ -298,15 +298,16 @@ axilio sessions stop <id>
 
 ### Accessibility mode
 
-Sessions get the phone's accessibility tree whenever the claimed phone supports
-it. `--accessibility` requires it (a named `--phone-id` that cannot provide it
-exits `6`); `--no-accessibility` turns it off. While it is on, the accessibility
-service is visible to apps on the phone. With the tree on, the locator verbs
+Sessions get the phone's accessibility tree by default, which requires a phone
+that supports it: only such phones are claimed, and a named `--phone-id` that
+cannot provide it exits `6`. `--accessibility=false` allocates any phone with
+the mode off. While it is on, the accessibility service is visible to apps on
+the phone. With the tree on, the locator verbs
 take `--role`, `--name`, `--id` (and `--exact`), and `--strategy` picks the
 resolver (`auto`, `vision`, or `accessibility`):
 
 ```bash
-axilio sessions start --accessibility
+axilio sessions start                                # accessibility on by default
 
 axilio phone tree                                    # role "name" #resource-id @x,y [node-id]
 axilio phone tap --role button --name "Log in"

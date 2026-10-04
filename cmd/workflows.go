@@ -128,8 +128,8 @@ func workflowsCreateCmd() *cobra.Command {
 			"push` code later. Recording, telemetry, capture, and accessibility " +
 			"mode default to on server-side; each toggle flag is sent only when set " +
 			"explicitly, so omitted toggles keep the server defaults. Accessibility " +
-			"mode is on for a run only when the claimed phone supports it, so it " +
-			"never fails a run.",
+			"mode requires a phone that supports it for every run; " +
+			"--accessibility=false lets runs use any phone.",
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			name := args[0]
@@ -191,7 +191,7 @@ func workflowsCreateCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&recording, "recording", true, "Record this workflow's runs; --recording=false suppresses video and thumbnails")
 	cmd.Flags().BoolVar(&telemetry, "telemetry", true, "Persist telemetry spans for runs; --telemetry=false skips the durable trace store")
 	cmd.Flags().BoolVar(&capture, "capture", true, "Capture media produced on the phone into the org library; --capture=false disables it")
-	cmd.Flags().BoolVar(&access, "accessibility", true, "Accessibility mode for runs where the phone supports it; --accessibility=false turns it off")
+	cmd.Flags().BoolVar(&access, "accessibility", true, "Accessibility mode for runs, which requires a phone that supports it; --accessibility=false allows any phone")
 	return cmd
 }
 

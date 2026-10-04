@@ -268,11 +268,11 @@ func TestSessionsStartAccessibilityFlag(t *testing.T) {
 	cases := []struct {
 		name string
 		args []string
-		want string // the raw accessibility value in the request, "" when omitted
+		want string // the raw accessibility value in the request
 	}{
-		{"omitted", nil, ""},
-		{"required", []string{"--accessibility"}, "true"},
-		{"off", []string{"--no-accessibility"}, "false"},
+		{"default", nil, "true"},
+		{"explicit", []string{"--accessibility"}, "true"},
+		{"off", []string{"--accessibility=false"}, "false"},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -304,17 +304,12 @@ func TestSessionsStartAccessibilityErrors(t *testing.T) {
 	}))
 	t.Cleanup(srv.Close)
 
-	_, err := run(t, srv, "sessions", "start", "--phone-id", "ph_old", "--accessibility")
+	_, err := run(t, srv, "sessions", "start", "--phone-id", "ph_old")
 	if got := exit.Classify(err); got != exit.Unavailable {
 		t.Fatalf("exit = %d, want unavailable (6): %v", got, err)
 	}
 	if !strings.Contains(err.Error(), "does not support accessibility mode") {
 		t.Fatalf("error = %v", err)
-	}
-
-	_, err = run(t, srv, "sessions", "start", "--accessibility", "--no-accessibility")
-	if got := exit.Classify(err); got != exit.Usage {
-		t.Fatalf("both flags: exit = %d, want usage (2): %v", got, err)
 	}
 }
 

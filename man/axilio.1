@@ -2138,7 +2138,7 @@ Show whether the selected session's accessibility tree is on, or turn it
 on or off mid-session. With the tree on, \fBphone tree\fR reads it and
 --role, --name, and --id select elements from it; while it is on, the
 accessibility service is visible to apps on the phone. Choose the
-session's starting state with the accessibility flags of \fBsessions
+session's starting state with the --accessibility flag of \fBsessions
 start\fR\&.
 
 .PP
@@ -3236,7 +3236,7 @@ center, and node id.
 
 .PP
 The session must have accessibility mode on (\fBsessions start\fR turns it
-on by default where the phone supports it; see \fBphone accessibility
+on by default unless --accessibility=false; see \fBphone accessibility
 status\fR); otherwise the phone answers that the strategy is unavailable
 and the command exits 2. Layout-only nodes are dropped unless --all is
 given. --window limits the tree to one window and --depth to that many
@@ -5140,10 +5140,10 @@ attach the session to a workflow with --workflow.
 .PP
 Accessibility mode, which lets phone commands select elements by --role,
 --name, and --id and \fBphone tree\fR read the screen's structure, is on by
-default whenever the claimed phone supports it. --accessibility requires
-it: only phones that support it are claimed, and a --phone-id that does
-not exits 6. --no-accessibility turns it off. While it is on, the
-accessibility service is visible to apps on the phone.
+default and requires a phone that supports it, so only such phones are
+claimed; pinning one without support exits 6. --accessibility=false
+allocates any phone with the mode off. While it is on, the accessibility
+service is visible to apps on the phone.
 
 .PP
 --export prints only \fBexport AXILIO_SESSION=\\<id\\>\fR for shell eval and
@@ -5152,13 +5152,11 @@ cannot be combined with -o json.
 .PP
 \fBCommand options\fP
 .IP \(bu 2
-\fB--accessibility\fP - Require accessibility mode; omitted turns it on
-wherever the phone supports it
+\fB--accessibility\fP - Accessibility mode, which requires a phone that
+supports it; --accessibility=false allows any phone (default "true")
 .IP \(bu 2
 \fB--export\fP - Print only \fBexport AXILIO_SESSION=\\<id\\>\fR for shell
 eval
-.IP \(bu 2
-\fB--no-accessibility\fP - Turn accessibility mode off for this session
 .IP \(bu 2
 \fB--phone-id\fP=\fIvalue\fP - Pin a dedicated phone ID from \fBphones mine\fR
 instead of pool allocation
@@ -5237,45 +5235,23 @@ Release it with:  axilio sessions stop <session-id>
 \fBSample 3\fP
 
 .EX
-user@host ~ % axilio sessions start --phone-id ph_123 --accessibility
-Session        <session-id>
-Phone          ph_123
-Region         us-central
-Accessibility  true
-Live view      <live-view-url>
-Control URL    <control-url>
+user@host ~ % axilio sessions start --phone-id ph_old
 .sp
 # Standard error:
-Drive it:  axilio phone observe
-Pin it to this shell (for parallel work):  export AXILIO_SESSION=<session-id>
-Release it with:  axilio sessions stop <session-id>
+phone ph_old does not support accessibility mode; drop --phone-id to claim any phone that does, or pass --accessibility=false
 .sp
-# Exit status: 0
-# Notes: --accessibility requires accessibility mode; omitting it turns
-#        the mode on wherever the claimed phone supports it.
+# Exit status: 6
+# Notes: Accessibility mode is on by default and needs a phone that
+#        supports it; nothing is allocated.
 .EE
 
 .PP
 \fBSample 4\fP
 
 .EX
-user@host ~ % axilio sessions start --phone-id ph_old --accessibility
-.sp
-# Standard error:
-phone ph_old does not support accessibility mode; drop --phone-id to claim any phone that does, or drop --accessibility
-.sp
-# Exit status: 6
-# Notes: A named phone without accessibility support is refused; nothing
-#        is allocated.
-.EE
-
-.PP
-\fBSample 5\fP
-
-.EX
-user@host ~ % axilio sessions start --no-accessibility
+user@host ~ % axilio sessions start --phone-id ph_old --accessibility=false
 Session        <session-id>
-Phone          <phone-id>
+Phone          ph_old
 Region         us-central
 Accessibility  false
 Live view      <live-view-url>
@@ -5287,10 +5263,12 @@ Pin it to this shell (for parallel work):  export AXILIO_SESSION=<session-id>
 Release it with:  axilio sessions stop <session-id>
 .sp
 # Exit status: 0
+# Notes: --accessibility=false allocates any phone, including one
+#        without accessibility support, with the mode off.
 .EE
 
 .PP
-\fBSample 6\fP
+\fBSample 5\fP
 
 .EX
 user@host ~ % axilio sessions start --workflow wf_123
@@ -5310,7 +5288,7 @@ Release it with:  axilio sessions stop <session-id>
 .EE
 
 .PP
-\fBSample 7\fP
+\fBSample 6\fP
 
 .EX
 user@host ~ % axilio sessions start --export
@@ -5322,7 +5300,7 @@ export AXILIO_SESSION=<session-id>
 .EE
 
 .PP
-\fBSample 8\fP
+\fBSample 7\fP
 
 .EX
 user@host ~ % eval "$(axilio sessions start --export)"
@@ -6048,14 +6026,15 @@ workflow's first code revision atomically with it; omit it to create an
 empty workflow and \fBworkflows push\fR code later. Recording, telemetry,
 capture, and accessibility mode default to on server-side; each toggle
 flag is sent only when set explicitly, so omitted toggles keep the
-server defaults. Accessibility mode is on for a run only when the
-claimed phone supports it, so it never fails a run.
+server defaults. Accessibility mode requires a phone that supports it
+for every run; --accessibility=false lets runs use any phone.
 
 .PP
 \fBCommand options\fP
 .IP \(bu 2
-\fB--accessibility\fP - Accessibility mode for runs where the phone
-supports it; --accessibility=false turns it off (default "true")
+\fB--accessibility\fP - Accessibility mode for runs, which requires a
+phone that supports it; --accessibility=false allows any phone (default
+"true")
 .IP \(bu 2
 \fB--capture\fP - Capture media produced on the phone into the org
 library; --capture=false disables it (default "true")

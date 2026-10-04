@@ -21,7 +21,7 @@ func phoneTreeCmd() *cobra.Command {
 		Long: "Print the accessibility tree of the selected phone, one window at a " +
 			"time, as an indented outline: each node's role, name, resource id, " +
 			"center, and node id. The session must have accessibility mode on " +
-			"(`sessions start` turns it on by default where the phone supports it; " +
+			"(`sessions start` turns it on by default unless --accessibility=false; " +
 			"see `phone accessibility status`); otherwise the phone answers that the " +
 			"strategy is unavailable and the command exits 2. Layout-only nodes are " +
 			"dropped unless --all is given. --window limits the tree to one window " +
@@ -154,7 +154,7 @@ func phoneAccessibilityCmd() *cobra.Command {
 			"it on or off mid-session. With the tree on, `phone tree` reads it and " +
 			"--role, --name, and --id select elements from it; while it is on, the " +
 			"accessibility service is visible to apps on the phone. Choose the " +
-			"session's starting state with the accessibility flags of " +
+			"session's starting state with the --accessibility flag of " +
 			"`sessions start`.\n\n" +
 			"Running `axilio phone accessibility` without a subcommand is equivalent " +
 			"to `axilio phone accessibility --help`.",
