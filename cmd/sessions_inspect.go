@@ -90,6 +90,7 @@ func sessionsGetCmd() *cobra.Command {
 					{"Tags", util.OrDash(tagList(d.Tags))},
 					{"Capture", fmt.Sprintf("%t", d.CaptureEnabled)},
 					{"Telemetry", fmt.Sprintf("%t", !d.TelemetryDisabled)},
+					{"Accessibility", fmt.Sprintf("%t", d.Accessibility)},
 					{"Recording", string(d.RecordingStatus)},
 					{"Recording URL", util.OrDash(strv(d.RecordingURL))},
 					{"Thumbnail URL", util.OrDash(thumbURL)},

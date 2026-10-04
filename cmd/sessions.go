@@ -353,7 +353,7 @@ func sessionsCurrentCmd() *cobra.Command {
 
 func sessionsStartCmd() *cobra.Command {
 	var phoneType, phoneID, workflowID string
-	var export bool
+	var export, accessibility bool
 	cmd := &cobra.Command{
 		Use:   "start",
 		Short: "Acquire a phone and open a session that remains active until stopped.",
@@ -363,7 +363,14 @@ func sessionsStartCmd() *cobra.Command {
 			"until stopped; the CLI saves its connection information locally and marks " +
 			"it as the most recently started session. Pin a dedicated phone discovered " +
 			"through `phones mine` with --phone-id, or " +
-			"attach the session to a workflow with --workflow. --export prints only " +
+			"attach the session to a workflow with --workflow.\n\n" +
+			"Accessibility mode, which lets phone commands select elements by " +
+			"--role, --name, and --id and `phone tree` read the screen's structure, " +
+			"is on by default and requires a phone that supports it, so only such " +
+			"phones are claimed; pinning one without support exits 6. " +
+			"--accessibility=false allocates any phone with the mode off. While it is " +
+			"on, the accessibility service is visible to apps on the phone.\n\n" +
+			"--export prints only " +
 			"`export AXILIO_SESSION=<id>` for shell eval and cannot be combined with " +
 			"-o json.",
 		RunE: func(_ *cobra.Command, _ []string) error {
@@ -388,7 +395,14 @@ func sessionsStartCmd() *cobra.Command {
 			if workflowID != "" {
 				req.WorkflowID = &workflowID
 			}
+			// Always sent, so the request states what the flag says rather
+			// than leaning on the server default (also true).
+			req.Accessibility = platformgo.Bool(accessibility)
 			a, err := cl.Phones.Allocate(context.Background(), req)
+			if platformgo.IsAccessibilityUnavailable(err) {
+				return exit.With(exit.Unavailable, fmt.Errorf(
+					"phone %s does not support accessibility mode; drop --phone-id to claim any phone that does, or pass --accessibility=false", phoneID))
+			}
 			if err != nil {
 				return err
 			}
@@ -414,6 +428,7 @@ func sessionsStartCmd() *cobra.Command {
 					{"Session", a.SessionID},
 					{"Phone", a.PhoneID},
 					{"Region", util.OrDash(strv(a.Region))},
+					{"Accessibility", fmt.Sprintf("%t", a.Accessibility)},
 					{"Live view", util.OrDash(strv(a.LiveViewURL))},
 					{"Control URL", util.OrDash(strv(a.ControlURL))},
 				})
@@ -432,6 +447,7 @@ func sessionsStartCmd() *cobra.Command {
 	cmd.Flags().StringVar(&phoneID, "phone-id", "", "Pin a dedicated phone ID from `phones mine` instead of pool allocation")
 	cmd.Flags().StringVar(&workflowID, "workflow", "", "Workflow ID to attach; omit for an interactive session")
 	cmd.Flags().BoolVar(&export, "export", false, "Print only `export AXILIO_SESSION=<id>` for shell eval")
+	cmd.Flags().BoolVar(&accessibility, "accessibility", true, "Accessibility mode, which requires a phone that supports it; --accessibility=false allows any phone")
 	return cmd
 }
 
