@@ -210,6 +210,8 @@ Precedence rules:
 | `sessions start` / `stop` / `list` / `current` | Start, stop, and inspect phone sessions. |
 | `sessions recording <id>` | Look up a session recording's status and URL, or download the MP4 with `--out` (`--wait` polls while it is still processing). |
 | `phone observe` / `find` / `find-text` / `tap` / `long-press` / `swipe` / `type` / `key` / `screenshot` / `wait-for` | Observe and control the selected phone session. |
+| `phone tree` | Print the phone's accessibility tree (roles, names, resource ids, node ids) for a session with accessibility mode on. |
+| `phone accessibility status` / `enable` / `disable` | Show whether the session's accessibility tree is on, or turn it on or off mid-session. |
 | `phone send` | Upload a local image/video and push it to the selected session's phone. |
 | `workflows list` | Discover workflow IDs by recency or name search. |
 | `workflows create` / `get` / `delete` | Create a workflow (optionally seeding its first code revision from a file), inspect its details and run statistics, or delete it. |
@@ -265,7 +267,7 @@ The CLI's output is a contract, not just cosmetics.
   | `3` | auth | missing or invalid credentials, unauthorized access, or permission denied; HTTP 401/403 |
   | `4` | not found | requested resource, phone allocation, or on-screen element not found; HTTP 404 |
   | `5` | timeout | operation exceeded its timeout or deadline; HTTP 408 |
-  | `6` | unavailable | service or phone unavailable/offline, rate limit, or server failure; HTTP 429/5xx |
+  | `6` | unavailable | service or phone unavailable/offline, the requested phone lacks accessibility mode, rate limit, or server failure; HTTP 429/5xx |
   | `7` | canceled | operation canceled by the user, shell, or system |
 
   For example, `axilio phone find "..."` returning `4` means no matching
@@ -293,6 +295,31 @@ axilio phone screenshot --out screen.png
 
 axilio sessions stop <id>
 ```
+
+### Accessibility mode
+
+Sessions get the phone's accessibility tree whenever the claimed phone supports
+it. `--accessibility` requires it (a named `--phone-id` that cannot provide it
+exits `6`); `--no-accessibility` turns it off. While it is on, the accessibility
+service is visible to apps on the phone. With the tree on, the locator verbs
+take `--role`, `--name`, `--id` (and `--exact`), and `--strategy` picks the
+resolver (`auto`, `vision`, or `accessibility`):
+
+```bash
+axilio sessions start --accessibility
+
+axilio phone tree                                    # role "name" #resource-id @x,y [node-id]
+axilio phone tap --role button --name "Log in"
+axilio phone tap --id com.example.app:id/login
+axilio phone find --role textbox --name Email -o json
+axilio phone wait-for --role progressbar --gone
+axilio phone tap --query "the log in button" --strategy vision   # skip the tree
+
+axilio phone accessibility status
+axilio phone accessibility disable                   # where status says Toggleable
+```
+
+On a session without the tree, the tree-only flags exit `2`.
 
 ### Parallel sessions
 
