@@ -21,9 +21,13 @@ const (
 	// AXI-1911 unified `uploads` + `downloads` (+ `sessions downloads`) into one
 	// `files` command group (+ `sessions files`): fewer command nodes, and the
 	// merged `files list` filter set nets out a few flags. AXI-1802 added
-	// `sessions recording` (--out, --wait, --timeout, --force).
-	applicationCommandCount = 75
-	applicationFlagCount    = 127
+	// `sessions recording` (--out, --wait, --timeout, --force). AXI-2116 added
+	// accessibility mode: `phone tree` and the `phone accessibility` group
+	// (status, enable, disable); --role/--name/--id/--strategy/--exact on the
+	// locator verbs; --accessibility/--no-accessibility on `sessions start`;
+	// --accessibility on `workflows create`.
+	applicationCommandCount = 80
+	applicationFlagCount    = 147
 )
 
 func TestApplicationHelpMetadata(t *testing.T) {

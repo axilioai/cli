@@ -339,9 +339,12 @@ var commandDocumentationByKey = map[string]CommandDocumentation{
 		sampleWithNote("axilio sessions current -o json", "{\n  \"session_id\": \"<session-id>\",\n  \"phone_id\": \"<phone-id>\",\n  \"phone_type\": \"android\",\n  \"control_url\": \"<control-url>\",\n  \"created_at\": \"<timestamp>\"\n}", "none", "A selected session keeps the same JSON shape. With no selected session, stdout is empty and exit status is 4."),
 	}},
 	"sessions start": {Samples: []CommandSample{
-		sample("axilio sessions start", "Session      <session-id>\nPhone        <phone-id>\nRegion       us-central\nLive view    <live-view-url>\nControl URL  <control-url>", "Drive it:  axilio phone observe\nPin it to this shell (for parallel work):  export AXILIO_SESSION=<session-id>\nRelease it with:  axilio sessions stop <session-id>"),
-		sample("axilio sessions start --phone-id ph_123", "Session      <session-id>\nPhone        ph_123\nRegion       us-central\nLive view    <live-view-url>\nControl URL  <control-url>", "Drive it:  axilio phone observe\nPin it to this shell (for parallel work):  export AXILIO_SESSION=<session-id>\nRelease it with:  axilio sessions stop <session-id>"),
-		sample("axilio sessions start --workflow wf_123", "Session      <session-id>\nPhone        <phone-id>\nRegion       us-central\nLive view    <live-view-url>\nControl URL  <control-url>", "Drive it:  axilio phone observe\nPin it to this shell (for parallel work):  export AXILIO_SESSION=<session-id>\nRelease it with:  axilio sessions stop <session-id>"),
+		sample("axilio sessions start", "Session        <session-id>\nPhone          <phone-id>\nRegion         us-central\nAccessibility  true\nLive view      <live-view-url>\nControl URL    <control-url>", "Drive it:  axilio phone observe\nPin it to this shell (for parallel work):  export AXILIO_SESSION=<session-id>\nRelease it with:  axilio sessions stop <session-id>"),
+		sample("axilio sessions start --phone-id ph_123", "Session        <session-id>\nPhone          ph_123\nRegion         us-central\nAccessibility  true\nLive view      <live-view-url>\nControl URL    <control-url>", "Drive it:  axilio phone observe\nPin it to this shell (for parallel work):  export AXILIO_SESSION=<session-id>\nRelease it with:  axilio sessions stop <session-id>"),
+		sampleWithNote("axilio sessions start --phone-id ph_123 --accessibility", "Session        <session-id>\nPhone          ph_123\nRegion         us-central\nAccessibility  true\nLive view      <live-view-url>\nControl URL    <control-url>", "Drive it:  axilio phone observe\nPin it to this shell (for parallel work):  export AXILIO_SESSION=<session-id>\nRelease it with:  axilio sessions stop <session-id>", "--accessibility requires accessibility mode; omitting it turns the mode on wherever the claimed phone supports it."),
+		failedSample("axilio sessions start --phone-id ph_old --accessibility", "none", "phone ph_old does not support accessibility mode; drop --phone-id to claim any phone that does, or drop --accessibility", 6, "A named phone without accessibility support is refused; nothing is allocated."),
+		sample("axilio sessions start --no-accessibility", "Session        <session-id>\nPhone          <phone-id>\nRegion         us-central\nAccessibility  false\nLive view      <live-view-url>\nControl URL    <control-url>", "Drive it:  axilio phone observe\nPin it to this shell (for parallel work):  export AXILIO_SESSION=<session-id>\nRelease it with:  axilio sessions stop <session-id>"),
+		sample("axilio sessions start --workflow wf_123", "Session        <session-id>\nPhone          <phone-id>\nRegion         us-central\nAccessibility  true\nLive view      <live-view-url>\nControl URL    <control-url>", "Drive it:  axilio phone observe\nPin it to this shell (for parallel work):  export AXILIO_SESSION=<session-id>\nRelease it with:  axilio sessions stop <session-id>"),
 		sampleWithNote("axilio sessions start --export", "export AXILIO_SESSION=<session-id>", "none", "--export is exact shell text; combining it with -o json is a usage error before allocation."),
 		sampleWithNote(`eval "$(axilio sessions start --export)"`, "none", "none", "The shell consumes the nested command's export line and sets AXILIO_SESSION in the current shell."),
 	}},
@@ -387,6 +390,7 @@ var commandDocumentationByKey = map[string]CommandDocumentation{
 	"phone find": {Samples: []CommandSample{
 		sample(`axilio phone find "the search box"`, "Resolved by  vlm\nCenter       540,620\nBBox         80,560 920x120\nTook         1840ms\nModel        vision-default", "none"),
 		sampleWithNote(`axilio phone find "settings icon" --ocr-engine premium`, "Resolved by  vlm\nCenter       900,120\nBBox         840,60 120x120\nTook         2310ms\nModel        vision-default", "none", "The phone waits up to --timeout for the target; coordinates depend on the current frame."),
+		sampleWithNote(`axilio phone find --role button --name "Log in"`, "Resolved by  a11y\nCenter       540,1480\nBBox         80,1420 920x120\nTook         95ms", "none", "Needs accessibility mode on the session; without it the command exits 2."),
 		sampleWithNote(`axilio phone find "continue button" --timeout 15s -o json`, "{\n  \"text\": \"Continue\",\n  \"center\": {\"x\": 540, \"y\": 1120},\n  \"bbox\": {\"x\": 80, \"y\": 1060, \"width\": 920, \"height\": 120},\n  \"confidence\": 0.98,\n  \"source\": \"ocr\"\n}", "none", "Element content and coordinates depend on the current frame."),
 	}},
 	"phone find-text": {Samples: []CommandSample{
@@ -404,6 +408,8 @@ var commandDocumentationByKey = map[string]CommandDocumentation{
 		sample(`axilio phone tap --query "the search box"`, `Tapped "the search box" at 540,620`, "none"),
 		sample("axilio phone tap 540 1200", "Tapped 540,1200", "none"),
 		sample(`axilio phone tap --session sess_123 --query "continue"`, `Tapped "continue" at 540,1120`, "none"),
+		sampleWithNote(`axilio phone tap --role button --name "Log in"`, `Tapped button "Log in" at 540,1480`, "none", "Selected from the accessibility tree; needs accessibility mode on the session."),
+		sample(`axilio phone tap --id com.example.app:id/login`, `Tapped #com.example.app:id/login at 540,1480`, "none"),
 	}},
 	"phone long-press": {Samples: []CommandSample{
 		sample("axilio phone long-press 540 1080", "Long-pressed 540,1080 for 800ms", "none"),
@@ -429,7 +435,28 @@ var commandDocumentationByKey = map[string]CommandDocumentation{
 		sample(`axilio phone wait-for "Results"`, "Resolved by  ocr\nCenter       540,1120\nBBox         80,1060 920x120\nTook         2650ms", "none"),
 		sample(`axilio phone wait-for "Loading" --gone`, `"Loading" gone`, "none"),
 		sampleWithNote(`axilio phone wait-for "Ready" --exact --timeout 30s`, "Resolved by  ocr\nCenter       540,1120\nBBox         80,1060 920x120\nTook         12040ms", "none", "Exact matching is case-sensitive and waits up to 30 seconds."),
+		sampleWithNote(`axilio phone wait-for --role progressbar --gone`, `progressbar gone`, "none", "Waits on the accessibility tree; needs accessibility mode on the session."),
 		failedSample(`axilio phone wait-for "Results" --timeout 1s`, "none", "timeout: text not found within deadline: Results", 5, "A wait timeout exits 5."),
+	}},
+	"phone tree": {Samples: []CommandSample{
+		sampleWithNote("axilio phone tree", "window 12 [application]  com.example.app  focused\n  generic @540,1200 [n1]\n    textbox \"Email\" #com.example.app:id/email @540,900 [n4]\n    button \"Log in\" #com.example.app:id/login @540,1480 [n7]", "3 nodes, 1 windows", "Layout-only nodes are dropped; --all keeps them."),
+		sampleWithNote("axilio phone tree --window 12 --depth 1 -o json", "{\n  \"nodes\": [\n    {\n      \"node_id\": \"n1\",\n      \"ignored\": false,\n      \"role\": {\"type\": \"role\", \"value\": \"generic\"},\n      \"child_ids\": [\"n4\", \"n7\"],\n      \"bounds\": {\"x\": 0, \"y\": 0, \"width\": 1080, \"height\": 2400},\n      \"window_id\": \"12\",\n      \"actions\": []\n    }\n  ],\n  \"windows\": [\n    {\"window_id\": \"12\", \"type\": \"application\", \"app\": \"com.example.app\", \"focused\": true, \"bounds\": {\"x\": 0, \"y\": 0, \"width\": 1080, \"height\": 2400}, \"root_id\": \"n1\"}\n  ],\n  \"captured_at\": \"<timestamp>\"\n}", "none", "Shortened representative JSON; nodes also carry names, properties, and Android attributes."),
+		failedSample("axilio phone tree", "none", "strategy_unavailable: accessibility tree is off for this session", 2, "The session's accessibility tree is off; turn it on with `phone accessibility enable` where toggleable."),
+	}},
+	"phone accessibility": workflow(
+		"axilio phone accessibility status",
+		"axilio phone accessibility disable",
+		"axilio phone accessibility enable",
+	),
+	"phone accessibility status": {Samples: []CommandSample{
+		sample("axilio phone accessibility status", "Enabled     true\nToggleable  true", "none"),
+		sample("axilio phone accessibility status -o json", "{\n  \"enabled\": true,\n  \"toggleable\": true\n}", "none"),
+	}},
+	"phone accessibility enable": {Samples: []CommandSample{
+		sampleWithNote("axilio phone accessibility enable", "Accessibility on.", "none", "Returns once the phone confirms the tree is on."),
+	}},
+	"phone accessibility disable": {Samples: []CommandSample{
+		sampleWithNote("axilio phone accessibility disable", "Accessibility off.", "none", "Returns once the phone confirms the tree is off."),
 	}},
 	"phone send": {Samples: []CommandSample{
 		sampleWithNote("axilio phone send ./photo.jpg", "Delivery  <delivery-id>\nFile      photo.jpg\nStatus    dispatched", "→ Sending photo.jpg to phone <phone-id>\npushed without requesting delivery receipt. In the future, add --wait if you want the cli to wait for delivery confirmation and report result.", "The upload remains in the organization library."),

@@ -48,9 +48,9 @@ var Codes = []Documented{
 	{Err, "error", "The command failed for a reason that does not fit a more specific category."},
 	{Usage, "usage", "Invalid command syntax, argument count, or value; or the API rejected the request as invalid (HTTP 400 or 422)."},
 	{Auth, "auth", "Missing or invalid credentials, unauthorized access, or permission denied (HTTP 401 or 403)."},
-	{NotFound, "not-found", "A requested resource or phone allocation was not found (HTTP 404). An on-screen target that never appears is a timeout (5)."},
+	{NotFound, "not-found", "A requested resource or phone allocation was not found (HTTP 404), or an accessibility node id is no longer on screen. An on-screen target that never appears is a timeout (5)."},
 	{Timeout, "timeout", "The operation exceeded its timeout or deadline (HTTP 408)."},
-	{Unavailable, "unavailable", "The Axilio service or phone connection was unavailable, the phone was offline, the request was rate-limited, or the server failed (HTTP 429 or 5xx)."},
+	{Unavailable, "unavailable", "The Axilio service or phone connection was unavailable, the phone was offline, the requested phone does not support accessibility mode, the accessibility tree was covered by a system dialog, the request was rate-limited, or the server failed (HTTP 429 or 5xx)."},
 	{Canceled, "canceled", "The operation was canceled by the user, shell, or system."},
 }
 
@@ -149,10 +149,16 @@ func fromMobile(c mobile.Code) Code {
 	case mobile.CodeTimeout, mobile.CodeActionTimeout:
 		return Timeout
 	case mobile.CodeStrategyUnavailable:
-		// The locator needs a capability (the accessibility tree) this
-		// session does not have: the caller must change the selector.
+		// The call needs a capability (the accessibility tree) this
+		// session does not have: the caller must change the selector or
+		// turn the tree on.
 		return Usage
-	case mobile.CodeConnection, mobile.CodeNotConnected, mobile.CodeDeviceOffline:
+	case mobile.CodeStaleNode:
+		// A node id from an earlier snapshot is gone: take a fresh one.
+		return NotFound
+	case mobile.CodeConnection, mobile.CodeNotConnected, mobile.CodeDeviceOffline,
+		mobile.CodeTreeUnavailable:
+		// TreeUnavailable: a system dialog covers the app for now.
 		return Unavailable
 	case mobile.CodeCanceled:
 		return Canceled

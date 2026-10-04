@@ -1,5 +1,5 @@
 .nh
-.TH "AXILIO" "1" "2026-08-03" "axilio 0.11.0" "Axilio CLI Manual"
+.TH "AXILIO" "1" "2026-08-03" "axilio 0.12.0" "Axilio CLI Manual"
 
 .SH NAME
 axilio \- Acquire and drive Axilio phones from the command line
@@ -2089,8 +2089,8 @@ element, act, then observe again to verify.
 
 .PP
 Available verbs are observe, find, find-text, find-all-text, tap,
-long-press, swipe, type, key, screenshot, wait-for, and send. Every
-successful verb emits a structured result with -o json.
+long-press, swipe, type, key, screenshot, wait-for, tree, accessibility,
+and send. Every successful verb emits a structured result with -o json.
 
 .PP
 Session selection precedence is --session, AXILIO_SESSION, the only
@@ -2128,29 +2128,231 @@ axilio phone type "Axilio"
 axilio phone observe
 .EE
 
-.SS find
+.SS accessibility
 .EX
-axilio phone find <query> [flags]
+axilio phone accessibility
 .EE
 
 .PP
-Locate one element from a natural-language description.
+Show whether the selected session's accessibility tree is on, or turn it
+on or off mid-session. With the tree on, \fBphone tree\fR reads it and
+--role, --name, and --id select elements from it; while it is on, the
+accessibility service is visible to apps on the phone. Choose the
+session's starting state with the accessibility flags of \fBsessions
+start\fR\&.
+
+.PP
+Running \fBaxilio phone accessibility\fR without a subcommand is equivalent
+to \fBaxilio phone accessibility --help\fR\&.
+
+.PP
+\fBParent options\fP
+.IP \(bu 2
+\fB--session\fP=\fIvalue\fP - No effect on phone accessibility command; bare
+axilio phone accessibility only displays this help
+
+.PP
+\fBGlobal-option behavior\fP
+.IP \(bu 2
+\fB--api-key\fP, \fB--base-url\fP, \fB--no-color\fP, \fB--org\fP, \fB--output\fP
+/ \fB-o\fP, \fB--quiet\fP / \fB-q\fP - No effect on phone accessibility
+command; bare axilio phone accessibility only displays this help
+
+.PP
+\fBWorkflow examples\fP
+
+.EX
+axilio phone accessibility status
+axilio phone accessibility disable
+axilio phone accessibility enable
+.EE
+
+.SS disable
+.EX
+axilio phone accessibility disable
+.EE
+
+.PP
+Turn the accessibility tree off for the selected session.
+
+.PP
+The command returns once the phone confirms the change. It works only
+where \fBphone accessibility status\fR reports Toggleable true; elsewhere
+the phone answers with an unknown-operation error.
+
+.PP
+\fBParent options\fP
+.IP \(bu 2
+\fB--session\fP=\fIvalue\fP - Session ID; overrides AXILIO_SESSION and
+automatic session selection
+
+.PP
+\fBGlobal-option behavior\fP
+.IP \(bu 2
+\fB--api-key\fP, \fB--base-url\fP, \fB--no-color\fP, \fB--org\fP - No effect
+on phone accessibility disable command
+.IP \(bu 2
+\fB-o\fP, \fB--output\fP=\fIvalue\fP - Emit a human confirmation or JSON
+accessibility disable result (default "table")
+.IP \(bu 2
+\fB-q\fP, \fB--quiet\fP - Suppress the human accessibility disable result;
+the phone action still runs; JSON still prints
+
+.PP
+\fBExamples and expected output\fP
+
+.EX
+user@host ~ % axilio phone accessibility disable
+Accessibility off.
+.sp
+# Exit status: 0
+# Notes: Returns once the phone confirms the tree is off.
+.EE
+
+.SS enable
+.EX
+axilio phone accessibility enable
+.EE
+
+.PP
+Turn the accessibility tree on for the selected session.
+
+.PP
+The command returns once the phone confirms the change. It works only
+where \fBphone accessibility status\fR reports Toggleable true; elsewhere
+the phone answers with an unknown-operation error.
+
+.PP
+\fBParent options\fP
+.IP \(bu 2
+\fB--session\fP=\fIvalue\fP - Session ID; overrides AXILIO_SESSION and
+automatic session selection
+
+.PP
+\fBGlobal-option behavior\fP
+.IP \(bu 2
+\fB--api-key\fP, \fB--base-url\fP, \fB--no-color\fP, \fB--org\fP - No effect
+on phone accessibility enable command
+.IP \(bu 2
+\fB-o\fP, \fB--output\fP=\fIvalue\fP - Emit a human confirmation or JSON
+accessibility enable result (default "table")
+.IP \(bu 2
+\fB-q\fP, \fB--quiet\fP - Suppress the human accessibility enable result;
+the phone action still runs; JSON still prints
+
+.PP
+\fBExamples and expected output\fP
+
+.EX
+user@host ~ % axilio phone accessibility enable
+Accessibility on.
+.sp
+# Exit status: 0
+# Notes: Returns once the phone confirms the tree is on.
+.EE
+
+.SS status
+.EX
+axilio phone accessibility status
+.EE
+
+.PP
+Report whether the selected session's accessibility tree is on, and
+whether this session can turn it on and off with \fBphone accessibility
+enable\fR and \fBdisable\fR\&.
+
+.PP
+A phone that cannot provide the tree at all answers with an
+unknown-operation error.
+
+.PP
+\fBParent options\fP
+.IP \(bu 2
+\fB--session\fP=\fIvalue\fP - Session ID; overrides AXILIO_SESSION and
+automatic session selection
+
+.PP
+\fBGlobal-option behavior\fP
+.IP \(bu 2
+\fB--api-key\fP, \fB--base-url\fP, \fB--org\fP - No effect on phone
+accessibility status command
+.IP \(bu 2
+\fB--no-color\fP - Disable ANSI color in the human-readable form of the
+accessibility state
+.IP \(bu 2
+\fB-o\fP, \fB--output\fP=\fIvalue\fP - Render the accessibility state as table
+or json (default "table")
+.IP \(bu 2
+\fB-q\fP, \fB--quiet\fP - Suppress stderr notes for accessibility status;
+the accessibility state remains on stdout
+
+.PP
+\fBExamples and expected output\fP
+
+.PP
+\fBSample 1\fP
+
+.EX
+user@host ~ % axilio phone accessibility status
+Enabled     true
+Toggleable  true
+.sp
+# Exit status: 0
+.EE
+
+.PP
+\fBSample 2\fP
+
+.EX
+user@host ~ % axilio phone accessibility status -o json
+{
+  "enabled": true,
+  "toggleable": true
+}
+.sp
+# Exit status: 0
+.EE
+
+.SS find
+.EX
+axilio phone find [query] [flags]
+.EE
+
+.PP
+Locate one element from a natural-language description, or from
+accessibility selectors (--role, --name, --id) on a session with
+accessibility mode on.
 
 .PP
 The phone waits for it to appear, up to --timeout (10 seconds when
-omitted), and returns how it was resolved, its center, bounding box, and
-the model that found it. The OCR engine defaults to free and the vision
-model is selected by the server. A target that never appears exits with
-the timeout code; use \fBfind-text\fR for a successful empty result.
+omitted), and returns how it was resolved (a11y, ocr, or vlm), its
+center, bounding box, and the model that found it. Every given selector
+must match. The OCR engine defaults to free and the vision model is
+selected by the server. A target that never appears exits with the
+timeout code; use \fBfind-text\fR for a successful empty result.
 
 .PP
 \fBCommand options\fP
 .IP \(bu 2
+\fB--exact\fP - Require a case-sensitive exact match on --name
+.IP \(bu 2
+\fB--id\fP=\fIvalue\fP - Android resource id, e.g. com.example.app:id/login;
+needs accessibility mode
+.IP \(bu 2
 \fB--model\fP=\fIvalue\fP - Vision model override; omitted lets the server
 select the model
 .IP \(bu 2
+\fB--name\fP=\fIvalue\fP - Accessible name, e.g. "Log in"; needs
+accessibility mode
+.IP \(bu 2
 \fB--ocr-engine\fP=\fIvalue\fP - OCR engine: free or premium; omitted uses
 free
+.IP \(bu 2
+\fB--role\fP=\fIvalue\fP - Accessibility role, e.g. button or textbox; needs
+accessibility mode
+.IP \(bu 2
+\fB--strategy\fP=\fIvalue\fP - Resolver: auto, vision, or accessibility;
+omitted uses auto (the tree when on, else vision)
 .IP \(bu 2
 \fB--timeout\fP=\fIduration\fP - Maximum vision search time, such as 500ms,
 15s, or 1m (default 10s). Units: ns, us/µs, ms, s, m, h.
@@ -2211,6 +2413,21 @@ Model        vision-default
 
 .PP
 \fBSample 3\fP
+
+.EX
+user@host ~ % axilio phone find --role button --name "Log in"
+Resolved by  a11y
+Center       540,1480
+BBox         80,1420 920x120
+Took         95ms
+.sp
+# Exit status: 0
+# Notes: Needs accessibility mode on the session; without it the command
+#        exits 2.
+.EE
+
+.PP
+\fBSample 4\fP
 
 .EX
 user@host ~ % axilio phone find "continue button" --timeout 15s -o json
@@ -2898,8 +3115,10 @@ the screen's top-left.
 .PP
 Use --query to find an element by natural-language description and tap
 its center in one step: the phone waits for the target to appear (up to
-5 seconds) before tapping. If --query and coordinates are both provided,
---query takes precedence.
+5 seconds) before tapping. On a session with accessibility mode on,
+--role, --name, and --id select the element from the accessibility tree
+instead; every given selector must match. If coordinates are also
+provided, --query takes precedence, as do --role, --name, and --id.
 
 .PP
 Session selection precedence is --session, AXILIO_SESSION, the only
@@ -2909,14 +3128,28 @@ ambiguity error.
 .PP
 \fBCommand options\fP
 .IP \(bu 2
+\fB--exact\fP - Require a case-sensitive exact match on --name
+.IP \(bu 2
+\fB--id\fP=\fIvalue\fP - Android resource id, e.g. com.example.app:id/login;
+needs accessibility mode
+.IP \(bu 2
 \fB--model\fP=\fIvalue\fP - Vision model for --query only; omitted lets the
 server select
+.IP \(bu 2
+\fB--name\fP=\fIvalue\fP - Accessible name, e.g. "Log in"; needs
+accessibility mode
 .IP \(bu 2
 \fB--ocr-engine\fP=\fIvalue\fP - OCR engine for --query only: free or
 premium; omitted uses free
 .IP \(bu 2
 \fB--query\fP=\fIvalue\fP - Recommended natural-language target; vision
 finds it and taps its center
+.IP \(bu 2
+\fB--role\fP=\fIvalue\fP - Accessibility role, e.g. button or textbox; needs
+accessibility mode
+.IP \(bu 2
+\fB--strategy\fP=\fIvalue\fP - Resolver: auto, vision, or accessibility;
+omitted uses auto (the tree when on, else vision)
 
 .PP
 \fBParent options\fP
@@ -2967,6 +3200,142 @@ user@host ~ % axilio phone tap --session sess_123 --query "continue"
 Tapped "continue" at 540,1120
 .sp
 # Exit status: 0
+.EE
+
+.PP
+\fBSample 4\fP
+
+.EX
+user@host ~ % axilio phone tap --role button --name "Log in"
+Tapped button "Log in" at 540,1480
+.sp
+# Exit status: 0
+# Notes: Selected from the accessibility tree; needs accessibility mode
+#        on the session.
+.EE
+
+.PP
+\fBSample 5\fP
+
+.EX
+user@host ~ % axilio phone tap --id com.example.app:id/login
+Tapped #com.example.app:id/login at 540,1480
+.sp
+# Exit status: 0
+.EE
+
+.SS tree
+.EX
+axilio phone tree [flags]
+.EE
+
+.PP
+Print the accessibility tree of the selected phone, one window at a
+time, as an indented outline: each node's role, name, resource id,
+center, and node id.
+
+.PP
+The session must have accessibility mode on (\fBsessions start\fR turns it
+on by default where the phone supports it; see \fBphone accessibility
+status\fR); otherwise the phone answers that the strategy is unavailable
+and the command exits 2. Layout-only nodes are dropped unless --all is
+given. --window limits the tree to one window and --depth to that many
+levels below each window root. JSON returns the complete snapshot:
+nodes, windows, and capture time. The role, name, and resource id shown
+here are what \fBphone tap --role --name --id\fR match.
+
+.PP
+\fBCommand options\fP
+.IP \(bu 2
+\fB--all\fP - Include layout-only nodes the phone drops by default
+.IP \(bu 2
+\fB--depth\fP=\fInumber\fP - Levels below each window root; omitted prints
+the whole tree
+.IP \(bu 2
+\fB--window\fP=\fIvalue\fP - Only this window id, as the outline's window
+lines list it
+
+.PP
+\fBParent options\fP
+.IP \(bu 2
+\fB--session\fP=\fIvalue\fP - Session ID; overrides AXILIO_SESSION and
+automatic session selection
+
+.PP
+\fBGlobal-option behavior\fP
+.IP \(bu 2
+\fB--api-key\fP, \fB--base-url\fP, \fB--org\fP - No effect on phone tree
+command
+.IP \(bu 2
+\fB--no-color\fP - Disable ANSI color in the human-readable form of the
+accessibility tree
+.IP \(bu 2
+\fB-o\fP, \fB--output\fP=\fIvalue\fP - Render the accessibility tree as table
+or json (default "table")
+.IP \(bu 2
+\fB-q\fP, \fB--quiet\fP - Suppress stderr notes for tree snapshot; the
+accessibility tree remains on stdout
+
+.PP
+\fBExamples and expected output\fP
+
+.PP
+\fBSample 1\fP
+
+.EX
+user@host ~ % axilio phone tree
+window 12 [application]  com.example.app  focused
+  generic @540,1200 [n1]
+    textbox "Email" #com.example.app:id/email @540,900 [n4]
+    button "Log in" #com.example.app:id/login @540,1480 [n7]
+.sp
+# Standard error:
+3 nodes, 1 windows
+.sp
+# Exit status: 0
+# Notes: Layout-only nodes are dropped; --all keeps them.
+.EE
+
+.PP
+\fBSample 2\fP
+
+.EX
+user@host ~ % axilio phone tree --window 12 --depth 1 -o json
+{
+  "nodes": [
+    {
+      "node_id": "n1",
+      "ignored": false,
+      "role": {"type": "role", "value": "generic"},
+      "child_ids": ["n4", "n7"],
+      "bounds": {"x": 0, "y": 0, "width": 1080, "height": 2400},
+      "window_id": "12",
+      "actions": []
+    }
+  ],
+  "windows": [
+    {"window_id": "12", "type": "application", "app": "com.example.app", "focused": true, "bounds": {"x": 0, "y": 0, "width": 1080, "height": 2400}, "root_id": "n1"}
+  ],
+  "captured_at": "<timestamp>"
+}
+.sp
+# Exit status: 0
+# Notes: Shortened representative JSON; nodes also carry names,
+#        properties, and Android attributes.
+.EE
+
+.PP
+\fBSample 3\fP
+
+.EX
+user@host ~ % axilio phone tree
+.sp
+# Standard error:
+strategy_unavailable: accessibility tree is off for this session
+.sp
+# Exit status: 2
+# Notes: The session's accessibility tree is off; turn it on with `phone
+#        accessibility enable` where toggleable.
 .EE
 
 .SS type
@@ -3036,7 +3405,7 @@ Typed "don't split this text"
 
 .SS wait-for
 .EX
-axilio phone wait-for <text> [flags]
+axilio phone wait-for [text] [flags]
 .EE
 
 .PP
@@ -3047,9 +3416,12 @@ Wait until text appears on the phone, or until it disappears with
 The phone does the waiting, re-reading the screen only when it changes,
 so this is one call rather than a polling loop. The default match is a
 case-insensitive substring; --exact requires a case-sensitive exact
-match. The default timeout is 10 seconds (at most 60). A timeout returns
-the CLI timeout exit code (5). Waiting for presence returns how the text
-was resolved and where it is; waiting for absence is action-only.
+match. On a session with accessibility mode on, --role, --name, and --id
+wait for an element from the accessibility tree instead of (or as well
+as) text; every given selector must match. The default timeout is 10
+seconds (at most 60). A timeout returns the CLI timeout exit code (5).
+Waiting for presence returns how the target was resolved and where it
+is; waiting for absence is action-only.
 
 .PP
 \fBCommand options\fP
@@ -3057,7 +3429,19 @@ was resolved and where it is; waiting for absence is action-only.
 \fB--exact\fP - Require a case-sensitive exact match instead of
 substring
 .IP \(bu 2
-\fB--gone\fP - Wait for the text to disappear instead of appear
+\fB--gone\fP - Wait for the target to disappear instead of appear
+.IP \(bu 2
+\fB--id\fP=\fIvalue\fP - Android resource id, e.g. com.example.app:id/login;
+needs accessibility mode
+.IP \(bu 2
+\fB--name\fP=\fIvalue\fP - Accessible name, e.g. "Log in"; needs
+accessibility mode
+.IP \(bu 2
+\fB--role\fP=\fIvalue\fP - Accessibility role, e.g. button or textbox; needs
+accessibility mode
+.IP \(bu 2
+\fB--strategy\fP=\fIvalue\fP - Resolver: auto, vision, or accessibility;
+omitted uses auto (the tree when on, else vision)
 .IP \(bu 2
 \fB--timeout\fP=\fIduration\fP - Maximum OCR polling time, such as 500ms,
 10s, or 1m; exceeding it exits 5 (default 10s). Units: ns, us/µs, ms, s,
@@ -3126,6 +3510,18 @@ Took         12040ms
 
 .PP
 \fBSample 4\fP
+
+.EX
+user@host ~ % axilio phone wait-for --role progressbar --gone
+progressbar gone
+.sp
+# Exit status: 0
+# Notes: Waits on the accessibility tree; needs accessibility mode on
+#        the session.
+.EE
+
+.PP
+\fBSample 5\fP
 
 .EX
 user@host ~ % axilio phone wait-for "Results" --timeout 1s
@@ -4733,23 +5129,36 @@ axilio sessions start [flags]
 .EE
 
 .PP
-Acquire an Android phone.
+Acquire an Android phone. The CLI currently supports Android allocation
+only; --phone-type remains available for scripts that pass android
+explicitly, and any other value is a usage error. The session remains
+active in Axilio until stopped; the CLI saves its connection information
+locally and marks it as the most recently started session. Pin a
+dedicated phone discovered through \fBphones mine\fR with --phone-id, or
+attach the session to a workflow with --workflow.
 
 .PP
-The CLI currently supports Android allocation only; --phone-type remains
-available for scripts that pass android explicitly, and any other value
-is a usage error. The session remains active in Axilio until stopped;
-the CLI saves its connection information locally and marks it as the
-most recently started session. Pin a dedicated phone discovered through
-\fBphones mine\fR with --phone-id, or attach the session to a workflow with
---workflow. --export prints only \fBexport AXILIO_SESSION=\\<id\\>\fR for
-shell eval and cannot be combined with -o json.
+Accessibility mode, which lets phone commands select elements by --role,
+--name, and --id and \fBphone tree\fR read the screen's structure, is on by
+default whenever the claimed phone supports it. --accessibility requires
+it: only phones that support it are claimed, and a --phone-id that does
+not exits 6. --no-accessibility turns it off. While it is on, the
+accessibility service is visible to apps on the phone.
+
+.PP
+--export prints only \fBexport AXILIO_SESSION=\\<id\\>\fR for shell eval and
+cannot be combined with -o json.
 
 .PP
 \fBCommand options\fP
 .IP \(bu 2
+\fB--accessibility\fP - Require accessibility mode; omitted turns it on
+wherever the phone supports it
+.IP \(bu 2
 \fB--export\fP - Print only \fBexport AXILIO_SESSION=\\<id\\>\fR for shell
 eval
+.IP \(bu 2
+\fB--no-accessibility\fP - Turn accessibility mode off for this session
 .IP \(bu 2
 \fB--phone-id\fP=\fIvalue\fP - Pin a dedicated phone ID from \fBphones mine\fR
 instead of pool allocation
@@ -4789,11 +5198,12 @@ or json; --export emits shell text and rejects json (default "table")
 
 .EX
 user@host ~ % axilio sessions start
-Session      <session-id>
-Phone        <phone-id>
-Region       us-central
-Live view    <live-view-url>
-Control URL  <control-url>
+Session        <session-id>
+Phone          <phone-id>
+Region         us-central
+Accessibility  true
+Live view      <live-view-url>
+Control URL    <control-url>
 .sp
 # Standard error:
 Drive it:  axilio phone observe
@@ -4808,11 +5218,12 @@ Release it with:  axilio sessions stop <session-id>
 
 .EX
 user@host ~ % axilio sessions start --phone-id ph_123
-Session      <session-id>
-Phone        ph_123
-Region       us-central
-Live view    <live-view-url>
-Control URL  <control-url>
+Session        <session-id>
+Phone          ph_123
+Region         us-central
+Accessibility  true
+Live view      <live-view-url>
+Control URL    <control-url>
 .sp
 # Standard error:
 Drive it:  axilio phone observe
@@ -4826,12 +5237,49 @@ Release it with:  axilio sessions stop <session-id>
 \fBSample 3\fP
 
 .EX
-user@host ~ % axilio sessions start --workflow wf_123
-Session      <session-id>
-Phone        <phone-id>
-Region       us-central
-Live view    <live-view-url>
-Control URL  <control-url>
+user@host ~ % axilio sessions start --phone-id ph_123 --accessibility
+Session        <session-id>
+Phone          ph_123
+Region         us-central
+Accessibility  true
+Live view      <live-view-url>
+Control URL    <control-url>
+.sp
+# Standard error:
+Drive it:  axilio phone observe
+Pin it to this shell (for parallel work):  export AXILIO_SESSION=<session-id>
+Release it with:  axilio sessions stop <session-id>
+.sp
+# Exit status: 0
+# Notes: --accessibility requires accessibility mode; omitting it turns
+#        the mode on wherever the claimed phone supports it.
+.EE
+
+.PP
+\fBSample 4\fP
+
+.EX
+user@host ~ % axilio sessions start --phone-id ph_old --accessibility
+.sp
+# Standard error:
+phone ph_old does not support accessibility mode; drop --phone-id to claim any phone that does, or drop --accessibility
+.sp
+# Exit status: 6
+# Notes: A named phone without accessibility support is refused; nothing
+#        is allocated.
+.EE
+
+.PP
+\fBSample 5\fP
+
+.EX
+user@host ~ % axilio sessions start --no-accessibility
+Session        <session-id>
+Phone          <phone-id>
+Region         us-central
+Accessibility  false
+Live view      <live-view-url>
+Control URL    <control-url>
 .sp
 # Standard error:
 Drive it:  axilio phone observe
@@ -4842,7 +5290,27 @@ Release it with:  axilio sessions stop <session-id>
 .EE
 
 .PP
-\fBSample 4\fP
+\fBSample 6\fP
+
+.EX
+user@host ~ % axilio sessions start --workflow wf_123
+Session        <session-id>
+Phone          <phone-id>
+Region         us-central
+Accessibility  true
+Live view      <live-view-url>
+Control URL    <control-url>
+.sp
+# Standard error:
+Drive it:  axilio phone observe
+Pin it to this shell (for parallel work):  export AXILIO_SESSION=<session-id>
+Release it with:  axilio sessions stop <session-id>
+.sp
+# Exit status: 0
+.EE
+
+.PP
+\fBSample 7\fP
 
 .EX
 user@host ~ % axilio sessions start --export
@@ -4854,7 +5322,7 @@ export AXILIO_SESSION=<session-id>
 .EE
 
 .PP
-\fBSample 5\fP
+\fBSample 8\fP
 
 .EX
 user@host ~ % eval "$(axilio sessions start --export)"
@@ -5578,11 +6046,16 @@ The name must contain only letters, digits, hyphens, and underscores,
 and be unique within the org. Pass --code with a Python file to save the
 workflow's first code revision atomically with it; omit it to create an
 empty workflow and \fBworkflows push\fR code later. Recording, telemetry,
-and capture default to on server-side; each toggle flag is sent only
-when set explicitly, so omitted toggles keep the server defaults.
+capture, and accessibility mode default to on server-side; each toggle
+flag is sent only when set explicitly, so omitted toggles keep the
+server defaults. Accessibility mode is on for a run only when the
+claimed phone supports it, so it never fails a run.
 
 .PP
 \fBCommand options\fP
+.IP \(bu 2
+\fB--accessibility\fP - Accessibility mode for runs where the phone
+supports it; --accessibility=false turns it off (default "true")
 .IP \(bu 2
 \fB--capture\fP - Capture media produced on the phone into the org
 library; --capture=false disables it (default "true")
@@ -5739,7 +6212,8 @@ axilio workflows get <workflow-id>
 
 .PP
 Show a single workflow: name, platform, status, OCR engine, the
-recording/telemetry/capture toggles, timestamps, and run statistics.
+recording/telemetry/capture/accessibility toggles, timestamps, and run
+statistics.
 
 .PP
 Use \fBworkflows list\fR to discover the workflow ID, \fBworkflows pull\fR for
@@ -6138,8 +6612,8 @@ permission denied (HTTP 401 or 403).
 
 .PP
 \fB4 (not-found)\fP : A requested resource or phone allocation was not
-found (HTTP 404). An on-screen target that never appears is a timeout
-(5).
+found (HTTP 404), or an accessibility node id is no longer on screen. An
+on-screen target that never appears is a timeout (5).
 
 .PP
 \fB5 (timeout)\fP : The operation exceeded its timeout or deadline (HTTP
@@ -6147,8 +6621,10 @@ found (HTTP 404). An on-screen target that never appears is a timeout
 
 .PP
 \fB6 (unavailable)\fP : The Axilio service or phone connection was
-unavailable, the phone was offline, the request was rate-limited, or the
-server failed (HTTP 429 or 5xx).
+unavailable, the phone was offline, the requested phone does not support
+accessibility mode, the accessibility tree was covered by a system
+dialog, the request was rate-limited, or the server failed (HTTP 429 or
+5xx).
 
 .PP
 \fB7 (canceled)\fP : The operation was canceled by the user, shell, or

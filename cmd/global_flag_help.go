@@ -81,8 +81,12 @@ func commandGlobalNoEffectHelp(command *cobra.Command) string {
 }
 
 func commandOwnedFlagUsage(command *cobra.Command, name string) (string, bool) {
-	if commandHelpKey(command) == "phone" && name == "session" {
-		return "No effect on phone command; bare axilio phone only displays this help", true
+	if name != "session" {
+		return "", false
+	}
+	switch key := commandHelpKey(command); key {
+	case "phone", "phone accessibility":
+		return fmt.Sprintf("No effect on %s command; bare axilio %s only displays this help", key, key), true
 	}
 	return "", false
 }
@@ -257,15 +261,16 @@ func buildGlobalFlagHelp() map[string]commandGlobalFlagHelp {
 			output:  "Emit human init messages or JSON written and skipped path lists",
 			quiet:   "Suppress init acknowledgments, notes, and prompts; warnings remain; --agent may be required; JSON still prints",
 		},
-		"sessions":  helpOnlyCommandHelp("sessions"),
-		"phones":    helpOnlyCommandHelp("phones"),
-		"phone":     helpOnlyCommandHelp("phone"),
-		"workflows": helpOnlyCommandHelp("workflows"),
-		"runs":      helpOnlyCommandHelp("runs"),
-		"usage":     helpOnlyCommandHelp("usage"),
-		"api-keys":  helpOnlyCommandHelp("api-keys"),
-		"files":     helpOnlyCommandHelp("files"),
-		"billing":   helpOnlyCommandHelp("billing"),
+		"sessions":            helpOnlyCommandHelp("sessions"),
+		"phones":              helpOnlyCommandHelp("phones"),
+		"phone":               helpOnlyCommandHelp("phone"),
+		"phone accessibility": helpOnlyCommandHelp("phone accessibility"),
+		"workflows":           helpOnlyCommandHelp("workflows"),
+		"runs":                helpOnlyCommandHelp("runs"),
+		"usage":               helpOnlyCommandHelp("usage"),
+		"api-keys":            helpOnlyCommandHelp("api-keys"),
+		"files":               helpOnlyCommandHelp("files"),
+		"billing":             helpOnlyCommandHelp("billing"),
 		"help": {
 			apiKey:          "No effect on help command or the help content it renders",
 			baseURL:         "No effect on help command or the help content it renders",
@@ -321,6 +326,10 @@ func buildGlobalFlagHelp() map[string]commandGlobalFlagHelp {
 	help["phone wait-for"] = withOutput(help["phone wait-for"],
 		"Render a present match or --gone result as table or json",
 		"Suppress human wait notes; table or JSON results remain on stdout")
+	help["phone tree"] = phoneResultHelp("phone tree", "tree snapshot", "the accessibility tree")
+	help["phone accessibility status"] = phoneResultHelp("phone accessibility status", "accessibility status", "the accessibility state")
+	help["phone accessibility enable"] = localActionHelp("phone accessibility enable", "accessibility enable", "accessibility enable")
+	help["phone accessibility disable"] = localActionHelp("phone accessibility disable", "accessibility disable", "accessibility disable")
 	help["phone send"] = apiResultHelp("the upload-and-delivery request", "the delivery result")
 	help["phone send"] = withQuiet(help["phone send"],
 		"Suppress upload progress and delivery notes; the delivery result remains on stdout")
