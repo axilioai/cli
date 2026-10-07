@@ -1,3 +1,7 @@
 # man/axilio.1 is generated from cmd/command_docs.go and the manpage
 # generator; review those sources and let diffs collapse the artifact.
 man/axilio.1 linguist-generated=true
+
+# Check out text files with LF on every platform, including Windows, so
+# golden files and generated manuals compare byte-for-byte.
+* text=auto eol=lf

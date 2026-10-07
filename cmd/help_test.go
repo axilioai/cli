@@ -23,7 +23,7 @@ const (
 	// merged `files list` filter set nets out a few flags. AXI-1802 added
 	// `sessions recording` (--out, --wait, --timeout, --force).
 	applicationCommandCount = 75
-	applicationFlagCount    = 127
+	applicationFlagCount    = 128
 )
 
 func TestApplicationHelpMetadata(t *testing.T) {

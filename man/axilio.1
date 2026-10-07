@@ -1,5 +1,5 @@
 .nh
-.TH "AXILIO" "1" "2026-08-03" "axilio 0.11.0" "Axilio CLI Manual"
+.TH "AXILIO" "1" "2026-08-03" "axilio 0.12.0" "Axilio CLI Manual"
 
 .SH NAME
 axilio \- Acquire and drive Axilio phones from the command line
@@ -4742,20 +4742,29 @@ is a usage error. The session remains active in Axilio until stopped;
 the CLI saves its connection information locally and marks it as the
 most recently started session. Pin a dedicated phone discovered through
 \fBphones mine\fR with --phone-id, or attach the session to a workflow with
---workflow. --export prints only \fBexport AXILIO_SESSION=\\<id\\>\fR for
-shell eval and cannot be combined with -o json.
+--workflow. --export prints only the AXILIO_SESSION assignment for the
+shell to evaluate and cannot be combined with -o json. --shell picks its
+syntax: posix prints \fBexport AXILIO_SESSION=\\<id\\>\fR (eval "$(axilio
+sessions start --export)"), powershell prints \fB$env:AXILIO_SESSION =
+"\\<id\\>"\fR (axilio sessions start --export | Invoke-Expression), and cmd
+prints \fBset AXILIO_SESSION=\\<id\\>\fR\&. The default is posix, except on
+Windows where it is powershell unless SHELL is set (Git Bash, MSYS2).
 
 .PP
 \fBCommand options\fP
 .IP \(bu 2
-\fB--export\fP - Print only \fBexport AXILIO_SESSION=\\<id\\>\fR for shell
-eval
+\fB--export\fP - Print only the AXILIO_SESSION assignment for the shell
+to evaluate
 .IP \(bu 2
 \fB--phone-id\fP=\fIvalue\fP - Pin a dedicated phone ID from \fBphones mine\fR
 instead of pool allocation
 .IP \(bu 2
 \fB--phone-type\fP=\fIvalue\fP - Phone platform to allocate (currently only
 android) (default "android")
+.IP \(bu 2
+\fB--shell\fP=\fIvalue\fP - Assignment syntax for --export and the pin hint:
+posix, powershell, or cmd (default posix; powershell on Windows unless
+SHELL is set, as Git Bash and MSYS2 do)
 .IP \(bu 2
 \fB--workflow\fP=\fIvalue\fP - Workflow ID to attach; omit for an
 interactive session
@@ -4862,6 +4871,30 @@ user@host ~ % eval "$(axilio sessions start --export)"
 # Exit status: 0
 # Notes: The shell consumes the nested command's export line and sets
 #        AXILIO_SESSION in the current shell.
+.EE
+
+.PP
+\fBSample 6\fP
+
+.EX
+user@host ~ % axilio sessions start --export --shell powershell
+$env:AXILIO_SESSION = "<session-id>"
+.sp
+# Exit status: 0
+# Notes: On Windows this is the default syntax unless SHELL is set, as
+#        it is in Git Bash and MSYS2. --shell cmd prints `set
+#        AXILIO_SESSION=<session-id>`.
+.EE
+
+.PP
+\fBSample 7\fP
+
+.EX
+user@host ~ % axilio sessions start --export | Invoke-Expression
+.sp
+# Exit status: 0
+# Notes: PowerShell evaluates the assignment and sets AXILIO_SESSION in
+#        the current session.
 .EE
 
 .SS stop
@@ -6101,6 +6134,7 @@ OAuth. It does not change the API host.
 .PP
 \fBXDG_CONFIG_HOME\fP : Moves config, OAuth fallback, locally saved
 session, and update-check state from $HOME/.config to $XDG_CONFIG_HOME.
+On Windows, $HOME is %USERPROFILE%.
 
 .PP
 \fBNO_COLOR\fP : Set to 1 to disable ANSI color in help shown on a
@@ -6162,7 +6196,8 @@ umask may make it more restrictive. Overwriting preserves its mode.
 
 .PP
 \fBOS keychain: service axilio-cli, account oauth-tokens\fP : Preferred
-storage for browser-OAuth access and refresh tokens.
+storage for browser-OAuth access and refresh tokens: the macOS Keychain,
+Windows Credential Manager, or the Linux Secret Service.
 
 .PP
 \fB${XDG_CONFIG_HOME:-$HOME/.config}/axilio/oauth.json\fP : OAuth-token
@@ -6262,6 +6297,15 @@ Start independent sessions in separate shells:
 
 .EX
 eval "$(axilio sessions start --export)"
+axilio phone screenshot --out screenshot.png
+.EE
+
+.PP
+The same in PowerShell, where --export prints a $env: assignment by
+default on Windows:
+
+.EX
+axilio sessions start --export | Invoke-Expression
 axilio phone screenshot --out screenshot.png
 .EE
 

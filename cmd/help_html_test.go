@@ -5,6 +5,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -12,6 +13,9 @@ import (
 )
 
 func TestHelpHTMLPrintsInstalledManualFileURL(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("stubs man(1) with a POSIX shell script; Windows has no man")
+	}
 	temp := t.TempDir()
 	stagedManualDirectory := filepath.Join(temp, "Caskroom", "manual files")
 	linkedManualDirectory := filepath.Join(temp, "share", "man", "man1")
@@ -79,5 +83,27 @@ func TestHelpHTMLRejectsCommandName(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "cannot be combined") {
 		t.Fatalf("help phone --html error = %q", err)
+	}
+}
+
+// install.ps1 puts the HTML manual in a man directory next to axilio.exe, the
+// first candidate for an executable outside a bin/share prefix lookup.
+func TestHTMLManualCandidatesIncludeExecutableManDirectory(t *testing.T) {
+	directory := filepath.Join(t.TempDir(), "Programs", "axilio", "bin")
+	candidates := appendExecutableManualCandidates(nil, filepath.Join(directory, "axilio.exe"))
+	want := filepath.Join(directory, "man", htmlManualName)
+	if len(candidates) == 0 || candidates[0] != want {
+		t.Fatalf("candidates = %q, want %q first", candidates, want)
+	}
+}
+
+func TestHTMLManualFileURLOnWindows(t *testing.T) {
+	if runtime.GOOS != "windows" {
+		t.Skip("drive-letter paths only parse on Windows")
+	}
+	got := htmlManualFileURL(`C:\Users\Ada Lovelace\AppData\Local\Programs\axilio\bin\man\axilio.1.html`)
+	want := "file:///C:/Users/Ada%20Lovelace/AppData/Local/Programs/axilio/bin/man/axilio.1.html"
+	if got != want {
+		t.Fatalf("htmlManualFileURL = %q, want %q", got, want)
 	}
 }

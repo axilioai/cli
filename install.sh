@@ -82,6 +82,7 @@ arm64 | aarch64) arch=arm64 ;;
 esac
 case "$os" in
 darwin | linux) ;;
+mingw* | msys* | cygwin*) err "on Windows, install from PowerShell: irm https://axilio.ai/install.ps1 | iex" ;;
 *) err "unsupported OS: $os (try Homebrew or: go install $REPO/cmd/$BIN@latest)" ;;
 esac
 
