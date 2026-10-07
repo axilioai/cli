@@ -142,10 +142,14 @@
         $dir = $env:INSTALL_DIR
         if (-not $dir) { $dir = Join-Path $env:LOCALAPPDATA "Programs\$Bin\bin" }
         $dir = Get-FullDir $dir
-        try {
-            New-Item -ItemType Directory -Force -Path $dir | Out-Null
-        } catch {
-            Fail "cannot create $dir; set INSTALL_DIR to a writable path"
+        # Only create a missing directory: Windows PowerShell 5.1's
+        # `New-Item -Force` throws on an existing drive root such as `D:\`.
+        if (-not (Test-Path -LiteralPath $dir -PathType Container)) {
+            try {
+                New-Item -ItemType Directory -Path $dir | Out-Null
+            } catch {
+                Fail "cannot create $dir; set INSTALL_DIR to a writable path"
+            }
         }
         $exeTarget = Join-Path $dir "$Bin.exe"
         # Windows cannot overwrite a running executable but can rename one, so
