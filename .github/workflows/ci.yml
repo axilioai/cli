@@ -118,9 +118,47 @@ jobs:
           $userPath = (Get-Item 'HKCU:\Environment').GetValue('Path', '', 'DoNotExpandEnvironmentNames')
           $entries = @(($userPath -split ';') | Where-Object { $_ -eq $env:INSTALL_DIR })
           if ($entries.Count -ne 1) { throw "expected one PATH entry, found $($entries.Count): $userPath" }
-          if (Test-Path (Join-Path $env:INSTALL_DIR '.axilio.exe.old')) { throw 'the replaced binary was left behind' }
+          if (Get-ChildItem -LiteralPath $env:INSTALL_DIR -Filter '.axilio.exe*.old' -Force) { throw 'the replaced binary was left behind' }
           axilio --version
           if ($LASTEXITCODE -ne 0) { throw "axilio on PATH exited $LASTEXITCODE" }
+      - name: reinstall while an older displaced binary is still running
+        run: |
+          # A displaced binary that is still running can be neither deleted nor
+          # replaced. A stand-in held open without delete sharing behaves the same.
+          $stale = Join-Path $env:INSTALL_DIR '.axilio.exe.old'
+          Set-Content -LiteralPath $stale -Value 'still running'
+          $lock = [IO.File]::Open($stale, 'Open', 'Read', 'Read')
+          try {
+            Get-Content -Raw .\install.ps1 | Invoke-Expression
+          } finally {
+            $lock.Dispose()
+          }
+          & (Join-Path $env:INSTALL_DIR 'axilio.exe') --version
+          if ($LASTEXITCODE -ne 0) { throw "axilio --version exited $LASTEXITCODE" }
+      - name: relative and drive-root INSTALL_DIR, and a session-only PATH entry
+        run: |
+          $script = Get-Content -Raw (Join-Path $env:GITHUB_WORKSPACE 'install.ps1')
+          Set-Location $env:RUNNER_TEMP
+          $userPath = { (Get-Item 'HKCU:\Environment').GetValue('Path', '', 'DoNotExpandEnvironmentNames') -split ';' }
+
+          # A relative directory resolves against the current location, and
+          # the saved PATH entry is absolute. The directory is already on this
+          # process's PATH, which must not stop it being saved for new terminals.
+          $relative = Join-Path $env:RUNNER_TEMP 'rel-axilio'
+          $env:Path = "$relative;$env:Path"
+          $env:INSTALL_DIR = '.\rel-axilio'
+          $script | Invoke-Expression
+          if (-not (Test-Path (Join-Path $relative 'axilio.exe'))) { throw 'relative INSTALL_DIR did not resolve against the current location' }
+          if ((& $userPath) -notcontains $relative) { throw "expected $relative on the user PATH" }
+
+          # A drive root stays a root: `D:` alone would mean the current
+          # directory on D.
+          $root = [IO.Path]::GetPathRoot($env:RUNNER_TEMP)
+          $env:INSTALL_DIR = $root
+          $script | Invoke-Expression
+          if (-not (Test-Path (Join-Path $root 'axilio.exe'))) { throw "drive-root INSTALL_DIR did not install to $root" }
+          if (Test-Path (Join-Path $env:RUNNER_TEMP 'axilio.exe')) { throw 'drive-root INSTALL_DIR installed into the current directory' }
+          if ((& $userPath) -notcontains $root) { throw "expected $root on the user PATH" }
 
   # Prove every release target builds before goreleaser ever runs, so a tag
   # never fails on a platform we don't build locally.
