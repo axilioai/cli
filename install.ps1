@@ -3,14 +3,16 @@
 #   irm https://axilio.ai/install.ps1 | iex
 #
 # Downloads the latest release for your architecture, verifies its checksum,
-# installs axilio.exe, and adds the install directory to your user PATH when it
-# is not already on PATH. The HTML manual is installed next to the binary,
-# where `axilio help --html` finds it. Works in Windows PowerShell 5.1 and
-# PowerShell 7+, and needs no administrator rights. Environment overrides:
+# installs axilio.exe, and adds the install directory to your user PATH when
+# neither your user nor the system PATH has it. The HTML manual is installed
+# next to the binary, where `axilio help --html` finds it. Works in Windows
+# PowerShell 5.1 and PowerShell 7+, and needs no administrator rights.
+# Environment overrides:
 #
 #   VERSION       release tag to install (default: latest, e.g. $env:VERSION = "v0.12.0")
 #   INSTALL_DIR   target directory (default: %LOCALAPPDATA%\Programs\axilio\bin).
-#                 A directory already on PATH leaves PATH untouched.
+#                 A relative path resolves against the current directory. A
+#                 directory already on the user or system PATH leaves it untouched.
 
 # `iex` runs a script in the caller's scope. The script block keeps this
 # script's preferences, variables, and functions out of the user's session.
@@ -43,11 +45,21 @@
         }
     }
 
+    # Get-FullDir resolves a path against PowerShell's current location and
+    # drops trailing separators, except on a root: `C:` alone means "the
+    # current directory on drive C", not `C:\`.
+    function Get-FullDir([string]$Path) {
+        $full = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($Path)
+        if ($full -ne [IO.Path]::GetPathRoot($full)) { $full = $full.TrimEnd('\', '/') }
+        return $full
+    }
+
     function Test-PathEntry([string]$PathList, [string]$Dir) {
         foreach ($entry in ($PathList -split ';')) {
-            if ($entry -and ([Environment]::ExpandEnvironmentVariables($entry).TrimEnd('\') -ieq $Dir)) {
-                return $true
-            }
+            if (-not $entry) { continue }
+            $expanded = [Environment]::ExpandEnvironmentVariables($entry)
+            try { $expanded = Get-FullDir $expanded } catch { $expanded = $expanded.TrimEnd('\') }
+            if ($expanded -ieq $Dir) { return $true }
         }
         return $false
     }
@@ -129,19 +141,26 @@
         # --- install --------------------------------------------------------
         $dir = $env:INSTALL_DIR
         if (-not $dir) { $dir = Join-Path $env:LOCALAPPDATA "Programs\$Bin\bin" }
-        $dir = $dir.TrimEnd('\', '/')
-        try {
-            New-Item -ItemType Directory -Force -Path $dir | Out-Null
-        } catch {
-            Fail "cannot create $dir; set INSTALL_DIR to a writable path"
+        $dir = Get-FullDir $dir
+        # Only create a missing directory: Windows PowerShell 5.1's
+        # `New-Item -Force` throws on an existing drive root such as `D:\`.
+        if (-not (Test-Path -LiteralPath $dir -PathType Container)) {
+            try {
+                New-Item -ItemType Directory -Path $dir | Out-Null
+            } catch {
+                Fail "cannot create $dir; set INSTALL_DIR to a writable path"
+            }
         }
         $exeTarget = Join-Path $dir "$Bin.exe"
         # Windows cannot overwrite a running executable but can rename one, so
         # an existing axilio.exe is moved aside first (this also lets a running
-        # `axilio runs watch` keep going). The same name `axilio upgrade` uses
-        # for its leftover; it is removed once nothing is running it.
-        $old = Join-Path $dir ".$Bin.exe.old"
-        Remove-Item -LiteralPath $old -Force -ErrorAction SilentlyContinue
+        # `axilio runs watch` keep going). A renamed binary that is still
+        # running cannot be deleted, so each install moves it to a fresh name
+        # and sweeps the leftovers it can, including the `.axilio.exe.old`
+        # that `axilio upgrade` leaves behind.
+        Get-ChildItem -LiteralPath $dir -Filter ".$Bin.exe*.old" -Force -ErrorAction SilentlyContinue |
+            ForEach-Object { Remove-Item -LiteralPath $_.FullName -Force -ErrorAction SilentlyContinue }
+        $old = Join-Path $dir (".$Bin.exe." + [Guid]::NewGuid().ToString('N') + '.old')
         if (Test-Path -LiteralPath $exeTarget) {
             try {
                 Move-Item -LiteralPath $exeTarget -Destination $old -Force
@@ -174,12 +193,14 @@
         }
 
         # --- PATH -------------------------------------------------------------
-        if (-not (Test-PathEntry $env:Path $dir)) {
+        # Persist based on the saved user and system PATH, not this process's
+        # PATH, which a launcher may have extended for this session only.
+        if (-not (Test-PathEntry ([Environment]::GetEnvironmentVariable('Path', 'Machine')) $dir)) {
             if (Add-UserPath $dir) {
                 Write-Host "Added $dir to your user PATH. New terminals pick it up."
             }
-            $env:Path = "$env:Path;$dir"
         }
+        if (-not (Test-PathEntry $env:Path $dir)) { $env:Path = "$env:Path;$dir" }
 
         Write-Host 'For PowerShell tab completion, add this line to your $PROFILE:'
         Write-Host '  axilio completion powershell | Out-String | Invoke-Expression'
