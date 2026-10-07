@@ -87,10 +87,12 @@ jobs:
       run:
         shell: ${{ matrix.shell }}
     env:
-      INSTALL_DIR: ${{ runner.temp }}\axilio-${{ matrix.shell }}\bin
       VERSION: ${{ matrix.version }}
     steps:
       - uses: actions/checkout@v4
+      # The runner context is not available in job-level env.
+      - name: choose an install directory
+        run: Add-Content -Path $env:GITHUB_ENV -Value "INSTALL_DIR=$env:RUNNER_TEMP\axilio\bin"
       - name: PSScriptAnalyzer
         if: matrix.shell == 'pwsh'
         run: |
