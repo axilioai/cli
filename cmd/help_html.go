@@ -100,7 +100,7 @@ func installedHTMLManualPath() (string, error) {
 		}
 	}
 
-	return "", fmt.Errorf("local HTML manual not found; reinstall with Homebrew or install.sh, or open man/%s from a release archive", htmlManualName)
+	return "", fmt.Errorf("local HTML manual not found; reinstall with Homebrew, install.sh, or install.ps1, or open man/%s from a release archive", htmlManualName)
 }
 
 func appendManualSibling(candidates []string, roff string) []string {

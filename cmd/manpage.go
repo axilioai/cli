@@ -152,6 +152,8 @@ func generateManpageMarkdown(root *cobra.Command, version string) (string, error
 	writeLiteral(&b, "axilio sessions start --phone-type android\naxilio phone observe\naxilio phone tap --query \"the search box\"\naxilio phone type \"coffee shops\"\naxilio phone observe")
 	writeWrapped(&b, "Start independent sessions in separate shells:")
 	writeLiteral(&b, "eval \"$(axilio sessions start --export)\"\naxilio phone screenshot --out screenshot.png")
+	writeWrapped(&b, "The same in PowerShell, where --export prints a $env: assignment by default on Windows:")
+	writeLiteral(&b, "axilio sessions start --export | Invoke-Expression\naxilio phone screenshot --out screenshot.png")
 	writeWrapped(&b, "Run a workflow and request machine-readable output:")
 	writeLiteral(&b, "axilio workflows list -o json\naxilio runs start <workflow-id> --count 2 -o json")
 
@@ -467,7 +469,7 @@ func writeEnvironment(b *strings.Builder) {
 		{"AXILIO_ORG", "OAuth organization slug or ID. Precedence: --org, AXILIO_ORG, saved active organization, then the OAuth session default. API keys remain scoped to the organization that created them."},
 		{"AXILIO_SESSION", "Selects a locally saved phone session. Precedence: --session, AXILIO_SESSION, the only locally saved session, the most recently started session, then an ambiguity error."},
 		{"AXILIO_DASHBOARD_URL", "Overrides the dashboard host used for browser OAuth. It does not change the API host."},
-		{"XDG_CONFIG_HOME", "Moves config, OAuth fallback, locally saved session, and update-check state from $HOME/.config to $XDG_CONFIG_HOME."},
+		{"XDG_CONFIG_HOME", "Moves config, OAuth fallback, locally saved session, and update-check state from $HOME/.config to $XDG_CONFIG_HOME. On Windows, $HOME is %USERPROFILE%."},
 		{"NO_COLOR", "Set to 1 to disable ANSI color in help shown on a terminal; text decoration may remain. When help is redirected, CLICOLOR_FORCE=1 takes precedence and can restore ANSI color."},
 		{"CLICOLOR", "Set to 1 to request ANSI color in help when output is a terminal and TERM is not dumb."},
 		{"CLICOLOR_FORCE", "Set to 1 to force ANSI color when help is redirected or TERM=dumb. For redirected help, it takes precedence over NO_COLOR."},
@@ -488,7 +490,7 @@ func writeExitStatuses(b *strings.Builder) {
 func writeFiles(b *strings.Builder) {
 	entries := [][2]string{
 		{"${XDG_CONFIG_HOME:-$HOME/.config}/axilio/config.json", "Saved API key, API host, and active organization. A new file requests mode 0600; umask may make it more restrictive. Overwriting preserves its mode."},
-		{"OS keychain: service axilio-cli, account oauth-tokens", "Preferred storage for browser-OAuth access and refresh tokens."},
+		{"OS keychain: service axilio-cli, account oauth-tokens", "Preferred storage for browser-OAuth access and refresh tokens: the macOS Keychain, Windows Credential Manager, or the Linux Secret Service."},
 		{"${XDG_CONFIG_HOME:-$HOME/.config}/axilio/oauth.json", "OAuth-token fallback when the OS keychain is unavailable. A new file requests mode 0600; umask may make it more restrictive. Overwriting preserves its mode."},
 		{"${XDG_CONFIG_HOME:-$HOME/.config}/axilio/sessions/<session-id>.json", "One mode-0600 locally saved session record containing the session ID, phone ID, type, control URL, and creation time. These local records let phone commands reconnect; deleting one does not stop the corresponding Axilio session."},
 		{"${XDG_CONFIG_HOME:-$HOME/.config}/axilio/current-session", "Stores the ID of the most recently started locally saved session. A new file requests mode 0600; umask may make it more restrictive. Overwriting preserves its mode."},

@@ -344,6 +344,8 @@ var commandDocumentationByKey = map[string]CommandDocumentation{
 		sample("axilio sessions start --workflow wf_123", "Session      <session-id>\nPhone        <phone-id>\nRegion       us-central\nLive view    <live-view-url>\nControl URL  <control-url>", "Drive it:  axilio phone observe\nPin it to this shell (for parallel work):  export AXILIO_SESSION=<session-id>\nRelease it with:  axilio sessions stop <session-id>"),
 		sampleWithNote("axilio sessions start --export", "export AXILIO_SESSION=<session-id>", "none", "--export is exact shell text; combining it with -o json is a usage error before allocation."),
 		sampleWithNote(`eval "$(axilio sessions start --export)"`, "none", "none", "The shell consumes the nested command's export line and sets AXILIO_SESSION in the current shell."),
+		sampleWithNote("axilio sessions start --export --shell powershell", `$env:AXILIO_SESSION = "<session-id>"`, "none", "On Windows this is the default syntax unless SHELL is set, as it is in Git Bash and MSYS2. --shell cmd prints `set AXILIO_SESSION=<session-id>`."),
+		sampleWithNote("axilio sessions start --export | Invoke-Expression", "none", "none", "PowerShell evaluates the assignment and sets AXILIO_SESSION in the current session."),
 	}},
 	"sessions stop": {Samples: []CommandSample{
 		sampleWithNote("axilio sessions stop sess_123", "Released <phone-id>.", "Release <phone-id>? [y/N]", "Without --yes, table mode prompts only when stdin is a terminal. Redirected, JSON, and quiet execution require --yes."),

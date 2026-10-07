@@ -53,6 +53,75 @@ jobs:
           AXILIO_BASE_URL: https://staging-api.axilio.ai
         run: go test -race ./...
 
+  # The quality job runs on Linux. Windows differs in paths, file modes,
+  # executable lookup and shells, so run the whole suite there too. -race needs
+  # cgo, so it stays on the Linux job.
+  test-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: test
+        # Same TEMPORARY staging override as the quality job.
+        env:
+          AXILIO_BASE_URL: https://staging-api.axilio.ai
+        run: go test ./...
+
+  # Run install.ps1 for real, the way users do (`irm ... | iex`), against a
+  # published release in both Windows PowerShell 5.1 and PowerShell 7. One leg
+  # pins VERSION without the leading v; the other resolves the latest release.
+  install-ps1:
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - shell: powershell
+            version: "0.11.0"
+          - shell: pwsh
+            version: ""
+    defaults:
+      run:
+        shell: ${{ matrix.shell }}
+    env:
+      VERSION: ${{ matrix.version }}
+    steps:
+      - uses: actions/checkout@v4
+      # The runner context is not available in job-level env.
+      - name: choose an install directory
+        run: Add-Content -Path $env:GITHUB_ENV -Value "INSTALL_DIR=$env:RUNNER_TEMP\axilio\bin"
+      - name: PSScriptAnalyzer
+        if: matrix.shell == 'pwsh'
+        run: |
+          Install-Module PSScriptAnalyzer -RequiredVersion 1.23.0 -Scope CurrentUser -Force
+          # Write-Host is deliberate: installer progress is for the console,
+          # not the pipeline.
+          $findings = Invoke-ScriptAnalyzer -Path install.ps1 -Severity Warning, Error -ExcludeRule PSAvoidUsingWriteHost
+          if ($findings) { $findings | Format-Table -AutoSize | Out-String -Width 200; exit 1 }
+      - name: install through iex
+        run: |
+          Get-Content -Raw .\install.ps1 | Invoke-Expression
+          $exe = Join-Path $env:INSTALL_DIR 'axilio.exe'
+          & $exe --version
+          if ($LASTEXITCODE -ne 0) { throw "axilio --version exited $LASTEXITCODE" }
+          if ($env:VERSION -and -not ((& $exe --version) -match [regex]::Escape($env:VERSION))) { throw 'installed the wrong version' }
+          if (-not (Test-Path (Join-Path $env:INSTALL_DIR 'man\axilio.1.html'))) { throw 'HTML manual missing' }
+          if (Get-Command Fail -ErrorAction SilentlyContinue) { throw 'install.ps1 leaked its functions into the caller scope' }
+          $userPath = (Get-Item 'HKCU:\Environment').GetValue('Path', '', 'DoNotExpandEnvironmentNames')
+          if (($userPath -split ';') -notcontains $env:INSTALL_DIR) { throw "install dir is not on the user PATH: $userPath" }
+      - name: reinstall over an existing install
+        run: |
+          Get-Content -Raw .\install.ps1 | Invoke-Expression
+          $userPath = (Get-Item 'HKCU:\Environment').GetValue('Path', '', 'DoNotExpandEnvironmentNames')
+          $entries = @(($userPath -split ';') | Where-Object { $_ -eq $env:INSTALL_DIR })
+          if ($entries.Count -ne 1) { throw "expected one PATH entry, found $($entries.Count): $userPath" }
+          if (Test-Path (Join-Path $env:INSTALL_DIR '.axilio.exe.old')) { throw 'the replaced binary was left behind' }
+          axilio --version
+          if ($LASTEXITCODE -ne 0) { throw "axilio on PATH exited $LASTEXITCODE" }
+
   # Prove every release target builds before goreleaser ever runs, so a tag
   # never fails on a platform we don't build locally.
   cross-compile:

@@ -58,6 +58,24 @@ derives `<prefix>/share/man/man1` only when `INSTALL_DIR` ends in `/bin` or
 produces a warning but does not undo a successful binary install. The script is
 [auditable on GitHub](https://github.com/axilioai/cli/blob/main/install.sh).
 
+### PowerShell (Windows)
+
+```powershell
+irm https://axilio.ai/install.ps1 | iex
+
+# Optional: pin a release or choose the destination.
+$env:VERSION = "v0.12.0"; $env:INSTALL_DIR = "$env:USERPROFILE\bin"; irm https://axilio.ai/install.ps1 | iex
+```
+
+The script works in Windows PowerShell 5.1 and PowerShell 7, and needs no
+administrator rights. It installs the latest release for your architecture
+(amd64 or arm64) to `%LOCALAPPDATA%\Programs\axilio\bin`, verifies the archive
+against the release `checksums.txt`, and adds the directory to your user `PATH`
+when it is not already there. Open a new terminal afterwards. The HTML manual
+goes to `man\axilio.1.html` next to `axilio.exe`, where `axilio help --html`
+finds it. The script is
+[auditable on GitHub](https://github.com/axilioai/cli/blob/main/install.ps1).
+
 ### go install
 
 ```bash
@@ -70,8 +88,9 @@ on your `PATH`. `go install` does not register the manual page.
 For Homebrew, run `brew upgrade axilio` (`axilio upgrade` prints that guidance,
 while `axilio upgrade --check` still checks GitHub for a newer release).
 For curl installs, rerun the curl installer to update both the executable and
-manual; the standalone `axilio upgrade` replaces only the executable. For
-`go install`, rerun the `go install` command.
+manual; the standalone `axilio upgrade` replaces only the executable. The same
+holds for the PowerShell installer on Windows. For `go install`, rerun the
+`go install` command.
 
 ## Offline manual
 
@@ -87,12 +106,14 @@ Every GitHub release archive also contains the source page at
 ```bash
 open man/axilio.1.html       # macOS
 xdg-open man/axilio.1.html   # Linux
+start man\axilio.1.html      # Windows
 ```
 
 The HTML page is generated from the same versioned command documentation as
-the roff page and needs no remote stylesheet or JavaScript. Windows archives
-carry both files for reference, but Windows and `go install` do not integrate
-the roff file with a system manual-page viewer. If you choose a custom
+the roff page and needs no remote stylesheet or JavaScript. Windows has no
+system manual-page viewer, so on Windows use the HTML edition: the PowerShell
+installer puts it where `axilio help --html` finds it. `go install` installs
+neither manual. If you choose a custom
 `MAN_DIR`, ensure that directory is on your `MANPATH`.
 
 ## Contributing
@@ -154,7 +175,8 @@ axilio sessions stop <id>    # release it
 
 **Browser (OAuth), the default.** Run `axilio login` on a terminal and it opens
 your browser to authorize the CLI. The Axilio session token is stored in your OS
-keychain (the file fallback requests mode `0600`, subject to umask; overwrites
+keychain (macOS Keychain, Windows Credential Manager, or the Linux Secret
+Service; the file fallback requests mode `0600`, subject to umask; overwrites
 preserve its existing mode) and refreshed automatically.
 
 ```bash
@@ -169,11 +191,14 @@ axilio login --api-key axl_xxx                 # store a key directly
 echo "$AXILIO_API_KEY" | axilio login          # non-interactive (pipe the key in)
 ```
 
+In PowerShell, pipe the variable the same way: `$env:AXILIO_API_KEY | axilio login`.
+
 The API key is written to a language-agnostic config file that every Axilio SDK
 also reads, so one login makes the CLI and the SDKs work:
 
 ```
 $XDG_CONFIG_HOME/axilio/config.json   (else ~/.config/axilio/config.json)
+%USERPROFILE%\.config\axilio\config.json   (Windows, when XDG_CONFIG_HOME is unset)
 ```
 
 New config files request mode `0600`; umask may make that more restrictive.
@@ -248,8 +273,8 @@ The CLI's output is a contract, not just cosmetics.
   Optional human acknowledgments, notes, progress, and prompts are suppressed.
   Warnings and errors remain on stderr. Built-in help and completion commands,
   bare parent-command help, `--help`, and `--version` remain text. `sessions
-  start --export` emits only an eval-able `export` line and cannot be combined
-  with JSON output.
+  start --export` emits only a shell assignment (`export` by default, or the
+  `--shell powershell|cmd` form) and cannot be combined with JSON output.
 - **`-q, --quiet`** preserves primary data on stdout and warnings/errors on
   stderr while suppressing human acknowledgments, notes, progress, and prompts.
   Destructive commands (`sessions stop`, `runs cancel`, `api-keys delete`,
@@ -307,6 +332,16 @@ axilio phone observe                          # drives A's phone
 # in terminal B (a second phone, concurrently)
 eval "$(axilio sessions start --export)"
 axilio phone observe                          # drives B's phone
+```
+
+In PowerShell, pipe the assignment to `Invoke-Expression`. On Windows,
+`--export` prints PowerShell syntax by default; Git Bash and MSYS2 (which set
+`SHELL`) get the POSIX form. `--shell posix|powershell|cmd` overrides the
+choice.
+
+```powershell
+axilio sessions start --export | Invoke-Expression   # sets $env:AXILIO_SESSION
+axilio phone observe
 ```
 
 Sessions remain active in Axilio until stopped. The CLI saves connection

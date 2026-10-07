@@ -352,7 +352,7 @@ func sessionsCurrentCmd() *cobra.Command {
 }
 
 func sessionsStartCmd() *cobra.Command {
-	var phoneType, phoneID, workflowID string
+	var phoneType, phoneID, workflowID, shellFlag string
 	var export bool
 	cmd := &cobra.Command{
 		Use:   "start",
@@ -364,11 +364,20 @@ func sessionsStartCmd() *cobra.Command {
 			"it as the most recently started session. Pin a dedicated phone discovered " +
 			"through `phones mine` with --phone-id, or " +
 			"attach the session to a workflow with --workflow. --export prints only " +
-			"`export AXILIO_SESSION=<id>` for shell eval and cannot be combined with " +
-			"-o json.",
+			"the AXILIO_SESSION assignment for the shell to evaluate and cannot be " +
+			"combined with -o json. --shell picks its syntax: posix prints " +
+			"`export AXILIO_SESSION=<id>` (eval \"$(axilio sessions start --export)\"), " +
+			"powershell prints `$env:AXILIO_SESSION = \"<id>\"` " +
+			"(axilio sessions start --export | Invoke-Expression), and cmd prints " +
+			"`set AXILIO_SESSION=<id>`. The default is posix, except on Windows " +
+			"where it is powershell unless SHELL is set (Git Bash, MSYS2).",
 		RunE: func(_ *cobra.Command, _ []string) error {
 			if export && flagOutput == "json" {
 				return exit.Usagef("--export cannot be combined with --output json")
+			}
+			shell, err := resolveShell(shellFlag)
+			if err != nil {
+				return err
 			}
 			normalizedPhoneType := strings.ToLower(strings.TrimSpace(phoneType))
 			if normalizedPhoneType != string(platformgo.PhoneAllocateRequestPhoneTypeAndroid) {
@@ -403,10 +412,11 @@ func sessionsStartCmd() *cobra.Command {
 					ControlURL: *a.ControlURL,
 				})
 			}
-			// --export: emit ONLY the eval-able line so a shell/agent can pin this
-			// phone to the process: eval "$(axilio sessions start --export ...)".
+			// --export: emit ONLY the assignment so a shell/agent can pin this
+			// phone to the process: eval "$(axilio sessions start --export ...)",
+			// or `| Invoke-Expression` in PowerShell.
 			if export {
-				p.Result("export %s=%s", session.EnvVar, a.SessionID)
+				p.Result("%s", envAssignment(shell, session.EnvVar, a.SessionID))
 				return p.Err()
 			}
 			if err := p.Emit(a, func() {
@@ -422,7 +432,7 @@ func sessionsStartCmd() *cobra.Command {
 			}
 			if a.ControlURL != nil {
 				p.Note("\nDrive it:  axilio phone observe")
-				p.Note("Pin it to this shell (for parallel work):  export %s=%s", session.EnvVar, a.SessionID)
+				p.Note("Pin it to this shell (for parallel work):  %s", envAssignment(shell, session.EnvVar, a.SessionID))
 			}
 			p.Note("Release it with:  axilio sessions stop %s", a.SessionID)
 			return p.Err()
@@ -431,7 +441,8 @@ func sessionsStartCmd() *cobra.Command {
 	cmd.Flags().StringVar(&phoneType, "phone-type", "android", "Phone platform to allocate (currently only android)")
 	cmd.Flags().StringVar(&phoneID, "phone-id", "", "Pin a dedicated phone ID from `phones mine` instead of pool allocation")
 	cmd.Flags().StringVar(&workflowID, "workflow", "", "Workflow ID to attach; omit for an interactive session")
-	cmd.Flags().BoolVar(&export, "export", false, "Print only `export AXILIO_SESSION=<id>` for shell eval")
+	cmd.Flags().BoolVar(&export, "export", false, "Print only the AXILIO_SESSION assignment for the shell to evaluate")
+	cmd.Flags().StringVar(&shellFlag, "shell", "", shellFlagHelp)
 	return cmd
 }
 
