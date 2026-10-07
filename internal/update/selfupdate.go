@@ -6,7 +6,9 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
+	"crypto/rand"
 	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -122,13 +124,68 @@ func Apply(ctx context.Context, rel *Release) error {
 	if err != nil {
 		return err
 	}
-	if err := selfupdate.Apply(bytes.NewReader(bin), selfupdate.Options{}); err != nil {
+	exe, err := os.Executable()
+	if err != nil {
+		return fmt.Errorf("locate the running executable: %w", err)
+	}
+	if err := replaceExecutable(bytes.NewReader(bin), exe, runtime.GOOS); err != nil {
 		if rerr := selfupdate.RollbackError(err); rerr != nil {
 			return fmt.Errorf("upgrade failed and rollback also failed; binary may be broken: %w", errors.Join(err, rerr))
 		}
 		return fmt.Errorf("apply update: %w", err)
 	}
 	return nil
+}
+
+// replaceExecutable swaps target for bin through minio/selfupdate, which moves
+// the old binary aside before moving the new one into place.
+//
+// On Windows a running executable can be renamed but not deleted, and the
+// binary doing the upgrade is the one being replaced, so its moved-aside copy
+// is always in use when the upgrade ends. minio's default puts that copy at a
+// fixed .axilio.exe.old and first deletes the previous one, ignoring errors.
+// If the binary from an earlier upgrade is still running (an open
+// `axilio runs watch`), that delete fails, the rename onto it fails, and the
+// upgrade aborts. So on Windows each upgrade gets its own backup name, and
+// leftovers from earlier upgrades and install.ps1 runs are removed once
+// nothing runs them (AXI-2225).
+func replaceExecutable(bin io.Reader, target, goos string) error {
+	opts := selfupdate.Options{TargetPath: target}
+	if goos == "windows" {
+		dir, base := filepath.Dir(target), filepath.Base(target)
+		removeOldBinaries(dir, base)
+		suffix, err := randomSuffix()
+		if err != nil {
+			return err
+		}
+		opts.OldSavePath = filepath.Join(dir, "."+base+"."+suffix+".old")
+	}
+	return selfupdate.Apply(bin, opts)
+}
+
+// removeOldBinaries deletes the moved-aside copies of base in dir
+// (.<base>.old and .<base>.<suffix>.old). A copy that is still running cannot
+// be deleted and is left for the next upgrade.
+func removeOldBinaries(dir, base string) {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return
+	}
+	for _, e := range entries {
+		name := e.Name()
+		if e.IsDir() || !strings.HasPrefix(name, "."+base+".") || !strings.HasSuffix(name, ".old") {
+			continue
+		}
+		_ = os.Remove(filepath.Join(dir, name))
+	}
+}
+
+func randomSuffix() (string, error) {
+	b := make([]byte, 8)
+	if _, err := rand.Read(b); err != nil {
+		return "", fmt.Errorf("generate a backup name: %w", err)
+	}
+	return hex.EncodeToString(b), nil
 }
 
 // assetForPlatform picks the release archive matching this OS/arch. goreleaser

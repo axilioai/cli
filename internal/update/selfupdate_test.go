@@ -8,7 +8,10 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 )
 
@@ -122,5 +125,53 @@ func writeTar(t *testing.T, tw *tar.Writer, name string, data []byte) {
 	}
 	if _, err := tw.Write(data); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestRemoveOldBinaries(t *testing.T) {
+	dir := t.TempDir()
+	for _, name := range []string{
+		".axilio.exe.old",                  // minio's fixed name, from older CLIs
+		".axilio.exe.0123456789abcdef.old", // a per-upgrade name
+		".axilio.exe.new",                  // minio's staging file: not a leftover
+		"axilio.exe",
+		"notes.old",
+	} {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte("x"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	removeOldBinaries(dir, "axilio.exe")
+
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var left []string
+	for _, e := range entries {
+		left = append(left, e.Name())
+	}
+	want := []string{".axilio.exe.new", "axilio.exe", "notes.old"}
+	if strings.Join(left, ",") != strings.Join(want, ",") {
+		t.Fatalf("left %v, want %v", left, want)
+	}
+}
+
+func TestReplaceExecutableWindowsUsesAFreshBackupName(t *testing.T) {
+	dir := t.TempDir()
+	target := filepath.Join(dir, "axilio.exe")
+	if err := os.WriteFile(target, []byte("v1"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := replaceExecutable(bytes.NewReader([]byte("v2")), target, "windows"); err != nil {
+		t.Fatalf("replaceExecutable: %v", err)
+	}
+	if got, _ := os.ReadFile(target); string(got) != "v2" {
+		t.Fatalf("target = %q, want v2", got)
+	}
+	// The displaced binary is kept under a per-upgrade name, never the fixed one.
+	matches, _ := filepath.Glob(filepath.Join(dir, ".axilio.exe.*.old"))
+	if len(matches) != 1 || filepath.Base(matches[0]) == ".axilio.exe.old" {
+		t.Fatalf("backups = %v, want one per-upgrade .axilio.exe.<suffix>.old", matches)
 	}
 }
