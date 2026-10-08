@@ -136,6 +136,8 @@ func TestRemoveOldBinaries(t *testing.T) {
 		".axilio.exe.new",                  // minio's staging file: not a leftover
 		".axilio.exe.mine.old",             // not a name either tool creates
 		".axilio.exe..old",
+		".axilio.exe.abc.old",                              // hex, but not a length either tool writes
+		".axilio.exe.0123456789abcdef0123456789abcdef.old", // install.ps1's GUID form
 		"axilio.exe",
 		"notes.old",
 	} {
@@ -153,7 +155,7 @@ func TestRemoveOldBinaries(t *testing.T) {
 	for _, e := range entries {
 		left = append(left, e.Name())
 	}
-	want := []string{".axilio.exe..old", ".axilio.exe.mine.old", ".axilio.exe.new", "axilio.exe", "notes.old"}
+	want := []string{".axilio.exe..old", ".axilio.exe.abc.old", ".axilio.exe.mine.old", ".axilio.exe.new", "axilio.exe", "notes.old"}
 	if strings.Join(left, ",") != strings.Join(want, ",") {
 		t.Fatalf("left %v, want %v", left, want)
 	}

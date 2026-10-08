@@ -171,8 +171,8 @@ func replaceExecutable(bin io.Reader, target, goos string) error {
 }
 
 // removeOldBinaries deletes the moved-aside copies of base in dir: the fixed
-// .<base>.old older CLIs left, and .<base>.<hex>.old from upgrades and
-// install.ps1. Nothing else matches. A copy that is still running cannot be
+// .<base>.old older CLIs left, and .<base>.<hex>.old with the 16 hex digits
+// randomSuffix writes or the 32 of install.ps1's GUID. Nothing else matches. A copy that is still running cannot be
 // deleted and is left for the next upgrade.
 func removeOldBinaries(dir, base string) {
 	entries, err := os.ReadDir(dir)
@@ -195,7 +195,7 @@ func isOldBinary(name, base string) bool {
 		return false
 	}
 	hexPart, ok := strings.CutSuffix(suffix, ".old")
-	if !ok || hexPart == "" {
+	if !ok || (len(hexPart) != 16 && len(hexPart) != 32) {
 		return false
 	}
 	return strings.Trim(hexPart, "0123456789abcdef") == ""
