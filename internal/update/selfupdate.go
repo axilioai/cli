@@ -128,6 +128,13 @@ func Apply(ctx context.Context, rel *Release) error {
 	if err != nil {
 		return fmt.Errorf("locate the running executable: %w", err)
 	}
+	// os.Executable can return the symlink the binary was launched through
+	// (macOS does). Replace the real file, as minio's own lookup did, not
+	// the link.
+	exe, err = filepath.EvalSymlinks(exe)
+	if err != nil {
+		return fmt.Errorf("resolve the running executable: %w", err)
+	}
 	if err := replaceExecutable(bytes.NewReader(bin), exe, runtime.GOOS); err != nil {
 		if rerr := selfupdate.RollbackError(err); rerr != nil {
 			return fmt.Errorf("upgrade failed and rollback also failed; binary may be broken: %w", errors.Join(err, rerr))
@@ -163,21 +170,35 @@ func replaceExecutable(bin io.Reader, target, goos string) error {
 	return selfupdate.Apply(bin, opts)
 }
 
-// removeOldBinaries deletes the moved-aside copies of base in dir
-// (.<base>.old and .<base>.<suffix>.old). A copy that is still running cannot
-// be deleted and is left for the next upgrade.
+// removeOldBinaries deletes the moved-aside copies of base in dir: the fixed
+// .<base>.old older CLIs left, and .<base>.<hex>.old from upgrades and
+// install.ps1. Nothing else matches. A copy that is still running cannot be
+// deleted and is left for the next upgrade.
 func removeOldBinaries(dir, base string) {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		return
 	}
 	for _, e := range entries {
-		name := e.Name()
-		if e.IsDir() || !strings.HasPrefix(name, "."+base+".") || !strings.HasSuffix(name, ".old") {
-			continue
+		if !e.IsDir() && isOldBinary(e.Name(), base) {
+			_ = os.Remove(filepath.Join(dir, e.Name()))
 		}
-		_ = os.Remove(filepath.Join(dir, name))
 	}
+}
+
+func isOldBinary(name, base string) bool {
+	if name == "."+base+".old" {
+		return true
+	}
+	suffix, ok := strings.CutPrefix(name, "."+base+".")
+	if !ok {
+		return false
+	}
+	hexPart, ok := strings.CutSuffix(suffix, ".old")
+	if !ok || hexPart == "" {
+		return false
+	}
+	return strings.Trim(hexPart, "0123456789abcdef") == ""
 }
 
 func randomSuffix() (string, error) {

@@ -134,6 +134,8 @@ func TestRemoveOldBinaries(t *testing.T) {
 		".axilio.exe.old",                  // minio's fixed name, from older CLIs
 		".axilio.exe.0123456789abcdef.old", // a per-upgrade name
 		".axilio.exe.new",                  // minio's staging file: not a leftover
+		".axilio.exe.mine.old",             // not a name either tool creates
+		".axilio.exe..old",
 		"axilio.exe",
 		"notes.old",
 	} {
@@ -151,7 +153,7 @@ func TestRemoveOldBinaries(t *testing.T) {
 	for _, e := range entries {
 		left = append(left, e.Name())
 	}
-	want := []string{".axilio.exe.new", "axilio.exe", "notes.old"}
+	want := []string{".axilio.exe..old", ".axilio.exe.mine.old", ".axilio.exe.new", "axilio.exe", "notes.old"}
 	if strings.Join(left, ",") != strings.Join(want, ",") {
 		t.Fatalf("left %v, want %v", left, want)
 	}
