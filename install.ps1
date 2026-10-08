@@ -159,6 +159,7 @@
         # and sweeps the leftovers it can, including the `.axilio.exe.old`
         # that `axilio upgrade` leaves behind.
         Get-ChildItem -LiteralPath $dir -Filter ".$Bin.exe*.old" -Force -ErrorAction SilentlyContinue |
+            Where-Object { $_.Name -cmatch "^\.$Bin\.exe\.([0-9a-f]{16}\.|[0-9a-f]{32}\.)?old$" } |
             ForEach-Object { Remove-Item -LiteralPath $_.FullName -Force -ErrorAction SilentlyContinue }
         $old = Join-Path $dir (".$Bin.exe." + [Guid]::NewGuid().ToString('N') + '.old')
         if (Test-Path -LiteralPath $exeTarget) {
