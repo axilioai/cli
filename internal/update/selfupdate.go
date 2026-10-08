@@ -101,8 +101,8 @@ func isHomebrewExecutable(path string) bool {
 // Apply upgrades the running binary to rel: download the release archive for
 // this OS/arch, verify its SHA-256 against the release checksums.txt, extract
 // the axilio binary, and replace the executable in place (atomic, with rollback
-// via minio/selfupdate).
-func Apply(ctx context.Context, rel *Release) error {
+// via minio/selfupdate). warn reports problems that don't stop the upgrade.
+func Apply(ctx context.Context, rel *Release, warn func(format string, a ...any)) error {
 	ctx, cancel := context.WithTimeout(ctx, downloadTimeout)
 	defer cancel()
 
@@ -142,7 +142,7 @@ func Apply(ctx context.Context, rel *Release) error {
 	if err != nil {
 		return fmt.Errorf("resolve the running executable: %w", err)
 	}
-	if err := replaceExecutable(bytes.NewReader(bin), exe, runtime.GOOS); err != nil {
+	if err := replaceExecutable(bytes.NewReader(bin), exe, runtime.GOOS, warn); err != nil {
 		if rerr := selfupdate.RollbackError(err); rerr != nil {
 			return fmt.Errorf("upgrade failed and rollback also failed; binary may be broken: %w", errors.Join(err, rerr))
 		}
@@ -162,15 +162,19 @@ func Apply(ctx context.Context, rel *Release) error {
 // `axilio runs watch`), that delete fails, the rename onto it fails, and the
 // upgrade aborts. So on Windows each upgrade gets its own backup name, and
 // leftovers from earlier upgrades and install.ps1 runs are removed once
-// nothing runs them (AXI-2225).
-func replaceExecutable(bin io.Reader, target, goos string) error {
+// nothing runs them (AXI-2225). warn reports a removal that failed.
+func replaceExecutable(bin io.Reader, target, goos string, warn func(format string, a ...any)) error {
 	opts := selfupdate.Options{TargetPath: target}
 	if goos != "windows" {
 		return selfupdate.Apply(bin, opts)
 	}
 	dir, base := filepath.Dir(target), filepath.Base(target)
 	if err := removeOldBinaries(dir, base); err != nil {
-		return err
+		// Removing leftovers is cleanup, and the fresh backup name below
+		// doesn't depend on it: a directory that can't be listed (some
+		// managed installs allow renames but not listing) mustn't stop the
+		// upgrade.
+		warn("could not remove old axilio binaries: %v", err)
 	}
 	suffix := make([]byte, backupSuffixBytes)
 	if _, err := rand.Read(suffix); err != nil {

@@ -45,7 +45,7 @@ func TestReplaceExecutableWhileAnOlderBackupIsRunning(t *testing.T) {
 		t.Fatal("default selfupdate.Apply succeeded over a running .axilio.exe.old; the scenario no longer reproduces")
 	}
 
-	if err := replaceExecutable(bytes.NewReader([]byte("v3")), target, "windows"); err != nil {
+	if err := replaceExecutable(bytes.NewReader([]byte("v3")), target, "windows", failOnWarn(t)); err != nil {
 		t.Fatalf("replaceExecutable: %v", err)
 	}
 	got, err := os.ReadFile(target)

@@ -77,7 +77,7 @@ func runUpgrade(ctx context.Context, check bool) error {
 		if err := p.Err(); err != nil {
 			return err
 		}
-		if err := update.Apply(ctx, state.release); err != nil {
+		if err := update.Apply(ctx, state.release, p.Warn); err != nil {
 			return err
 		}
 	}

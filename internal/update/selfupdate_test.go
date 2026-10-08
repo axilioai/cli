@@ -6,6 +6,7 @@ import (
 	"compress/gzip"
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"io/fs"
 	"net/http"
@@ -172,13 +173,59 @@ func TestRemoveOldBinaries(t *testing.T) {
 	}
 }
 
+// failOnWarn is the warn func for an upgrade that must not warn.
+func failOnWarn(t *testing.T) func(format string, a ...any) {
+	return func(format string, a ...any) {
+		t.Errorf("unexpected warning: %s", fmt.Sprintf(format, a...))
+	}
+}
+
+func TestReplaceExecutableWindowsWarnsWhenTheDirectoryCannotBeListed(t *testing.T) {
+	if runtime.GOOS == "windows" || os.Geteuid() == 0 {
+		t.Skip("needs a directory that can be written but not listed: chmod on Unix, as non-root")
+	}
+	dir := t.TempDir()
+	target := filepath.Join(dir, "axilio.exe")
+	if err := os.WriteFile(target, []byte("v1"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	// Write and search but not read: renames work, listing doesn't.
+	if err := os.Chmod(dir, 0o300); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := os.Chmod(dir, 0o700); err != nil {
+			t.Error(err)
+		}
+	})
+	var warnings [][]any
+	warn := func(_ string, a ...any) { warnings = append(warnings, a) }
+
+	if err := replaceExecutable(bytes.NewReader([]byte("v2")), target, "windows", warn); err != nil {
+		t.Fatalf("replaceExecutable: %v", err)
+	}
+	got, err := os.ReadFile(target)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(got) != "v2" {
+		t.Fatalf("target = %q, want v2", got)
+	}
+	if len(warnings) != 1 || len(warnings[0]) != 1 {
+		t.Fatalf("warnings = %v, want one carrying the listing error", warnings)
+	}
+	if err, _ := warnings[0][0].(error); !errors.Is(err, fs.ErrPermission) {
+		t.Fatalf("warning error = %v, want a permission error", warnings[0][0])
+	}
+}
+
 func TestReplaceExecutableWindowsUsesAFreshBackupName(t *testing.T) {
 	dir := t.TempDir()
 	target := filepath.Join(dir, "axilio.exe")
 	if err := os.WriteFile(target, []byte("v1"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := replaceExecutable(bytes.NewReader([]byte("v2")), target, "windows"); err != nil {
+	if err := replaceExecutable(bytes.NewReader([]byte("v2")), target, "windows", failOnWarn(t)); err != nil {
 		t.Fatalf("replaceExecutable: %v", err)
 	}
 	got, err := os.ReadFile(target)
