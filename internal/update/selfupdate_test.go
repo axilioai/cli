@@ -5,13 +5,14 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
+	"errors"
 	"io"
+	"io/fs"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"runtime"
-	"strings"
 	"testing"
 )
 
@@ -129,35 +130,45 @@ func writeTar(t *testing.T, tw *tar.Writer, name string, data []byte) {
 }
 
 func TestRemoveOldBinaries(t *testing.T) {
+	tests := []struct {
+		name    string
+		dir     bool
+		removed bool
+	}{
+		{name: ".axilio.exe.old", removed: true},                                  // minio's fixed name, from older CLIs
+		{name: ".axilio.exe.0123456789abcdef.old", removed: true},                 // an upgrade's suffix
+		{name: ".axilio.exe.0123456789abcdef0123456789abcdef.old", removed: true}, // install.ps1's GUID
+		{name: ".axilio.exe.new"},                                                 // minio's staging file
+		{name: ".axilio.exe.abc.old"},                                             // hex, but no tool writes this length
+		{name: ".axilio.exe.ABCDEF0123456789.old"},                                // upper case, which neither tool writes (no lower-case twin: macOS and Windows names ignore case)
+		{name: ".axilio.exe.mine.old"},
+		{name: ".axilio.exe..old"},
+		{name: ".axilio.exe.0123456789abcdef.old.bak"},
+		{name: ".axilio.exe.fedcba9876543210.old", dir: true}, // a directory, never removed
+		{name: "axilio.exe"},
+		{name: "notes.old"},
+	}
 	dir := t.TempDir()
-	for _, name := range []string{
-		".axilio.exe.old",                  // minio's fixed name, from older CLIs
-		".axilio.exe.0123456789abcdef.old", // a per-upgrade name
-		".axilio.exe.new",                  // minio's staging file: not a leftover
-		".axilio.exe.mine.old",             // not a name either tool creates
-		".axilio.exe..old",
-		".axilio.exe.abc.old",                              // hex, but not a length either tool writes
-		".axilio.exe.0123456789abcdef0123456789abcdef.old", // install.ps1's GUID form
-		"axilio.exe",
-		"notes.old",
-	} {
-		if err := os.WriteFile(filepath.Join(dir, name), []byte("x"), 0o644); err != nil {
+	for _, tt := range tests {
+		path := filepath.Join(dir, tt.name)
+		var err error
+		if tt.dir {
+			err = os.Mkdir(path, 0o755)
+		} else {
+			err = os.WriteFile(path, []byte("x"), 0o644)
+		}
+		if err != nil {
 			t.Fatal(err)
 		}
 	}
-	removeOldBinaries(dir, "axilio.exe")
-
-	entries, err := os.ReadDir(dir)
-	if err != nil {
-		t.Fatal(err)
+	if err := removeOldBinaries(dir, "axilio.exe"); err != nil {
+		t.Fatalf("removeOldBinaries: %v", err)
 	}
-	var left []string
-	for _, e := range entries {
-		left = append(left, e.Name())
-	}
-	want := []string{".axilio.exe..old", ".axilio.exe.abc.old", ".axilio.exe.mine.old", ".axilio.exe.new", "axilio.exe", "notes.old"}
-	if strings.Join(left, ",") != strings.Join(want, ",") {
-		t.Fatalf("left %v, want %v", left, want)
+	for _, tt := range tests {
+		_, err := os.Stat(filepath.Join(dir, tt.name))
+		if removed := errors.Is(err, fs.ErrNotExist); removed != tt.removed {
+			t.Errorf("%s: removed = %v, want %v (stat err %v)", tt.name, removed, tt.removed, err)
+		}
 	}
 }
 
@@ -170,12 +181,19 @@ func TestReplaceExecutableWindowsUsesAFreshBackupName(t *testing.T) {
 	if err := replaceExecutable(bytes.NewReader([]byte("v2")), target, "windows"); err != nil {
 		t.Fatalf("replaceExecutable: %v", err)
 	}
-	if got, _ := os.ReadFile(target); string(got) != "v2" {
+	got, err := os.ReadFile(target)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(got) != "v2" {
 		t.Fatalf("target = %q, want v2", got)
 	}
 	// The displaced binary is kept under a per-upgrade name, never the fixed one.
-	matches, _ := filepath.Glob(filepath.Join(dir, ".axilio.exe.*.old"))
-	if len(matches) != 1 || filepath.Base(matches[0]) == ".axilio.exe.old" {
+	matches, err := filepath.Glob(filepath.Join(dir, ".axilio.exe.*.old"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(matches) != 1 || !isOldBinary(filepath.Base(matches[0]), "axilio.exe") || filepath.Base(matches[0]) == ".axilio.exe.old" {
 		t.Fatalf("backups = %v, want one per-upgrade .axilio.exe.<suffix>.old", matches)
 	}
 }

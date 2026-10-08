@@ -48,7 +48,11 @@ func TestReplaceExecutableWhileAnOlderBackupIsRunning(t *testing.T) {
 	if err := replaceExecutable(bytes.NewReader([]byte("v3")), target, "windows"); err != nil {
 		t.Fatalf("replaceExecutable: %v", err)
 	}
-	if got, _ := os.ReadFile(target); string(got) != "v3" {
+	got, err := os.ReadFile(target)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(got) != "v3" {
 		t.Fatalf("target = %q, want v3", got)
 	}
 	// The running copy is left alone, to be swept by a later upgrade.

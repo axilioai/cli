@@ -30,6 +30,13 @@ const (
 	downloadTimeout = 60 * time.Second
 	// maxDownload defensively caps a release asset read.
 	maxDownload = 100 << 20 // 100 MiB
+	// backupSuffixBytes is the randomness in a Windows upgrade's backup name,
+	// .axilio.exe.<hex>.old, which hex-encodes to upgradeSuffixLen digits.
+	backupSuffixBytes = 8
+	upgradeSuffixLen  = 2 * backupSuffixBytes
+	// installerSuffixLen is the hex length of the GUID install.ps1 puts in its
+	// backup names.
+	installerSuffixLen = 32
 )
 
 // Asset is a single release download.
@@ -158,34 +165,42 @@ func Apply(ctx context.Context, rel *Release) error {
 // nothing runs them (AXI-2225).
 func replaceExecutable(bin io.Reader, target, goos string) error {
 	opts := selfupdate.Options{TargetPath: target}
-	if goos == "windows" {
-		dir, base := filepath.Dir(target), filepath.Base(target)
-		removeOldBinaries(dir, base)
-		suffix, err := randomSuffix()
-		if err != nil {
-			return err
-		}
-		opts.OldSavePath = filepath.Join(dir, "."+base+"."+suffix+".old")
+	if goos != "windows" {
+		return selfupdate.Apply(bin, opts)
 	}
+	dir, base := filepath.Dir(target), filepath.Base(target)
+	if err := removeOldBinaries(dir, base); err != nil {
+		return err
+	}
+	suffix := make([]byte, backupSuffixBytes)
+	if _, err := rand.Read(suffix); err != nil {
+		return err
+	}
+	opts.OldSavePath = filepath.Join(dir, "."+base+"."+hex.EncodeToString(suffix)+".old")
 	return selfupdate.Apply(bin, opts)
 }
 
-// removeOldBinaries deletes the moved-aside copies of base in dir: the fixed
-// .<base>.old older CLIs left, and .<base>.<hex>.old with the 16 hex digits
-// randomSuffix writes or the 32 of install.ps1's GUID. Nothing else matches. A copy that is still running cannot be
-// deleted and is left for the next upgrade.
-func removeOldBinaries(dir, base string) {
+// removeOldBinaries deletes the moved-aside copies of base in dir that nothing
+// runs any more.
+func removeOldBinaries(dir, base string) error {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
-		return
+		return err
 	}
 	for _, e := range entries {
-		if !e.IsDir() && isOldBinary(e.Name(), base) {
-			_ = os.Remove(filepath.Join(dir, e.Name()))
+		if e.IsDir() || !isOldBinary(e.Name(), base) {
+			continue
 		}
+		// A copy that is still running can't be deleted. That failure is
+		// expected, and the next upgrade or install retries it.
+		_ = os.Remove(filepath.Join(dir, e.Name()))
 	}
+	return nil
 }
 
+// isOldBinary reports whether name is a moved-aside copy of base: the fixed
+// .<base>.old that older CLIs left, or .<base>.<hex>.old with the suffix length
+// an upgrade or install.ps1 writes. Nothing else may be deleted.
 func isOldBinary(name, base string) bool {
 	if name == "."+base+".old" {
 		return true
@@ -194,19 +209,11 @@ func isOldBinary(name, base string) bool {
 	if !ok {
 		return false
 	}
-	hexPart, ok := strings.CutSuffix(suffix, ".old")
-	if !ok || (len(hexPart) != 16 && len(hexPart) != 32) {
+	digits, ok := strings.CutSuffix(suffix, ".old")
+	if !ok || (len(digits) != upgradeSuffixLen && len(digits) != installerSuffixLen) {
 		return false
 	}
-	return strings.Trim(hexPart, "0123456789abcdef") == ""
-}
-
-func randomSuffix() (string, error) {
-	b := make([]byte, 8)
-	if _, err := rand.Read(b); err != nil {
-		return "", fmt.Errorf("generate a backup name: %w", err)
-	}
-	return hex.EncodeToString(b), nil
+	return strings.Trim(digits, "0123456789abcdef") == ""
 }
 
 // assetForPlatform picks the release archive matching this OS/arch. goreleaser
