@@ -366,10 +366,10 @@ func sessionsStartCmd() *cobra.Command {
 			"attach the session to a workflow with --workflow.\n\n" +
 			"Accessibility mode, which lets phone commands select elements by " +
 			"--role, --name, and --id and `phone tree` read the screen's structure, " +
-			"is on by default and requires a phone that supports it, so only such " +
-			"phones are claimed; pinning one without support exits 6. " +
-			"--accessibility=false allocates any phone with the mode off. While it is " +
-			"on, the accessibility service is visible to apps on the phone.\n\n" +
+			"is off by default. --accessibility turns it on and requires a phone " +
+			"that supports it, so only such phones are claimed; pinning one without " +
+			"support with --phone-id exits 6. While it is on, the accessibility " +
+			"service is visible to apps on the phone.\n\n" +
 			"--export prints only " +
 			"`export AXILIO_SESSION=<id>` for shell eval and cannot be combined with " +
 			"-o json.",
@@ -396,12 +396,12 @@ func sessionsStartCmd() *cobra.Command {
 				req.WorkflowID = &workflowID
 			}
 			// Always sent, so the request states what the flag says rather
-			// than leaning on the server default (also true).
+			// than leaning on the server default (also false).
 			req.Accessibility = platformgo.Bool(accessibility)
 			a, err := cl.Phones.Allocate(context.Background(), req)
 			if platformgo.IsAccessibilityUnavailable(err) {
 				return exit.With(exit.Unavailable, fmt.Errorf(
-					"phone %s does not support accessibility mode; drop --phone-id to claim any phone that does, or pass --accessibility=false", phoneID))
+					"phone %s does not support accessibility mode; drop --phone-id to claim any phone that does, or drop --accessibility", phoneID))
 			}
 			if err != nil {
 				return err
@@ -447,7 +447,7 @@ func sessionsStartCmd() *cobra.Command {
 	cmd.Flags().StringVar(&phoneID, "phone-id", "", "Pin a dedicated phone ID from `phones mine` instead of pool allocation")
 	cmd.Flags().StringVar(&workflowID, "workflow", "", "Workflow ID to attach; omit for an interactive session")
 	cmd.Flags().BoolVar(&export, "export", false, "Print only `export AXILIO_SESSION=<id>` for shell eval")
-	cmd.Flags().BoolVar(&accessibility, "accessibility", true, "Accessibility mode, which requires a phone that supports it; --accessibility=false allows any phone")
+	cmd.Flags().BoolVar(&accessibility, "accessibility", false, "Turn on accessibility mode, which requires a phone that supports it; off by default")
 	return cmd
 }
 

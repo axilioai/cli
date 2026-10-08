@@ -21,11 +21,12 @@ func phoneTreeCmd() *cobra.Command {
 		Long: "Print the accessibility tree of the selected phone, one window at a " +
 			"time, as an indented outline: each node's role, name, resource id, " +
 			"center, and node id. The session must have accessibility mode on " +
-			"(`sessions start` turns it on by default unless --accessibility=false; " +
-			"see `phone accessibility status`); otherwise the phone answers that the " +
-			"strategy is unavailable and the command exits 2. Layout-only nodes are " +
-			"dropped unless --all is given. --window limits the tree to one window " +
-			"and --depth to that many levels below each window root. JSON returns " +
+			"(it is off by default; `sessions start --accessibility` turns it on, " +
+			"and `phone accessibility status` shows it); otherwise the phone " +
+			"answers that the strategy is unavailable and the command exits 2. " +
+			"Layout-only nodes are dropped unless --all is given. --window limits " +
+			"the tree to one window and --depth to that many levels below each " +
+			"window root. JSON returns " +
 			"the complete snapshot: nodes, windows, and capture time. The role, name, " +
 			"and resource id shown here are what `phone tap --role --name --id` match.",
 		Args: cobra.NoArgs,
@@ -153,9 +154,9 @@ func phoneAccessibilityCmd() *cobra.Command {
 		Long: "Show whether the selected session's accessibility tree is on, or turn " +
 			"it on or off mid-session. With the tree on, `phone tree` reads it and " +
 			"--role, --name, and --id select elements from it; while it is on, the " +
-			"accessibility service is visible to apps on the phone. Choose the " +
-			"session's starting state with the --accessibility flag of " +
-			"`sessions start`.\n\n" +
+			"accessibility service is visible to apps on the phone. " +
+			"`sessions start --accessibility` starts a session with the tree on; " +
+			"without it, the tree starts off.\n\n" +
 			"Running `axilio phone accessibility` without a subcommand is equivalent " +
 			"to `axilio phone accessibility --help`.",
 	}
