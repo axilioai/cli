@@ -12,7 +12,7 @@ name: Skill sync
 # this repo at all — a normal push-triggered CI can never observe that.
 #
 # The Go half is guarded in-repo by cmd/agentskill_test.go (the CLI depends on
-# platform-go, so `go test` catches a rename at PR time, and TestMain fetches
+# platform-go, so `go test` catches a rename at PR time, and the tests fetch
 # the live skill fresh on every run). The Python half can't be guarded the
 # same way: the CLI has no dependency on platform-python, by design.
 #
@@ -59,10 +59,7 @@ jobs:
       - name: install the published SDK
         run: pip install --upgrade axilio
       - name: check the skill's Python section
-        # TEMPORARY: prod predates the /skill route (AXI-1527) and 404s;
-        # staging serves it. Remove once the prod backend deploy lands.
-        env:
-          AXILIO_SKILL_URL: https://staging-api.axilio.ai/api/v1/skill
+        # Check the same production skill that customers receive.
         run: python scripts/check_python_skill.py
 
   go-surface:
@@ -75,10 +72,7 @@ jobs:
           go-version-file: go.mod
           cache: true
       # Same assertions CI runs, surfaced here too so a scheduled run reports on
-      # both languages in one place rather than only half the picture. TestMain
+      # both languages in one place rather than only half the picture. The tests
       # fetches the live hosted skill before any TestSkill* case runs.
       - name: check the skill's Go section
-        # TEMPORARY: staging host until prod serves /skill (see above).
-        env:
-          AXILIO_BASE_URL: https://staging-api.axilio.ai
         run: go test ./cmd/ -run TestSkill -v

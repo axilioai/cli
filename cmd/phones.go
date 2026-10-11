@@ -44,6 +44,35 @@ func phonesCmd() *cobra.Command {
 	return cmd
 }
 
+// Both inventory commands promise all matching phones, not just the first page.
+func listDedicatedPhones(ctx context.Context) (*platformgo.PhonePrivateListResponse, error) {
+	cl, err := newClient()
+	if err != nil {
+		return nil, err
+	}
+	phones := []*platformgo.PhoneSummary{}
+	for offset := int64(0); ; {
+		resp, err := cl.Phones.List(ctx, &platformgo.PhonesListRequest{
+			Ownership: platformgo.PhonesListRequestOwnershipDedicated,
+			Offset:    &offset,
+		})
+		if err != nil {
+			return nil, err
+		}
+		phones = append(phones, resp.Phones...)
+		offset += int64(len(resp.Phones))
+		if offset >= resp.Total {
+			resp.SetPhones(phones)
+			resp.SetOffset(0)
+			resp.SetLimit(int64(len(phones)))
+			return resp, nil
+		}
+		if len(resp.Phones) == 0 {
+			return nil, fmt.Errorf("incomplete phone inventory: received %d of %d phones; retry the listing", offset, resp.Total)
+		}
+	}
+}
+
 func phonesListCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "list",
@@ -53,14 +82,8 @@ func phonesListCmd() *cobra.Command {
 			"use `axilio phones mine` to see the full dedicated inventory. The shared pool is not listed - it " +
 			"is drawn from automatically when you start a session without a phone ID. Results include phone " +
 			"ID, nickname, type, and model.",
-		RunE: func(_ *cobra.Command, _ []string) error {
-			cl, err := newClient()
-			if err != nil {
-				return err
-			}
-			resp, err := cl.Phones.List(context.Background(), &platformgo.PhonesListRequest{
-				Ownership: platformgo.PhonesListRequestOwnershipDedicated,
-			})
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			resp, err := listDedicatedPhones(cmd.Context())
 			if err != nil {
 				return err
 			}
@@ -74,6 +97,8 @@ func phonesListCmd() *cobra.Command {
 				}
 			}
 			resp.SetPhones(free)
+			resp.SetTotal(int64(len(free)))
+			resp.SetLimit(int64(len(free)))
 			p := printer()
 			return p.Emit(resp, func() {
 				if len(resp.Phones) == 0 {
@@ -100,14 +125,8 @@ func phonesMineCmd() *cobra.Command {
 			"busy in an active session, or offline. This is how you discover a phone_id to pin with " +
 			"`axilio sessions start --phone-id`. Results include phone ID, nickname, type, model, " +
 			"status, and the session ID holding a busy phone.",
-		RunE: func(_ *cobra.Command, _ []string) error {
-			cl, err := newClient()
-			if err != nil {
-				return err
-			}
-			resp, err := cl.Phones.List(context.Background(), &platformgo.PhonesListRequest{
-				Ownership: platformgo.PhonesListRequestOwnershipDedicated,
-			})
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			resp, err := listDedicatedPhones(cmd.Context())
 			if err != nil {
 				return err
 			}

@@ -144,7 +144,18 @@ computer does not give a separate cloud chat access to it.
 
 ```bash
 axilio doctor  # check existing authentication and connectivity
-axilio login   # if sign-in is needed, complete it yourself in this environment
+```
+
+If credentials are missing or rejected, sign in yourself in this environment:
+
+```bash
+axilio login
+```
+
+For forbidden access (HTTP 403), check your organization or ask its administrator
+for access instead of signing in again. Once access is ready:
+
+```bash
 axilio init    # writes a skill for your agent (auto-detects claude / codex / cursor)
 axilio doctor  # verify readiness after setup
 ```
@@ -163,14 +174,16 @@ Then tell your agent:
 > the flow, then hand me a standalone SDK script.
 
 The agent guides you through app preparation, completes the approved task, and
-hands back a script you can run again. It honors your language preference or
+hands back a script you can run again. It honors your Python/Go preference or
 existing Python/Go project; otherwise it uses Python.
 
 > **If you are a coding agent reading this:** run `axilio init`, then read the
-> skill file it writes and follow it. If any `axilio` command exits with code 3,
-> stop and ask your human to run `axilio login` in the same environment, or
-> securely supply `AXILIO_API_KEY` in a headless setup. Verify with `axilio doctor`
-> and resume the task. Browser and app sign-in need the human.
+> skill file it writes and follow it. On exit code 3, inspect the error detail.
+> Missing or rejected credentials need human sign-in through `axilio login` in
+> the same environment, or secure `AXILIO_API_KEY` injection in a headless setup.
+> Forbidden access (HTTP 403) needs the correct organization or administrator
+> assistance. Verify with `axilio doctor` and resume the task. Browser and app
+> sign-in need the human.
 
 Own dedicated phones? Point the session at one: `axilio phones mine` for the
 `phone_id`, then `axilio sessions start --phone-id <id>`.
