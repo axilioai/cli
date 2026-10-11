@@ -138,22 +138,52 @@ Two ways in, depending on who's driving.
 
 ### Give it to your agent (recommended)
 
+Use an agent with terminal access to the environment where Axilio will run.
+A cloud agent runs commands in its own environment; installing the CLI on your
+computer does not give a separate cloud chat access to it.
+
 ```bash
-axilio login   # you sign in once (browser) — the one step your agent can't do
-axilio init    # writes a skill for your agent (auto-detects claude / codex / cursor)
+axilio doctor  # check existing authentication and connectivity
 ```
+
+If credentials are missing or rejected, sign in yourself in this environment:
+
+```bash
+axilio login
+```
+
+For forbidden access (HTTP 403), check your organization or ask its administrator
+for access instead of signing in again. Once access is ready:
+
+```bash
+axilio init    # writes a skill for your agent (auto-detects claude / codex / cursor)
+axilio doctor  # verify readiness after setup
+```
+
+In a fresh non-interactive folder, choose the known agent explicitly with
+`axilio init --agent claude`, `axilio init --agent codex`, or
+`axilio init --agent cursor`. Existing repository instructions are preserved.
+`init` can write the skill successfully while warning that sign-in is missing;
+use `doctor` to verify readiness. For a headless environment, securely inject
+`AXILIO_API_KEY` there instead of using browser sign-in.
 
 Then tell your agent:
 
-> Use the axilio CLI to take a phone, open the browser, search for something —
-> then hand me the SDK script.
+> Help me complete one useful task on one of my organization's dedicated phones.
+> Ask which app and result I want if I haven't said, use the axilio CLI to prove
+> the flow, then hand me a standalone SDK script.
 
-The agent explores and drives the phone live through the CLI, and the SDK
-script it hands back is the durable thing you keep and run without it.
+The agent guides you through app preparation, completes the approved task, and
+hands back a script you can run again. It honors your Python/Go preference or
+existing Python/Go project; otherwise it uses Python.
 
 > **If you are a coding agent reading this:** run `axilio init`, then read the
-> skill file it writes and follow it. If any `axilio` command exits with code 3,
-> stop and ask your human to run `axilio login` — browser sign-in needs them.
+> skill file it writes and follow it. On exit code 3, inspect the error detail.
+> Missing or rejected credentials need human sign-in through `axilio login` in
+> the same environment, or secure `AXILIO_API_KEY` injection in a headless setup.
+> Forbidden access (HTTP 403) needs the correct organization or administrator
+> assistance. Verify with `axilio doctor` and resume the task. Browser and app
+> sign-in need the human.
 
 Own dedicated phones? Point the session at one: `axilio phones mine` for the
 `phone_id`, then `axilio sessions start --phone-id <id>`.

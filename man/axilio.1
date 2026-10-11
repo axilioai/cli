@@ -1600,8 +1600,8 @@ axilio init [flags]
 .PP
 Write an instruction file that teaches your coding agent to drive a
 phone through the axilio CLI and then hand back a runnable Python or Go
-script using the Axilio SDK. The agent asks whether you want Python or
-Go.
+script using the Axilio SDK. The agent honors your Python/Go preference
+or existing Python/Go project, otherwise using Python.
 
 .PP
 Bare \fBaxilio init\fR detects which agents this repo uses (.claude/,
@@ -1622,9 +1622,10 @@ markers, interactive mode asks which agent to configure, while JSON,
 quiet, or redirected use requires --agent.
 
 .PP
-It finishes with a sign-in check: browser login is the one step an agent
-can't do itself, so init surfaces it while a human is likely at the
-keyboard.
+It finishes with sign-in guidance: browser login needs a human in the
+same execution environment. Writing the skill can succeed without
+authentication; run axilio doctor to verify readiness before using a
+phone.
 
 .PP
 \fBCommand options\fP
@@ -1662,13 +1663,13 @@ user@host ~ % axilio init
 ✓ Wrote the Axilio agent skill to <detected-target>
 .sp
 # Standard error:
-warning: not signed in; a human must run `axilio login` (browser), or set AXILIO_API_KEY
+warning: not signed in; a human must run `axilio login` in this environment, or securely provide AXILIO_API_KEY
 .sp
 # Exit status: 0
 # Notes: Representative stderr excerpt; detected targets depend on
-#        repository markers, existing auto-detected skills may be
-#        skipped, and the command finishes with a suggested agent
-#        prompt.
+#        repository markers and existing auto-detected skills may be
+#        skipped. Run axilio doctor to verify readiness; the suggested
+#        agent prompt needs terminal access to this environment.
 .EE
 
 .PP
@@ -1679,10 +1680,11 @@ user@host ~ % axilio init --agent codex
 ✓ Wrote the Axilio agent skill to AGENTS.md
 .sp
 # Standard error:
-warning: not signed in; a human must run `axilio login` (browser), or set AXILIO_API_KEY
+warning: not signed in; a human must run `axilio login` in this environment, or securely provide AXILIO_API_KEY
 .sp
 # Exit status: 0
-# Notes: Excerpt: stderr then prints the suggested first agent prompt.
+# Notes: Excerpt: stderr then prints the readiness check and suggested
+#        first agent prompt.
 .EE
 
 .PP
@@ -1693,11 +1695,11 @@ user@host ~ % axilio init --agent claude --force
 ✓ Wrote the Axilio agent skill to .claude/skills/axilio/SKILL.md
 .sp
 # Standard error:
-warning: not signed in; a human must run `axilio login` (browser), or set AXILIO_API_KEY
+warning: not signed in; a human must run `axilio login` in this environment, or securely provide AXILIO_API_KEY
 .sp
 # Exit status: 0
 # Notes: Excerpt: --force replaces an existing Axilio-owned Claude skill
-#        before the suggested first agent prompt.
+#        before the readiness check and suggested first agent prompt.
 .EE
 
 .SH login

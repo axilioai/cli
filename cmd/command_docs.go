@@ -296,9 +296,9 @@ var commandDocumentationByKey = map[string]CommandDocumentation{
 		externalSample("brew upgrade axilio", "Output and exit status are owned by Homebrew, not the axilio CLI."),
 	}},
 	"init": {Samples: []CommandSample{
-		sampleWithNote("axilio init", "✓ Wrote the Axilio agent skill to <detected-target>", "warning: not signed in; a human must run `axilio login` (browser), or set AXILIO_API_KEY", "Representative stderr excerpt; detected targets depend on repository markers, existing auto-detected skills may be skipped, and the command finishes with a suggested agent prompt."),
-		sampleWithNote("axilio init --agent codex", "✓ Wrote the Axilio agent skill to AGENTS.md", "warning: not signed in; a human must run `axilio login` (browser), or set AXILIO_API_KEY", "Excerpt: stderr then prints the suggested first agent prompt."),
-		sampleWithNote("axilio init --agent claude --force", "✓ Wrote the Axilio agent skill to .claude/skills/axilio/SKILL.md", "warning: not signed in; a human must run `axilio login` (browser), or set AXILIO_API_KEY", "Excerpt: --force replaces an existing Axilio-owned Claude skill before the suggested first agent prompt."),
+		sampleWithNote("axilio init", "✓ Wrote the Axilio agent skill to <detected-target>", "warning: not signed in; a human must run `axilio login` in this environment, or securely provide AXILIO_API_KEY", "Representative stderr excerpt; detected targets depend on repository markers and existing auto-detected skills may be skipped. Run axilio doctor to verify readiness; the suggested agent prompt needs terminal access to this environment."),
+		sampleWithNote("axilio init --agent codex", "✓ Wrote the Axilio agent skill to AGENTS.md", "warning: not signed in; a human must run `axilio login` in this environment, or securely provide AXILIO_API_KEY", "Excerpt: stderr then prints the readiness check and suggested first agent prompt."),
+		sampleWithNote("axilio init --agent claude --force", "✓ Wrote the Axilio agent skill to .claude/skills/axilio/SKILL.md", "warning: not signed in; a human must run `axilio login` in this environment, or securely provide AXILIO_API_KEY", "Excerpt: --force replaces an existing Axilio-owned Claude skill before the readiness check and suggested first agent prompt."),
 	}},
 	"sessions": workflow(
 		"axilio sessions list",

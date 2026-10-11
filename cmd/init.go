@@ -54,7 +54,7 @@ func fetchSkillBody(ctx context.Context) (string, error) {
 }
 
 // skillDescription is the one-line summary in each agent's frontmatter.
-const skillDescription = "Drive real Axilio phones from the axilio CLI (observe/find/tap/type), then write the equivalent SDK script in Python or Go."
+const skillDescription = "Set up Axilio, complete a task on a dedicated phone through the CLI, then write a standalone Python or Go SDK script."
 
 const (
 	claudeFrontmatter = "---\nname: axilio-phone-control\ndescription: " + skillDescription + "\n---\n\n"
@@ -88,8 +88,8 @@ func initCmd() *cobra.Command {
 		Short: "Drop an agent skill into this repo so a coding agent can drive phones via the CLI.",
 		Long: "Write an instruction file that teaches your coding agent to drive a phone " +
 			"through the axilio CLI and then hand back a runnable Python or Go script " +
-			"using the Axilio SDK. The agent " +
-			"asks whether you want Python or Go.\n\n" +
+			"using the Axilio SDK. The agent honors your Python/Go preference or " +
+			"existing Python/Go project, otherwise using Python.\n\n" +
 			"Bare `axilio init` detects which agents this repo uses (.claude/, AGENTS.md, " +
 			".cursor/) and writes a skill for each; on a terminal with nothing detected it " +
 			"asks. --agent picks one explicitly:\n\n" +
@@ -101,8 +101,9 @@ func initCmd() *cobra.Command {
 			"for AGENTS.md, --force replaces only the marked Axilio block. Without " +
 			"markers, interactive mode asks which agent to configure, while JSON, " +
 			"quiet, or redirected use requires --agent.\n\n" +
-			"It finishes with a sign-in check: browser login is the one step an agent " +
-			"can't do itself, so init surfaces it while a human is likely at the keyboard.",
+			"It finishes with sign-in guidance: browser login needs a human in the " +
+			"same execution environment. Writing the skill can succeed without " +
+			"authentication; run axilio doctor to verify readiness before using a phone.",
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			return runInit(cmd.Context(), agent, force)
 		},
@@ -252,7 +253,7 @@ func promptAgentChoice() ([]string, bool) {
 
 // agentFirstPrompt is the copy-pasteable first thing to say to an agent once
 // the skill is in place — a concrete task plus the durable deliverable.
-const agentFirstPrompt = `Use the axilio CLI to take a phone, open the browser, search for something — then hand me the SDK script.`
+const agentFirstPrompt = `Help me complete one useful task on one of my organization's dedicated phones. Ask which app and result I want if I haven't said, use the axilio CLI to prove the flow, then hand me a standalone SDK script.`
 
 // initNextSteps closes the loop after the skill lands: confirm sign-in (browser
 // login is the one step an agent can't do itself, so surface it while a human
@@ -275,9 +276,9 @@ func initNextSteps(ctx context.Context, p *output.Printer) {
 			p.Warn("login didn't complete (%v); run `axilio login` when ready", err)
 		}
 	default:
-		p.Warn("not signed in; a human must run `axilio login` (browser), or set AXILIO_API_KEY")
+		p.Warn("not signed in; a human must run `axilio login` in this environment, or securely provide AXILIO_API_KEY")
 	}
-	p.Note("\nNow tell your agent:\n  %q", agentFirstPrompt)
+	p.Note("\nRun `axilio doctor` to verify readiness; then continue in an agent with terminal access to this environment:\n  %q", agentFirstPrompt)
 }
 
 // oauthSignedIn reports whether a usable OAuth session exists for apiHost,
