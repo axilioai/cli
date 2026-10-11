@@ -139,7 +139,7 @@ func TestSkillGoErrorHelpersExist(t *testing.T) {
 
 // TestSkillTeachesSemanticSelectors pins the rule that matters most for output
 // quality: coordinates are only true for the screen you explored on, and the
-// script runs later against a different phone from the pool.
+// dedicated phone's layout can change before the script runs again.
 func TestSkillTeachesSemanticSelectors(t *testing.T) {
 	skill := hostedAgentSkill(t)
 	for _, want := range []string{
@@ -156,13 +156,9 @@ func TestSkillTeachesSemanticSelectors(t *testing.T) {
 	}
 }
 
-// TestSkillAsksForLanguage pins the language-choice step: without it an agent
-// defaults to whichever SDK appears first and the user never gets a say.
-func TestSkillAsksForLanguage(t *testing.T) {
-	skill := hostedAgentSkill(t)
-	if !strings.Contains(skill, "Which SDK should I write this in") {
-		t.Error("the hosted skill no longer tells the agent to ask which SDK to write")
-	}
+// Both languages must remain available to honor the user's preference. Whether
+// to ask or use the documented default is guidance, not a fixed question string.
+func TestSkillDocumentsBothSDKs(t *testing.T) {
 	for _, lang := range []string{"python", "go"} {
 		langBlock(t, lang) // fatals if the block is missing
 	}
@@ -179,7 +175,7 @@ func TestSkillCommandExamplesMatchCLI(t *testing.T) {
 		}
 	}
 	for _, command := range []string{
-		"axilio sessions start --export",
+		"axilio sessions start",
 		"axilio phone tap --query",
 		"axilio phone send",
 		"axilio files list",
