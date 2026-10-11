@@ -70,11 +70,12 @@ func TestPhonesInventoryDoesNotEmitPartialSuccess(t *testing.T) {
 			t.Run(command+"/"+failure, func(t *testing.T) {
 				srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					w.Header().Set("Content-Type", "application/json")
-					if r.URL.Query().Get("offset") == "0" {
+					switch {
+					case r.URL.Query().Get("offset") == "0":
 						_, _ = w.Write([]byte(`{"phones":[{"phone_id":"p1","status":"active"}],"total":2,"limit":1,"offset":0}`))
-					} else if failure == "forbidden" {
+					case failure == "forbidden":
 						http.Error(w, `{"message":"permission denied"}`, http.StatusForbidden)
-					} else {
+					default:
 						_, _ = w.Write([]byte(`{"phones":[],"total":2,"limit":1,"offset":1}`))
 					}
 				}))

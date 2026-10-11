@@ -73,6 +73,6 @@ jobs:
           cache: true
       # Same assertions CI runs, surfaced here too so a scheduled run reports on
       # both languages in one place rather than only half the picture. The tests
-      # fetches the live hosted skill before any TestSkill* case runs.
+      # fetch the live hosted skill before any TestSkill* case runs.
       - name: check the skill's Go section
         run: go test ./cmd/ -run TestSkill -v
