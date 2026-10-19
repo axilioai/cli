@@ -148,3 +148,25 @@ func TestPhoneObserveWalkthroughSurvivesFangWidths(t *testing.T) {
 		t.Fatal("walkthrough was not separated from command prose")
 	}
 }
+
+// A bare `sessions start` lands on a shared-pool phone billed per second, and
+// agents copy the help's examples verbatim. The help must say so, and the
+// workflow examples an agent reads first must name a phone (AXI-2254).
+func TestSessionsStartHelpCallsOutSharedPoolCharge(t *testing.T) {
+	start := findCommand(t, Root(), "sessions start")
+	if !strings.Contains(start.Long, "shared pool, billed per second") {
+		t.Errorf("sessions start help must say a phone without --phone-id is billed per second:\n%s", start.Long)
+	}
+
+	for _, key := range []string{"axilio", "sessions"} {
+		docs, ok := commandDocumentationByKey[key]
+		if !ok {
+			t.Fatalf("%s has no structured documentation", key)
+		}
+		for _, sample := range docs.Samples {
+			if strings.Contains(sample.Invocation, "sessions start") && !strings.Contains(sample.Invocation, "--phone-id") {
+				t.Errorf("%s workflow example %q starts a metered shared-pool session; name a phone", key, sample.Invocation)
+			}
+		}
+	}
+}

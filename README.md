@@ -5,7 +5,7 @@ terminal, and inspect sessions, runs, and API keys. A single static Go binary,
 built to be driven by people and coding agents alike.
 
 ```bash
-axilio sessions start                 # start a phone session
+axilio sessions start                 # start a session on a shared-pool phone, billed per second
 axilio phone observe                  # see what's on screen
 axilio phone tap --query "the search box"
 axilio phone type "androiddev"
@@ -185,8 +185,10 @@ existing Python/Go project; otherwise it uses Python.
 > assistance. Verify with `axilio doctor` and resume the task. Browser and app
 > sign-in need the human.
 
-Own dedicated phones? Point the session at one: `axilio phones mine` for the
-`phone_id`, then `axilio sessions start --phone-id <id>`.
+Without `--phone-id`, `sessions start` takes a phone from the shared pool, which
+is billed per second of session time at your plan's rate. To use a dedicated
+phone you rent instead (no phone-time charge), get its `phone_id` from
+`axilio phones mine`, then run `axilio sessions start --phone-id <id>`.
 
 ### Drive it yourself
 
@@ -194,7 +196,7 @@ Own dedicated phones? Point the session at one: `axilio phones mine` for the
 axilio login                 # sign in (browser OAuth, or --api-key)
 axilio doctor                # one-shot check: auth, connectivity, account, environment
 axilio phones list           # phones you can claim
-axilio sessions start        # acquire a phone; the session remains active until stopped
+axilio sessions start        # acquire a shared-pool phone, billed per second until stopped
 axilio phone observe         # see the screen
 axilio sessions stop <id>    # release it
 ```
@@ -336,7 +338,7 @@ The verbs are a 1:1 projection of the SDK's driver, so a session you explore her
 maps directly onto SDK code.
 
 ```bash
-axilio sessions start --phone-type android
+axilio sessions start --phone-id ph_123      # your phone's ID, from `axilio phones mine`
 
 axilio phone observe -o json                  # text + elements with coordinates
 axilio phone find "the search box" -o json    # locate a target semantically
@@ -352,16 +354,17 @@ axilio sessions stop <id>
 ### Parallel sessions
 
 Each terminal or agent process can select its own session and drive its own
-phone at once. Pin a phone to a shell with `AXILIO_SESSION`:
+phone at once. Pin a phone to a shell with `AXILIO_SESSION`. Replace `ph_123`
+and `ph_456` with your phone IDs from `axilio phones mine`:
 
 ```bash
 # in terminal A
-eval "$(axilio sessions start --export)"      # sets AXILIO_SESSION for this shell
-axilio phone observe                          # drives A's phone
+eval "$(axilio sessions start --phone-id ph_123 --export)"   # sets AXILIO_SESSION for this shell
+axilio phone observe                                         # drives A's phone
 
 # in terminal B (a second phone, concurrently)
-eval "$(axilio sessions start --export)"
-axilio phone observe                          # drives B's phone
+eval "$(axilio sessions start --phone-id ph_456 --export)"
+axilio phone observe                                         # drives B's phone
 ```
 
 In PowerShell, pipe the assignment to `Invoke-Expression`. On Windows,
@@ -370,7 +373,7 @@ In PowerShell, pipe the assignment to `Invoke-Expression`. On Windows,
 choice.
 
 ```powershell
-axilio sessions start --export | Invoke-Expression   # sets $env:AXILIO_SESSION
+axilio sessions start --phone-id ph_123 --export | Invoke-Expression   # sets $env:AXILIO_SESSION
 axilio phone observe
 ```
 
