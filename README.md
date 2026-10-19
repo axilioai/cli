@@ -338,7 +338,7 @@ The verbs are a 1:1 projection of the SDK's driver, so a session you explore her
 maps directly onto SDK code.
 
 ```bash
-axilio sessions start --phone-id <id>
+axilio sessions start --phone-id ph_123      # your phone's ID, from `axilio phones mine`
 
 axilio phone observe -o json                  # text + elements with coordinates
 axilio phone find "the search box" -o json    # locate a target semantically
@@ -354,15 +354,16 @@ axilio sessions stop <id>
 ### Parallel sessions
 
 Each terminal or agent process can select its own session and drive its own
-phone at once. Pin a phone to a shell with `AXILIO_SESSION`:
+phone at once. Pin a phone to a shell with `AXILIO_SESSION`. Replace `ph_123`
+and `ph_456` with your phone IDs from `axilio phones mine`:
 
 ```bash
 # in terminal A
-eval "$(axilio sessions start --phone-id <id-a> --export)"   # sets AXILIO_SESSION for this shell
+eval "$(axilio sessions start --phone-id ph_123 --export)"   # sets AXILIO_SESSION for this shell
 axilio phone observe                                         # drives A's phone
 
 # in terminal B (a second phone, concurrently)
-eval "$(axilio sessions start --phone-id <id-b> --export)"
+eval "$(axilio sessions start --phone-id ph_456 --export)"
 axilio phone observe                                         # drives B's phone
 ```
 
@@ -372,7 +373,7 @@ In PowerShell, pipe the assignment to `Invoke-Expression`. On Windows,
 choice.
 
 ```powershell
-axilio sessions start --phone-id <id> --export | Invoke-Expression   # sets $env:AXILIO_SESSION
+axilio sessions start --phone-id ph_123 --export | Invoke-Expression   # sets $env:AXILIO_SESSION
 axilio phone observe
 ```
 
