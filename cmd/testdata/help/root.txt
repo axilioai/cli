@@ -52,7 +52,7 @@ Acquire Axilio phones, drive live sessions, run workflows, and manage
   EXAMPLES
 
     axilio login
-    eval "$(axilio sessions start --export)"
+    eval "$(axilio sessions start --phone-id ph_123 --export)"
     axilio phone observe
     axilio phone tap --query "the search box"
     axilio phone observe

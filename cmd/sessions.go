@@ -361,8 +361,10 @@ func sessionsStartCmd() *cobra.Command {
 			"only; --phone-type remains available for scripts that pass android explicitly, " +
 			"and any other value is a usage error. The session remains active in Axilio " +
 			"until stopped; the CLI saves its connection information locally and marks " +
-			"it as the most recently started session. Pin a dedicated phone discovered " +
-			"through `phones mine` with --phone-id, or " +
+			"it as the most recently started session. Without --phone-id the phone " +
+			"comes from the shared pool, billed per second at your plan's rate. Use " +
+			"--phone-id to pin a dedicated phone from `phones mine` (no phone-time " +
+			"charge), or " +
 			"attach the session to a workflow with --workflow. --export prints only " +
 			"the AXILIO_SESSION assignment for the shell to evaluate and cannot be " +
 			"combined with -o json. --shell picks its syntax: posix prints " +

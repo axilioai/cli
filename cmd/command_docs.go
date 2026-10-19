@@ -238,7 +238,7 @@ axilio phone tap 540 1120`
 var commandDocumentationByKey = map[string]CommandDocumentation{
 	"axilio": workflow(
 		"axilio login",
-		`eval "$(axilio sessions start --export)"`,
+		`eval "$(axilio sessions start --phone-id ph_123 --export)"`,
 		"axilio phone observe",
 		`axilio phone tap --query "the search box"`,
 		"axilio phone observe",
@@ -302,7 +302,7 @@ var commandDocumentationByKey = map[string]CommandDocumentation{
 	}},
 	"sessions": workflow(
 		"axilio sessions list",
-		"axilio sessions start",
+		"axilio sessions start --phone-id ph_123",
 		"axilio sessions current",
 		"axilio sessions get sess_123",
 		"axilio sessions trace sess_123",
@@ -339,7 +339,7 @@ var commandDocumentationByKey = map[string]CommandDocumentation{
 		sampleWithNote("axilio sessions current -o json", "{\n  \"session_id\": \"<session-id>\",\n  \"phone_id\": \"<phone-id>\",\n  \"phone_type\": \"android\",\n  \"control_url\": \"<control-url>\",\n  \"created_at\": \"<timestamp>\"\n}", "none", "A selected session keeps the same JSON shape. With no selected session, stdout is empty and exit status is 4."),
 	}},
 	"sessions start": {Samples: []CommandSample{
-		sample("axilio sessions start", "Session      <session-id>\nPhone        <phone-id>\nRegion       us-central\nLive view    <live-view-url>\nControl URL  <control-url>", "Drive it:  axilio phone observe\nPin it to this shell (for parallel work):  export AXILIO_SESSION=<session-id>\nRelease it with:  axilio sessions stop <session-id>"),
+		sampleWithNote("axilio sessions start", "Session      <session-id>\nPhone        <phone-id>\nRegion       us-central\nLive view    <live-view-url>\nControl URL  <control-url>", "Drive it:  axilio phone observe\nPin it to this shell (for parallel work):  export AXILIO_SESSION=<session-id>\nRelease it with:  axilio sessions stop <session-id>", "Without --phone-id the phone comes from the shared pool, billed per second of session time at your plan's rate. Pass --phone-id to use a dedicated phone instead."),
 		sample("axilio sessions start --phone-id ph_123", "Session      <session-id>\nPhone        ph_123\nRegion       us-central\nLive view    <live-view-url>\nControl URL  <control-url>", "Drive it:  axilio phone observe\nPin it to this shell (for parallel work):  export AXILIO_SESSION=<session-id>\nRelease it with:  axilio sessions stop <session-id>"),
 		sample("axilio sessions start --workflow wf_123", "Session      <session-id>\nPhone        <phone-id>\nRegion       us-central\nLive view    <live-view-url>\nControl URL  <control-url>", "Drive it:  axilio phone observe\nPin it to this shell (for parallel work):  export AXILIO_SESSION=<session-id>\nRelease it with:  axilio sessions stop <session-id>"),
 		sampleWithNote("axilio sessions start --export", "export AXILIO_SESSION=<session-id>", "none", "--export is exact shell text; combining it with -o json is a usage error before allocation."),

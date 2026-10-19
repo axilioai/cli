@@ -46,7 +46,7 @@ performs an action, verifies the result, and releases the session:
 
 .EX
 axilio login
-eval "$(axilio sessions start --export)"
+eval "$(axilio sessions start --phone-id ph_123 --export)"
 axilio phone observe
 axilio phone tap --query "the search box"
 axilio phone observe
@@ -4203,7 +4203,7 @@ axilio sessions only displays this help
 
 .EX
 axilio sessions list
-axilio sessions start
+axilio sessions start --phone-id ph_123
 axilio sessions current
 axilio sessions get sess_123
 axilio sessions trace sess_123
@@ -4742,15 +4742,17 @@ The CLI currently supports Android allocation only; --phone-type remains
 available for scripts that pass android explicitly, and any other value
 is a usage error. The session remains active in Axilio until stopped;
 the CLI saves its connection information locally and marks it as the
-most recently started session. Pin a dedicated phone discovered through
-\fBphones mine\fR with --phone-id, or attach the session to a workflow with
---workflow. --export prints only the AXILIO_SESSION assignment for the
-shell to evaluate and cannot be combined with -o json. --shell picks its
-syntax: posix prints \fBexport AXILIO_SESSION=\\<id\\>\fR (eval "$(axilio
-sessions start --export)"), powershell prints \fB$env:AXILIO_SESSION =
-"\\<id\\>"\fR (axilio sessions start --export | Invoke-Expression), and cmd
-prints \fBset AXILIO_SESSION=\\<id\\>\fR\&. The default is posix, except on
-Windows where it is powershell unless SHELL is set (Git Bash, MSYS2).
+most recently started session. Without --phone-id the phone comes from
+the shared pool, billed per second at your plan's rate. Use --phone-id
+to pin a dedicated phone from \fBphones mine\fR (no phone-time charge), or
+attach the session to a workflow with --workflow. --export prints only
+the AXILIO_SESSION assignment for the shell to evaluate and cannot be
+combined with -o json. --shell picks its syntax: posix prints \fBexport
+AXILIO_SESSION=\\<id\\>\fR (eval "$(axilio sessions start --export)"),
+powershell prints \fB$env:AXILIO_SESSION = "\\<id\\>"\fR (axilio sessions
+start --export | Invoke-Expression), and cmd prints \fBset
+AXILIO_SESSION=\\<id\\>\fR\&. The default is posix, except on Windows where it
+is powershell unless SHELL is set (Git Bash, MSYS2).
 
 .PP
 \fBCommand options\fP
@@ -4812,6 +4814,9 @@ Pin it to this shell (for parallel work):  export AXILIO_SESSION=<session-id>
 Release it with:  axilio sessions stop <session-id>
 .sp
 # Exit status: 0
+# Notes: Without --phone-id the phone comes from the shared pool, billed
+#        per second of session time at your plan's rate. Pass --phone-id
+#        to use a dedicated phone instead.
 .EE
 
 .PP
@@ -6287,7 +6292,7 @@ error output may include an ERROR heading, spacing, and ANSI color.
 Observe and act on a selected phone session:
 
 .EX
-axilio sessions start --phone-type android
+axilio sessions start --phone-id ph_123
 axilio phone observe
 axilio phone tap --query "the search box"
 axilio phone type "coffee shops"
@@ -6298,7 +6303,7 @@ axilio phone observe
 Start independent sessions in separate shells:
 
 .EX
-eval "$(axilio sessions start --export)"
+eval "$(axilio sessions start --phone-id ph_123 --export)"
 axilio phone screenshot --out screenshot.png
 .EE
 
@@ -6307,7 +6312,7 @@ The same in PowerShell, where --export prints a $env: assignment by
 default on Windows:
 
 .EX
-axilio sessions start --export | Invoke-Expression
+axilio sessions start --phone-id ph_123 --export | Invoke-Expression
 axilio phone screenshot --out screenshot.png
 .EE
 

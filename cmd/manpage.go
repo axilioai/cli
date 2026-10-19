@@ -149,11 +149,11 @@ func generateManpageMarkdown(root *cobra.Command, version string) (string, error
 
 	writeManpageHeading(&b, 1, "EXAMPLES", "EXAMPLES")
 	writeWrapped(&b, "Observe and act on a selected phone session:")
-	writeLiteral(&b, "axilio sessions start --phone-type android\naxilio phone observe\naxilio phone tap --query \"the search box\"\naxilio phone type \"coffee shops\"\naxilio phone observe")
+	writeLiteral(&b, "axilio sessions start --phone-id ph_123\naxilio phone observe\naxilio phone tap --query \"the search box\"\naxilio phone type \"coffee shops\"\naxilio phone observe")
 	writeWrapped(&b, "Start independent sessions in separate shells:")
-	writeLiteral(&b, "eval \"$(axilio sessions start --export)\"\naxilio phone screenshot --out screenshot.png")
+	writeLiteral(&b, "eval \"$(axilio sessions start --phone-id ph_123 --export)\"\naxilio phone screenshot --out screenshot.png")
 	writeWrapped(&b, "The same in PowerShell, where --export prints a $env: assignment by default on Windows:")
-	writeLiteral(&b, "axilio sessions start --export | Invoke-Expression\naxilio phone screenshot --out screenshot.png")
+	writeLiteral(&b, "axilio sessions start --phone-id ph_123 --export | Invoke-Expression\naxilio phone screenshot --out screenshot.png")
 	writeWrapped(&b, "Run a workflow and request machine-readable output:")
 	writeLiteral(&b, "axilio workflows list -o json\naxilio runs start <workflow-id> --count 2 -o json")
 
