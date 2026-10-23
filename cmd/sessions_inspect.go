@@ -185,7 +185,7 @@ func sessionsTraceCmd() *cobra.Command {
 			"frames response (frames, sdk_call_costs, inference_costs, totals) merged " +
 			"across pages.\n\n" +
 			"--follow keeps the trace open on an active session: after the archived " +
-			"listing, new frames stream live (attaching to the telemetry WebSocket, " +
+			"listing, new frames stream live (from the telemetry event stream, " +
 			"with the archive as fallback) until the session-end frame. Live rows " +
 			"show COST as \"-\"; billing joins at read time, so live totals settle " +
 			"in the closing summary. With JSON output the follow contract becomes " +
@@ -289,23 +289,21 @@ func traceFollow(cl *client.Client, p *output.Printer, sessionID string) error {
 	fetched := int64(len(merged.Frames))
 
 	for !dedupe.endSeen {
-		tok, mintErr := cl.Phones.SessionTelemetryToken(ctx, &platformgo.PhonesSessionTelemetryTokenRequest{SessionID: sessionID})
+		stream, openErr := openLiveStream(ctx, sessionID)
 		if ctx.Err() != nil {
 			return traceFollowInterrupted(p, sessionID)
 		}
-		if mintErr == nil {
-			if stream, dialErr := telemetry.Tail(ctx, tok.TelemetryURL); dialErr == nil {
-				p.Step("attached to live telemetry — Ctrl-C to stop")
-				if _, err := streamLive(ctx, stream, dedupe); err != nil {
-					if ctx.Err() != nil {
-						return traceFollowInterrupted(p, sessionID)
-					}
-					return err
+		sessionOver := false
+		if openErr == nil {
+			p.Step("attached to live telemetry — Ctrl-C to stop")
+			over, err := streamLive(ctx, stream, dedupe)
+			if err != nil {
+				if ctx.Err() != nil {
+					return traceFollowInterrupted(p, sessionID)
 				}
+				return err
 			}
-			if ctx.Err() != nil {
-				return traceFollowInterrupted(p, sessionID)
-			}
+			sessionOver = over
 		}
 		// Backfill what the live window missed — and, when live is
 		// unavailable, the polling leg itself.
@@ -320,8 +318,12 @@ func traceFollow(cl *client.Client, p *output.Printer, sessionID string) error {
 		if dedupe.endSeen {
 			break
 		}
-		if mintErr != nil {
+		if sessionOver {
 			p.Note("session is not active — the archived trace above is complete")
+			break
+		}
+		if telemetry.IsTelemetryOff(openErr) || telemetry.IsNotFound(openErr) || telemetry.IsUnauthorized(openErr) {
+			p.Note("live telemetry unavailable for this session — the archived trace above is complete")
 			break
 		}
 		select {

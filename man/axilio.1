@@ -4097,7 +4097,7 @@ its recorded telemetry and exits the same way.
 
 .PP
 While the session is active the stream attaches to the live telemetry
-WebSocket for push delivery; when the attach is refused or lost it
+event stream for push delivery; when the stream is refused or lost it
 follows the durable frame archive instead. Frames render exactly once
 either way, and spans appear on completion (in-flight span starts are
 not shown).
@@ -5009,10 +5009,10 @@ totals) merged across pages.
 
 .PP
 --follow keeps the trace open on an active session: after the archived
-listing, new frames stream live (attaching to the telemetry WebSocket,
-with the archive as fallback) until the session-end frame. Live rows
-show COST as "-"; billing joins at read time, so live totals settle in
-the closing summary. With JSON output the follow contract becomes
+listing, new frames stream live (from the telemetry event stream, with
+the archive as fallback) until the session-end frame. Live rows show
+COST as "-"; billing joins at read time, so live totals settle in the
+closing summary. With JSON output the follow contract becomes
 newline-delimited JSON: one object per frame (archived first, then
 live), then a final \fB{"trace_end": true, ...}\fR object carrying the
 merged cost maps. If the session is no longer active, the archive prints

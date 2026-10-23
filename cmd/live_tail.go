@@ -6,9 +6,10 @@ import (
 	"errors"
 	"io"
 
+	"github.com/axilioai/cli/internal/oauth"
 	"github.com/axilioai/cli/internal/output"
+	"github.com/axilioai/cli/internal/util"
 	platformgo "github.com/axilioai/platform-go"
-	"github.com/axilioai/platform-go/client"
 	"github.com/axilioai/platform-go/drivers/telemetry"
 )
 
@@ -96,19 +97,32 @@ func spanEndNano(s *platformgo.RunSpanFrame) int64 {
 	return *s.EndTimeUnixNano
 }
 
-// tryLiveAttach mints a fresh telemetry URL for an active session and dials
-// the live leg. Live attach is an upgrade over archive polling, never a new
-// failure mode: any refusal (session no longer active, cross-org read as not
-// found, network trouble) reports nil and the caller stays on the archive.
-func tryLiveAttach(ctx context.Context, cl *client.Client, p *output.Printer, sessionID string) *telemetry.Stream {
-	tok, err := cl.Phones.SessionTelemetryToken(ctx, &platformgo.PhonesSessionTelemetryTokenRequest{SessionID: sessionID})
+// openLiveStream opens a session's telemetry event stream on the API host
+// with the CLI's own credentials: the API key header, or the OAuth bearer.
+// Same precedence as newClient.
+func openLiveStream(ctx context.Context, sessionID string) (*telemetry.Stream, error) {
+	key, host := resolvedCreds()
+	header := cliHeader("")
+	if key != "" {
+		header.Set("X-Axilio-Api-Key", key)
+	} else {
+		tok, err := oauth.ValidAccessToken(ctx, util.FirstNonEmpty(host, defaultAPIHost))
+		if err != nil {
+			return nil, err
+		}
+		header = cliHeader(tok)
+	}
+	return telemetry.Tail(ctx, telemetry.StreamURL(sdkBaseURL(host), sessionID), telemetry.WithHeader(header))
+}
+
+// tryLiveAttach opens the live stream. Live attach is an upgrade over archive
+// polling, never a new failure mode: any refusal (telemetry off, cross-org
+// read as not found, network trouble) reports nil and the caller stays on the
+// archive.
+func tryLiveAttach(ctx context.Context, p *output.Printer, sessionID string) *telemetry.Stream {
+	stream, err := openLiveStream(ctx, sessionID)
 	if err != nil {
 		p.Step("live telemetry unavailable — following the archive")
-		return nil
-	}
-	stream, err := telemetry.Tail(ctx, tok.TelemetryURL)
-	if err != nil {
-		p.Step("live telemetry attach failed — following the archive")
 		return nil
 	}
 	p.Step("attached to live telemetry")
@@ -116,10 +130,12 @@ func tryLiveAttach(ctx context.Context, cl *client.Client, p *output.Printer, se
 }
 
 // streamLive delivers live frames through the deduper until the stream ends.
-// It reports (true, nil) on a clean end (the terminal session frame was
-// delivered), (false, nil) when the live leg failed and the caller should
-// fall back to the archive, and a non-nil error only for context
-// cancellation or a renderer failure.
+// It reports (true, nil) on a clean end (the session is over: its end frame
+// arrived, or the server had nothing left to send), (false, nil) when the
+// live leg failed and the caller should fall back to the archive, and a
+// non-nil error only for context cancellation or a renderer failure. The
+// stream replays the archive before going live, so the deduper drops what the
+// caller already printed.
 func streamLive(ctx context.Context, stream *telemetry.Stream, d *frameDeduper) (bool, error) {
 	defer func() { _ = stream.Close() }()
 	for {
@@ -135,10 +151,6 @@ func streamLive(ctx context.Context, stream *telemetry.Stream, d *frameDeduper) 
 			return true, nil
 		case ctx.Err() != nil:
 			return false, ctx.Err()
-		case telemetry.IsSessionEnded(err):
-			// The session is over but the terminal frame was lost on the
-			// live leg; the caller's archive backfill still recovers it.
-			return false, nil
 		default:
 			// Token rejected or reconnect budget exhausted: degrade to the
 			// archive rather than failing a watch that polling can finish.

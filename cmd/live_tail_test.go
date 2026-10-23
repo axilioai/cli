@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -9,9 +8,6 @@ import (
 	"strconv"
 	"strings"
 	"testing"
-	"time"
-
-	"github.com/coder/websocket"
 )
 
 // liveFrames is the scripted session telemetry: a log, an sdk_call span, and
@@ -28,54 +24,40 @@ var liveFrames = []string{
 // (spans appear on completion), and no duplicate when its end phase arrives.
 const inFlightSpan = `{"kind":"span","trace_id":"t1","span_id":"s-call","span_type":"sdk_call","name":"Screen.observe","phase":"start","start_time_unix_nano":1755900001000000000}`
 
-// fakeTelemetryWS serves the telemetry dialect: handler runs once per
-// accepted connection, ordinal-numbered; refuse pre-upgrade by writing an
-// HTTP status instead of accepting.
-func fakeTelemetryWS(t *testing.T, handler func(conn int, w http.ResponseWriter, r *http.Request)) *httptest.Server {
+// sseServe writes frames as a telemetry event stream, then ends the response
+// (the server closing; the client reopens with its cursor).
+func sseServe(w http.ResponseWriter, frames []string) {
+	w.Header().Set("Content-Type", "text/event-stream")
+	for i, f := range frames {
+		var head struct {
+			Kind string `json:"kind"`
+		}
+		_ = json.Unmarshal([]byte(f), &head)
+		fmt.Fprintf(w, "id: 1-%d\nevent: %s\ndata: %s\n\n", i+1, head.Kind, f)
+	}
+}
+
+// refuse answers every stream request with status.
+func refuse(status int) func(int, http.ResponseWriter, *http.Request) {
+	return func(_ int, w http.ResponseWriter, _ *http.Request) { w.WriteHeader(status) }
+}
+
+// liveAPI wires the HTTP fake for live-attach tests: a run with a session, an
+// archive holding archive (offset-sliced, cost maps attached), and the
+// session's event stream, whose Nth request events answers.
+func liveAPI(t *testing.T, events func(conn int, w http.ResponseWriter, r *http.Request), archive []string, terminal string) *httptest.Server {
 	t.Helper()
 	conns := 0
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		conns++
-		handler(conns, w, r)
-	}))
-	t.Cleanup(srv.Close)
-	return srv
-}
-
-// wsServe upgrades and plays the given wire messages, then closes with the
-// given status (normal closure = the hub's clean end).
-func wsServe(t *testing.T, w http.ResponseWriter, r *http.Request, messages []string, status websocket.StatusCode) {
-	t.Helper()
-	c, err := websocket.Accept(w, r, nil)
-	if err != nil {
-		return
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	for _, m := range messages {
-		if err := c.Write(ctx, websocket.MessageText, []byte(m)); err != nil {
-			return
-		}
-	}
-	_ = c.Close(status, "")
-}
-
-// liveAPI wires the HTTP fake for live-attach tests: a running run with a
-// session, an archive holding archived[0:archiveLen] (offset-sliced, cost
-// maps attached), and a telemetry-token endpoint pointing at wsURL (or
-// refusing with mintStatus when non-zero).
-func liveAPI(t *testing.T, wsURL string, archive []string, mintStatus int, terminal string) *httptest.Server {
-	t.Helper()
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		p := r.URL.Path
 		switch {
-		case strings.Contains(p, "/telemetry-token"):
-			if mintStatus != 0 {
-				http.Error(w, fmt.Sprintf(`{"title":"Conflict","status":%d,"detail":"session is not active"}`, mintStatus), mintStatus)
-				return
+		case p == "/api/v1/realtime/sessions/sess-1/events":
+			if got := r.Header.Get("X-Axilio-Api-Key"); got != "axl_test" {
+				t.Errorf("stream request carried API key %q, want the CLI's", got)
 			}
-			fmt.Fprintf(w, `{"session_id":"sess-1","telemetry_url":%q}`, wsURL)
+			conns++
+			events(conns, w, r)
 		case strings.Contains(p, "/frames"):
 			offset, _ := strconv.Atoi(r.URL.Query().Get("offset"))
 			if offset > len(archive) {
@@ -93,29 +75,16 @@ func liveAPI(t *testing.T, wsURL string, archive []string, mintStatus int, termi
 	return srv
 }
 
-func wsURLOf(srv *httptest.Server) string {
-	return "ws" + strings.TrimPrefix(srv.URL, "http")
-}
-
-// The live leg replays frames the archive already delivered, plus transport
-// frames and an in-flight span start: each frame renders exactly once, the
-// in-flight start not at all, and the live end frame finishes the watch.
+// The stream replays the archive the watch already printed, plus an in-flight
+// span start: each frame renders exactly once, the in-flight start not at
+// all, and the end frame finishes the watch.
 func TestRunsWatchLiveAttachNoDuplicates(t *testing.T) {
 	fastWatch(t)
-	ws := fakeTelemetryWS(t, func(conn int, w http.ResponseWriter, r *http.Request) {
-		if got := r.URL.Query().Get("resume"); got != "1" {
-			t.Errorf("live attach did not opt into cursor resume (resume=%q)", got)
-		}
-		wsServe(t, w, r, []string{
-			`{"type":"CURSOR","cursor":"c-1"}`,
-			inFlightSpan,
-			// Array batching plus full replay of the archived prefix.
-			"[" + liveFrames[0] + "," + liveFrames[1] + "]",
-			liveFrames[2],
-		}, websocket.StatusNormalClosure)
-	})
+	events := func(_ int, w http.ResponseWriter, _ *http.Request) {
+		sseServe(w, []string{liveFrames[0], liveFrames[1], inFlightSpan, liveFrames[2]})
+	}
 	// The archive already holds the first two frames when watch drains it.
-	api := liveAPI(t, wsURLOf(ws), liveFrames[:2], 0, "completed")
+	api := liveAPI(t, events, liveFrames[:2], "completed")
 
 	out, err := run(t, api, "runs", "watch", "r1")
 	if err != nil {
@@ -131,11 +100,11 @@ func TestRunsWatchLiveAttachNoDuplicates(t *testing.T) {
 	}
 }
 
-// A refused mint (session already over, or not eligible) must leave the
-// polling path fully intact — live attach is never a new failure mode.
-func TestRunsWatchMintRefusedFallsBackToPolling(t *testing.T) {
+// A refused stream (telemetry off, or not found) must leave the polling path
+// fully intact — live attach is never a new failure mode.
+func TestRunsWatchStreamRefusedFallsBackToPolling(t *testing.T) {
 	fastWatch(t)
-	api := liveAPI(t, "ws://unreachable.invalid", liveFrames, http.StatusConflict, "completed")
+	api := liveAPI(t, refuse(http.StatusConflict), liveFrames, "completed")
 	out, err := run(t, api, "runs", "watch", "r1")
 	if err != nil {
 		t.Fatalf("watch: %v", err)
@@ -151,16 +120,16 @@ func TestRunsWatchMintRefusedFallsBackToPolling(t *testing.T) {
 // archive: every frame still arrives exactly once and the watch completes.
 func TestRunsWatchLiveFailureFallsBack(t *testing.T) {
 	fastWatch(t)
-	ws := fakeTelemetryWS(t, func(conn int, w http.ResponseWriter, r *http.Request) {
+	events := func(conn int, w http.ResponseWriter, _ *http.Request) {
 		if conn == 1 {
-			// One frame, then an abrupt drop (no close frame).
-			wsServe(t, w, r, liveFrames[:1], websocket.StatusInternalError)
+			// One frame, then the response ends.
+			sseServe(w, liveFrames[:1])
 			return
 		}
-		// The redial: token now rejected — a terminal, non-retryable refusal.
-		http.Error(w, "token rejected", http.StatusUnauthorized)
-	})
-	api := liveAPI(t, wsURLOf(ws), liveFrames, 0, "completed")
+		// The reopen: credential now rejected, a terminal refusal.
+		w.WriteHeader(http.StatusUnauthorized)
+	}
+	api := liveAPI(t, events, liveFrames, "completed")
 
 	out, err := run(t, api, "runs", "watch", "r1")
 	if err != nil {
@@ -177,13 +146,13 @@ func TestRunsWatchLiveFailureFallsBack(t *testing.T) {
 // ends cleanly on the live end frame.
 func TestSessionsTraceFollowTable(t *testing.T) {
 	fastWatch(t)
-	ws := fakeTelemetryWS(t, func(conn int, w http.ResponseWriter, r *http.Request) {
-		wsServe(t, w, r, []string{
+	events := func(_ int, w http.ResponseWriter, _ *http.Request) {
+		sseServe(w, []string{
 			`{"kind":"span","trace_id":"t1","span_id":"s-live","span_type":"sdk_call","name":"Screen.tap","phase":"end","start_time_unix_nano":1755900001500000000,"end_time_unix_nano":1755900001600000000,"status":{"code":"ok","message":""}}`,
 			liveFrames[2],
-		}, websocket.StatusNormalClosure)
-	})
-	api := liveAPI(t, wsURLOf(ws), liveFrames[:2], 0, "completed")
+		})
+	}
+	api := liveAPI(t, events, liveFrames[:2], "completed")
 
 	out, err := run(t, api, "sessions", "trace", "sess-1", "--follow")
 	if err != nil {
@@ -211,10 +180,10 @@ func TestSessionsTraceFollowTable(t *testing.T) {
 // live frames, then the trace_end summary with the merged cost maps.
 func TestSessionsTraceFollowJSONContract(t *testing.T) {
 	fastWatch(t)
-	ws := fakeTelemetryWS(t, func(conn int, w http.ResponseWriter, r *http.Request) {
-		wsServe(t, w, r, []string{liveFrames[2]}, websocket.StatusNormalClosure)
-	})
-	api := liveAPI(t, wsURLOf(ws), liveFrames[:2], 0, "completed")
+	events := func(_ int, w http.ResponseWriter, _ *http.Request) {
+		sseServe(w, []string{liveFrames[2]})
+	}
+	api := liveAPI(t, events, liveFrames[:2], "completed")
 
 	out, err := run(t, api, "-o", "json", "sessions", "trace", "sess-1", "--follow")
 	if err != nil {
@@ -241,11 +210,11 @@ func TestSessionsTraceFollowJSONContract(t *testing.T) {
 	}
 }
 
-// --follow on a session that is no longer active (mint refused, archive has
+// --follow on a session that is over (the stream answers 204, the archive has
 // no end frame) drains once, says so, and exits cleanly.
 func TestSessionsTraceFollowInactiveSession(t *testing.T) {
 	fastWatch(t)
-	api := liveAPI(t, "ws://unreachable.invalid", liveFrames[:2], http.StatusConflict, "completed")
+	api := liveAPI(t, refuse(http.StatusNoContent), liveFrames[:2], "completed")
 
 	out, err := run(t, api, "sessions", "trace", "sess-1", "--follow")
 	if err != nil {
