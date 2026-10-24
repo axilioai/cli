@@ -116,6 +116,7 @@ func workflowsCreateCmd() *cobra.Command {
 		recording bool
 		telemetry bool
 		capture   bool
+		access    bool
 	)
 	cmd := &cobra.Command{
 		Use:   "create <name>",
@@ -125,8 +126,10 @@ func workflowsCreateCmd() *cobra.Command {
 			"Pass --code with a Python file to save the workflow's first code revision " +
 			"atomically with it; omit it to create an empty workflow and `workflows " +
 			"push` code later. Recording, telemetry, and capture default to on " +
-			"server-side; each toggle flag is sent only when set explicitly, so " +
-			"omitted toggles keep the server defaults.",
+			"server-side and accessibility mode to off; each toggle flag is sent " +
+			"only when set explicitly, so omitted toggles keep the server defaults. " +
+			"--accessibility turns accessibility mode on for the workflow's runs, " +
+			"and every run then requires a phone that supports it.",
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			name := args[0]
@@ -153,6 +156,9 @@ func workflowsCreateCmd() *cobra.Command {
 			}
 			if cmd.Flags().Changed("capture") {
 				req.Capture = &capture
+			}
+			if cmd.Flags().Changed("accessibility") {
+				req.Accessibility = &access
 			}
 			if codePath != "" {
 				code, err := readWorkflowSource(codePath, "--code")
@@ -185,6 +191,7 @@ func workflowsCreateCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&recording, "recording", true, "Record this workflow's runs; --recording=false suppresses video and thumbnails")
 	cmd.Flags().BoolVar(&telemetry, "telemetry", true, "Persist telemetry spans for runs; --telemetry=false skips the durable trace store")
 	cmd.Flags().BoolVar(&capture, "capture", true, "Capture media produced on the phone into the org library; --capture=false disables it")
+	cmd.Flags().BoolVar(&access, "accessibility", false, "Turn on accessibility mode for runs, which then require a phone that supports it; off by default")
 	return cmd
 }
 
@@ -193,7 +200,8 @@ func workflowsGetCmd() *cobra.Command {
 		Use:   "get <workflow-id>",
 		Short: "Show one workflow's details and run statistics.",
 		Long: "Show a single workflow: name, platform, status, OCR engine, the " +
-			"recording/telemetry/capture toggles, timestamps, and run statistics. " +
+			"recording/telemetry/capture/accessibility toggles, timestamps, and run " +
+			"statistics. " +
 			"Use `workflows list` to discover the workflow ID, `workflows pull` for " +
 			"its code, and `workflows revisions` for its code history.",
 		Args: cobra.ExactArgs(1),
@@ -222,6 +230,7 @@ func workflowsGetCmd() *cobra.Command {
 					{"Recording", fmt.Sprintf("%t", w.Recording)},
 					{"Telemetry", fmt.Sprintf("%t", w.Telemetry)},
 					{"Capture", fmt.Sprintf("%t", w.Capture)},
+					{"Accessibility", fmt.Sprintf("%t", w.Accessibility)},
 					{"Created", ts(w.CreatedAt)},
 					{"Updated", ts(w.UpdatedAt)},
 					{"Last run", util.OrDash(tsp(w.LastRunAt))},

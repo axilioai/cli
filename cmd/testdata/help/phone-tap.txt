@@ -3,8 +3,9 @@ Perform a tap action on the selected phone.
   The coordinate form takes x and y as frame-space pixels, with (0,0) at the screen's top-left.
 
   Use --query to find an element by natural-language description and tap its center in one step: the phone waits for the
-  target to appear (up to 5 seconds) before tapping. If --query and coordinates are both provided, --query takes
-  precedence.
+  target to appear (up to 5 seconds) before tapping. On a session with accessibility mode on, --role, --name, and --id
+  select the element from the accessibility tree instead; every given selector must match. If coordinates are also
+  provided, --query takes precedence, as do --role, --name, and --id.
 
   Session selection precedence is --session, AXILIO_SESSION, the only locally saved session, the most recently started
   session, then an ambiguity error.
@@ -30,12 +31,29 @@ Perform a tap action on the selected phone.
     # stderr: none
     # exit status: 0
 
+    axilio phone tap --role button --name "Log in"
+    # stdout: Tapped button "Log in" at 540,1480
+    # stderr: none
+    # exit status: 0
+    # note: Selected from the accessibility tree; needs accessibility mode on the
+    # session.
+
+    axilio phone tap --id com.example.app:id/login
+    # stdout: Tapped #com.example.app:id/login at 540,1480
+    # stderr: none
+    # exit status: 0
+
   TAP FLAGS
 
+    --exact       Require a case-sensitive exact match on --name
     -h --help     Help for tap
+    --id          Android resource id, e.g. com.example.app:id/login; needs accessibility mode
     --model       Vision model for --query only; omitted lets the server select
+    --name        Accessible name, e.g. "Log in"; needs accessibility mode
     --ocr-engine  Ocr engine for --query only: free or premium; omitted uses free
     --query       Recommended natural-language target; vision finds it and taps its center
+    --role        Accessibility role, e.g. button or textbox; needs accessibility mode
+    --strategy    Resolver: auto, vision, or accessibility; omitted uses auto (the tree when on, else vision)
 
   PHONE FLAGS
 

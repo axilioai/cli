@@ -29,6 +29,8 @@ func TestClassify(t *testing.T) {
 		{"driver timeout", &mobile.Error{Code: mobile.CodeTimeout}, Timeout},
 		{"locator auto-wait timeout", &mobile.Error{Code: mobile.CodeActionTimeout}, Timeout},
 		{"locator needs a capability the session lacks", &mobile.Error{Code: mobile.CodeStrategyUnavailable}, Usage},
+		{"accessibility tree covered by a system dialog", &mobile.Error{Code: mobile.CodeTreeUnavailable}, Unavailable},
+		{"accessibility node gone", &mobile.Error{Code: mobile.CodeStaleNode}, NotFound},
 		{"driver connection", &mobile.Error{Code: mobile.CodeConnection}, Unavailable},
 		{"driver not connected", &mobile.Error{Code: mobile.CodeNotConnected}, Unavailable},
 		{"driver device offline", &mobile.Error{Code: mobile.CodeDeviceOffline}, Unavailable},

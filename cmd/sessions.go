@@ -376,7 +376,7 @@ func sessionsCurrentCmd() *cobra.Command {
 
 func sessionsStartCmd() *cobra.Command {
 	var phoneType, phoneID, workflowID, shellFlag string
-	var export bool
+	var export, accessibility bool
 	cmd := &cobra.Command{
 		Use:   "start",
 		Short: "Acquire a phone and open a session that remains active until stopped.",
@@ -384,13 +384,20 @@ func sessionsStartCmd() *cobra.Command {
 			"only; --phone-type remains available for scripts that pass android explicitly, " +
 			"and any other value is a usage error. The session remains active in Axilio " +
 			"until stopped; the CLI saves its connection information locally and marks " +
-			"it as the most recently started session. Without --phone-id the phone " +
-			"comes from the shared pool, billed per second at your plan's rate. Use " +
+			"it as the most recently started session. A session started without --phone-id " +
+			"gets a phone from the shared pool, billed per second at your plan's rate. Use " +
 			"--phone-id to pin a dedicated phone from `phones mine` (no phone-time " +
 			"charge), or " +
-			"attach the session to a workflow with --workflow. --export prints only " +
+			"attach the session to a workflow with --workflow.\n\n" +
+			"Accessibility mode, which lets phone commands select elements by " +
+			"--role, --name, and --id and `phone tree` read the screen's structure, " +
+			"is off by default. --accessibility turns it on and requires a phone " +
+			"that supports it, so only such phones are claimed; pinning one without " +
+			"support with --phone-id exits 6. While it is on, the accessibility " +
+			"service is visible to apps on the phone.\n\n" +
+			"--export prints only " +
 			"the AXILIO_SESSION assignment for the shell to evaluate and cannot be " +
-			"combined with -o json. --shell picks its syntax: posix prints " +
+			"combined with -o json. The --shell flag picks its syntax: posix prints " +
 			"`export AXILIO_SESSION=<id>` (eval \"$(axilio sessions start --export)\"), " +
 			"powershell prints `$env:AXILIO_SESSION = \"<id>\"` " +
 			"(axilio sessions start --export | Invoke-Expression), and cmd prints " +
@@ -422,7 +429,14 @@ func sessionsStartCmd() *cobra.Command {
 			if workflowID != "" {
 				req.WorkflowID = &workflowID
 			}
+			// Always sent, so the request states what the flag says rather
+			// than leaning on the server default (also false).
+			req.Accessibility = platformgo.Bool(accessibility)
 			a, err := cl.Phones.Allocate(context.Background(), req)
+			if platformgo.IsAccessibilityUnavailable(err) {
+				return exit.With(exit.Unavailable, fmt.Errorf(
+					"phone %s does not support accessibility mode; drop --phone-id to claim any phone that does, or drop --accessibility", phoneID))
+			}
 			if err != nil {
 				return err
 			}
@@ -449,6 +463,7 @@ func sessionsStartCmd() *cobra.Command {
 					{"Session", a.SessionID},
 					{"Phone", a.PhoneID},
 					{"Region", util.OrDash(strv(a.Region))},
+					{"Accessibility", fmt.Sprintf("%t", a.Accessibility)},
 					{"Live view", util.OrDash(strv(a.LiveViewURL))},
 					{"Control URL", util.OrDash(strv(a.ControlURL))},
 				})
@@ -468,6 +483,7 @@ func sessionsStartCmd() *cobra.Command {
 	cmd.Flags().StringVar(&workflowID, "workflow", "", "Workflow ID to attach; omit for an interactive session")
 	cmd.Flags().BoolVar(&export, "export", false, "Print only the AXILIO_SESSION assignment for the shell to evaluate")
 	cmd.Flags().StringVar(&shellFlag, "shell", "", shellFlagHelp)
+	cmd.Flags().BoolVar(&accessibility, "accessibility", false, "Turn on accessibility mode, which requires a phone that supports it; off by default")
 	return cmd
 }
 
