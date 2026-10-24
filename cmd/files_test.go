@@ -2,6 +2,10 @@ package cmd
 
 import (
 	"encoding/json"
+	"io"
+	"net/http"
+	"net/http/httptest"
+	"net/url"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -30,6 +34,27 @@ func TestFilesListJSON(t *testing.T) {
 	// A failed capture is a visible row with its state, not an absence.
 	if got.Files[1]["id"] != "d2" || got.Files[1]["capture_state"] != "skipped_size" {
 		t.Fatalf("skipped capture not surfaced: %v", got.Files[1])
+	}
+}
+
+// --sort/--order fold into the API's single order_by expression and --search
+// goes out as search.
+func TestFilesListSortAndSearchMapToQuery(t *testing.T) {
+	var gotQuery url.Values
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotQuery = r.URL.Query()
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = io.WriteString(w, `{"files":[],"total":0,"usage":{"file_count":0,"file_limit":10000,"total_bytes":0,"byte_limit":53687091200}}`)
+	}))
+	t.Cleanup(srv.Close)
+	if _, err := run(t, srv, "files", "list", "--search", "receipt", "--sort", "size_bytes", "--order", "asc"); err != nil {
+		t.Fatalf("files list: %v", err)
+	}
+	if got := gotQuery.Get("order_by"); got != "size_bytes asc" {
+		t.Fatalf("order_by = %q, want %q", got, "size_bytes asc")
+	}
+	if got := gotQuery.Get("search"); got != "receipt" {
+		t.Fatalf("search = %q, want receipt", got)
 	}
 }
 

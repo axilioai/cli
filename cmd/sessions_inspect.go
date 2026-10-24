@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 	"os/signal"
@@ -35,8 +34,7 @@ func sessionsGetCmd() *cobra.Command {
 		Long: "Fetch one session by ID, active or historical. The result includes " +
 			"status, source, phone, allocation and release times, duration, tags, " +
 			"workflow, capture and telemetry settings, and the recording status and " +
-			"playback URL when ready. Active sessions also include a short-lived " +
-			"screen thumbnail URL. Discover IDs with `sessions list --remote` or " +
+			"playback URL when ready. Discover IDs with `sessions list --remote` or " +
 			"`sessions list --history`.",
 		Args: cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
@@ -48,27 +46,8 @@ func sessionsGetCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			// The JSON payload is the canonical detail response plus the
-			// thumbnail fields, which live behind their own endpoint. The
-			// thumbnail only exists while a session is active, and its absence
-			// must not fail the command — it is enrichment, not the record.
-			payload, err := toMap(d)
-			if err != nil {
-				return err
-			}
-			var thumbURL string
-			if d.Status == platformgo.PhoneSessionDetailResponseStatusActive {
-				th, thErr := cl.Phones.SessionThumbnail(context.Background(), &platformgo.PhonesSessionThumbnailRequest{SessionID: args[0]})
-				if thErr == nil {
-					thumbURL = strv(th.URL)
-					payload["thumbnail_status"] = string(th.Status)
-					if th.URL != nil {
-						payload["thumbnail_url"] = *th.URL
-					}
-				}
-			}
 			p := printer()
-			return p.Emit(payload, func() {
+			return p.Emit(d, func() {
 				p.KV([][2]string{
 					{"Session", d.SessionID},
 					{"Name", util.OrDash(strv(d.Name))},
@@ -77,7 +56,7 @@ func sessionsGetCmd() *cobra.Command {
 					{"Allocated by", util.OrDash(enumv(d.AllocatedBy))},
 					{"Phone", d.PhoneID},
 					{"Phone name", util.OrDash(strv(d.PhoneName))},
-					{"Nickname", util.OrDash(strv(d.Nickname))},
+					{"Nickname", util.OrDash(strv(d.PhoneNickname))},
 					{"Model", util.OrDash(strv(d.ModelName))},
 					{"Type", util.OrDash(enumv(d.PhoneType))},
 					{"Location", util.OrDash(strv(d.Location))},
@@ -92,25 +71,10 @@ func sessionsGetCmd() *cobra.Command {
 					{"Telemetry", fmt.Sprintf("%t", !d.TelemetryDisabled)},
 					{"Recording", string(d.RecordingStatus)},
 					{"Recording URL", util.OrDash(strv(d.RecordingURL))},
-					{"Thumbnail URL", util.OrDash(thumbURL)},
 				})
 			})
 		},
 	}
-}
-
-// toMap round-trips a response through JSON so extra CLI-composed fields can
-// be added without losing the canonical wire field names.
-func toMap(v any) (map[string]any, error) {
-	raw, err := json.Marshal(v)
-	if err != nil {
-		return nil, err
-	}
-	var m map[string]any
-	if err := json.Unmarshal(raw, &m); err != nil {
-		return nil, err
-	}
-	return m, nil
 }
 
 // sessionDuration renders the session length, running to now while active.

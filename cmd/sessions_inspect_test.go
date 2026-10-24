@@ -12,7 +12,7 @@ import (
 	"github.com/axilioai/cli/internal/exit"
 )
 
-// sessionsAPI fakes the session detail, thumbnail, and frames endpoints. The
+// sessionsAPI fakes the session detail and frames endpoints. The
 // frames endpoint serves two pages so the pagination merge is exercised, and
 // includes a frame with an unknown kind to pin the tolerant-reader contract.
 func sessionsAPI(t *testing.T) *httptest.Server {
@@ -39,8 +39,6 @@ func sessionsAPI(t *testing.T) *httptest.Server {
 				],
 				"sdk_call_costs":{"sp1":3100},"inference_costs":{"inf1":2000},
 				"total":4,"limit":2,"offset":2,"retention_expired":false}`)
-		case strings.HasSuffix(p, "/thumbnail"):
-			_, _ = io.WriteString(w, `{"status":"ready","url":"https://cdn.example/thumb.jpg"}`)
 		case strings.Contains(p, "/phones/sessions/"):
 			_, _ = io.WriteString(w, `{
 				"session_id":"s1","phone_id":"p1","status":"active","source":"interactive",
@@ -56,7 +54,7 @@ func sessionsAPI(t *testing.T) *httptest.Server {
 	return srv
 }
 
-func TestSessionsGetJSONIncludesThumbnail(t *testing.T) {
+func TestSessionsGetJSON(t *testing.T) {
 	srv := sessionsAPI(t)
 	out, err := run(t, srv, "-o", "json", "sessions", "get", "s1")
 	if err != nil {
@@ -65,9 +63,6 @@ func TestSessionsGetJSONIncludesThumbnail(t *testing.T) {
 	got := mustJSON(t, out)
 	if got["session_id"] != "s1" || got["status"] != "active" || got["phone_id"] != "p1" {
 		t.Fatalf("canonical detail fields missing: %v", got)
-	}
-	if got["thumbnail_url"] != "https://cdn.example/thumb.jpg" || got["thumbnail_status"] != "ready" {
-		t.Fatalf("thumbnail enrichment missing: %v", got)
 	}
 }
 
@@ -137,15 +132,15 @@ func TestSessionsListHistoryFiltersMapToQuery(t *testing.T) {
 	if gotQuery == nil {
 		t.Fatal("filters did not route to the historical list endpoint")
 	}
-	// Status normalizes to the API's uppercase enum; bare dates become RFC3339.
-	if got := gotQuery["status"]; len(got) != 1 || got[0] != "COMPLETED" {
-		t.Fatalf("status = %v, want [COMPLETED]", got)
+	// Status normalizes to the API's lowercase enum; bare dates become RFC3339.
+	if got := gotQuery["status"]; len(got) != 1 || got[0] != "completed" {
+		t.Fatalf("status = %v, want [completed]", got)
 	}
-	if got := gotQuery.Get("started_after"); got != "2026-08-01T00:00:00Z" {
-		t.Fatalf("started_after = %q, want RFC3339 midnight", got)
+	if got := gotQuery.Get("allocated_after"); got != "2026-08-01T00:00:00.000Z" {
+		t.Fatalf("allocated_after = %q, want midnight UTC", got)
 	}
-	if gotQuery.Get("sort") != "duration" || gotQuery.Get("order") != "asc" {
-		t.Fatalf("sort/order not forwarded: %v", gotQuery)
+	if got := gotQuery.Get("order_by"); got != "duration_seconds asc" {
+		t.Fatalf("order_by = %q, want %q", got, "duration_seconds asc")
 	}
 }
 

@@ -29,10 +29,10 @@ func billingCmd() *cobra.Command {
 // billingBalancePlan is the plan slice attached to `billing balance` output; the
 // full subscription object lives under `billing plan`.
 type billingBalancePlan struct {
-	PlanID           string    `json:"plan_id"`
-	PlanName         string    `json:"plan_name"`
-	BillingCycle     string    `json:"billing_cycle"`
-	CurrentPeriodEnd time.Time `json:"current_period_end"`
+	PlanID             string    `json:"plan_id"`
+	PlanName           string    `json:"plan_name"`
+	BillingCycle       string    `json:"billing_cycle"`
+	CurrentPeriodEndAt time.Time `json:"current_period_end_at"`
 }
 
 func billingBalanceCmd() *cobra.Command {
@@ -67,21 +67,21 @@ func billingBalanceCmd() *cobra.Command {
 			var plan *billingBalancePlan
 			if sub != nil {
 				plan = &billingBalancePlan{
-					PlanID:           sub.PlanID,
-					PlanName:         sub.PlanName,
-					BillingCycle:     string(sub.BillingCycle),
-					CurrentPeriodEnd: sub.CurrentPeriodEnd,
+					PlanID:             sub.PlanID,
+					PlanName:           sub.PlanName,
+					BillingCycle:       string(sub.BillingCycle),
+					CurrentPeriodEndAt: sub.CurrentPeriodEndAt,
 				}
 			}
 			p := printer()
 			return p.Emit(map[string]any{"balance": bal, "plan": plan}, func() {
 				purchased := formatMicrodollars(bal.PurchasedMicrodollars)
-				if bal.PurchasedNextExpiry != nil {
-					purchased += fmt.Sprintf(" (next expiry %s)", ts(*bal.PurchasedNextExpiry))
+				if bal.PurchasedExpiresAt != nil {
+					purchased += fmt.Sprintf(" (next expiry %s)", ts(*bal.PurchasedExpiresAt))
 				}
 				planLine := "(none)"
 				if plan != nil {
-					planLine = fmt.Sprintf("%s (%s, renews %s)", plan.PlanName, plan.BillingCycle, ts(plan.CurrentPeriodEnd))
+					planLine = fmt.Sprintf("%s (%s, renews %s)", plan.PlanName, plan.BillingCycle, ts(plan.CurrentPeriodEndAt))
 				}
 				p.KV([][2]string{
 					{"Balance", bal.BalanceDisplay},
@@ -113,9 +113,9 @@ func billingPlanCmd() *cobra.Command {
 			}
 			p := printer()
 			return p.Emit(sub, func() {
-				price := fmt.Sprintf("$%.2f/mo", sub.MonthlyPrice)
+				price := formatMicrodollars(sub.MonthlyPriceMicrodollars) + "/mo"
 				if sub.BillingCycle == platformgo.SubscriptionResponseBillingCycleYearly {
-					price = fmt.Sprintf("$%.2f/yr", sub.YearlyPrice)
+					price = formatMicrodollars(sub.YearlyPriceMicrodollars) + "/yr"
 				}
 				pairs := [][2]string{
 					{"Plan", fmt.Sprintf("%s (%s)", sub.PlanName, sub.PlanID)},
@@ -124,20 +124,20 @@ func billingPlanCmd() *cobra.Command {
 					{"Price", price},
 					{"Included / cycle", sub.IncludedBalanceDisplay},
 					{"Max concurrent runs", fmt.Sprintf("%d", sub.MaxConcurrentRuns)},
-					{"Current period", fmt.Sprintf("%s → %s", ts(sub.CurrentPeriodStart), ts(sub.CurrentPeriodEnd))},
+					{"Current period", fmt.Sprintf("%s → %s", ts(sub.CurrentPeriodStartAt), ts(sub.CurrentPeriodEndAt))},
 				}
 				if sub.CancelAtPeriodEnd {
 					pairs = append(pairs, [2]string{"Cancels", "at period end"})
 				}
 				if sub.PendingDowngradePlanID != nil {
 					when := ""
-					if sub.PendingDowngradeEffectiveDate != nil {
-						when = " on " + ts(*sub.PendingDowngradeEffectiveDate)
+					if sub.PendingDowngradeAt != nil {
+						when = " on " + ts(*sub.PendingDowngradeAt)
 					}
 					pairs = append(pairs, [2]string{"Pending downgrade", *sub.PendingDowngradePlanID + when})
 				}
-				if sub.TrialEnd != nil {
-					pairs = append(pairs, [2]string{"Trial ends", ts(*sub.TrialEnd)})
+				if sub.TrialEndAt != nil {
+					pairs = append(pairs, [2]string{"Trial ends", ts(*sub.TrialEndAt)})
 				}
 				p.KV(pairs)
 			})

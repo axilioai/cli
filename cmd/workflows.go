@@ -349,11 +349,11 @@ func workflowsPushCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			req := &platformgo.WorkflowSaveCodeRequest{WorkflowID: args[0], Source: source}
+			req := &platformgo.WorkflowCreateRevisionRequest{WorkflowID: args[0], Source: source}
 			if message != "" {
 				req.Message = &message
 			}
-			resp, err := cl.Workflows.SaveCode(cmd.Context(), req)
+			resp, err := cl.Workflows.CreateRevision(cmd.Context(), req)
 			if err != nil {
 				return err
 			}
@@ -445,7 +445,7 @@ func workflowsRestoreCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			resp, err := cl.Workflows.RestoreRevision(cmd.Context(), &platformgo.WorkflowRestoreRevisionRequest{
+			resp, err := cl.Workflows.RestoreRevision(cmd.Context(), &platformgo.WorkflowsRestoreRevisionRequest{
 				WorkflowID: args[0],
 				RevisionID: args[1],
 			})

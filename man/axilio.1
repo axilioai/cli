@@ -427,7 +427,7 @@ user@host ~ % axilio billing balance -o json
     "plan_id": "pro",
     "plan_name": "Pro",
     "billing_cycle": "monthly",
-    "current_period_end": "<timestamp>"
+    "current_period_end_at": "<timestamp>"
   }
 }
 .sp
@@ -3782,9 +3782,10 @@ axilio runs history [flags]
 .EE
 
 .PP
-List the caller's historic runs between --from and --to, including
-archived runs that \fBruns list\fR no longer returns. Filter by workflow,
-final status (repeatable), or a run/workflow ID substring with --search.
+List the caller's historic runs that finished between --from and --to,
+including archived runs that \fBruns list\fR no longer returns. Filter by
+workflow, final status (repeatable), or a run/workflow ID substring with
+--search.
 
 .PP
 Page with --limit and --offset. Accepts an RFC 3339 timestamp
@@ -3804,8 +3805,9 @@ page
 .IP \(bu 2
 \fB--search\fP=\fIvalue\fP - Filter by run or workflow ID substring
 .IP \(bu 2
-\fB--status\fP=\fIstringSlice\fP - Restrict to run statuses: queued,
-running, completed, failed, cancelled (repeatable) (default "[]")
+\fB--status\fP=\fIstringSlice\fP - Restrict to run statuses: scheduled,
+queued, running, completed, failed, cancelled (repeatable) (default
+"[]")
 .IP \(bu 2
 \fB--to\fP=\fIvalue\fP - End of the query window (default: now)
 .IP \(bu 2
@@ -4511,9 +4513,8 @@ Fetch one session by ID, active or historical.
 .PP
 The result includes status, source, phone, allocation and release times,
 duration, tags, workflow, capture and telemetry settings, and the
-recording status and playback URL when ready. Active sessions also
-include a short-lived screen thumbnail URL. Discover IDs with \fBsessions
-list --remote\fR or \fBsessions list --history\fR\&.
+recording status and playback URL when ready. Discover IDs with
+\fBsessions list --remote\fR or \fBsessions list --history\fR\&.
 
 .PP
 \fBGlobal-option behavior\fP
@@ -4566,11 +4567,9 @@ Capture        true
 Telemetry      true
 Recording      ready
 Recording URL  <recording-url>
-Thumbnail URL  -
 .sp
 # Exit status: 0
-# Notes: Works for active and released sessions; the thumbnail URL is
-#        present on active sessions only.
+# Notes: Works for active and released sessions.
 .EE
 
 .PP
@@ -4584,14 +4583,11 @@ user@host ~ % axilio sessions get sess_123 -o json
   "source": "interactive",
   "phone_id": "<phone-id>",
   "allocated_at": "<timestamp>",
-  "recording_status": "pending",
-  "thumbnail_status": "ready",
-  "thumbnail_url": "<thumbnail-url>"
+  "recording_status": "pending"
 }
 .sp
 # Exit status: 0
-# Notes: Excerpt: JSON is the canonical session detail response plus
-#        thumbnail_status/thumbnail_url enrichment on active sessions.
+# Notes: Excerpt: JSON is the canonical session detail response.
 .EE
 
 .SS recording
@@ -5291,8 +5287,8 @@ axilio usage inferences [flags]
 .PP
 List the billed vision inference calls between --from and --to, most
 recent first, with the cost and latency of each. Filter by endpoint
-(detect or locate, repeatable), model, or session; --search matches
-inference-ID substrings.
+(detect, locate or element_locate, repeatable), model, or session;
+--search matches inference-ID substrings.
 
 .PP
 --order-by is a '<field> <asc|desc>\&' expression; the field is one of
@@ -5309,8 +5305,8 @@ YYYY-MM-DD date, which reads as midnight UTC of that day.
 .PP
 \fBCommand options\fP
 .IP \(bu 2
-\fB--endpoint\fP=\fIstringSlice\fP - Restrict to a vision endpoint: detect
-or locate (repeatable) (default "[]")
+\fB--endpoint\fP=\fIstringSlice\fP - Restrict to a vision endpoint: detect,
+locate or element_locate (repeatable) (default "[]")
 .IP \(bu 2
 \fB--from\fP=\fIvalue\fP - Start of the query window (required)
 .IP \(bu 2
@@ -5386,18 +5382,17 @@ axilio usage metrics [flags]
 .EE
 
 .PP
-Summarize the organization's usage between --from and --to: total
-compute minutes, spend split by product (sessions, inference, other),
-and infrastructure costs, each with the change from the previous period.
+Summarize the organization's usage spend between --from and --to, split
+into phone-session and inference spend.
 
 .PP
---granularity picks the bucket resolution (hourly or daily); the server
-chooses when omitted. --tz names an IANA timezone (e.g.
-America/Los_Angeles) for bucketing periods.
+--granularity picks the bucket size (hour or day; hour needs a window of
+7 days or less); the server chooses when omitted. --tz names an IANA
+time zone (e.g. America/Los_Angeles) the buckets follow.
 
 .PP
-Table mode prints the summary numbers; the per-period chart series are
-available in --output json.
+Table mode prints the totals; the per-bucket series is available in
+--output json.
 
 .PP
 Accepts an RFC 3339 timestamp (2026-08-01T00:00:00Z) or a bare
@@ -5408,12 +5403,12 @@ YYYY-MM-DD date, which reads as midnight UTC of that day.
 .IP \(bu 2
 \fB--from\fP=\fIvalue\fP - Start of the reporting window (required)
 .IP \(bu 2
-\fB--granularity\fP=\fIvalue\fP - Bucket resolution: hourly or daily
-(default: server-chosen)
+\fB--granularity\fP=\fIvalue\fP - Bucket size: hour or day (default:
+server-chosen)
 .IP \(bu 2
 \fB--to\fP=\fIvalue\fP - End of the reporting window (default: now)
 .IP \(bu 2
-\fB--tz\fP=\fIvalue\fP - IANA timezone for bucketing periods, such as
+\fB--tz\fP=\fIvalue\fP - IANA time zone the buckets follow, such as
 America/Los_Angeles
 
 .PP
@@ -5445,30 +5440,25 @@ request; the usage summary remains on stdout
 
 .EX
 user@host ~ % axilio usage metrics --from 2026-08-01
-Period           <start> - <end> (daily)
-Compute minutes  42.5 (+10.0%)
+Period           <start> - <end>
 Session spend    $1.25
 Inference spend  $0.75
-Other spend      $0.00
-Infra cost       $2.00 total, $2.00 this period (-5.0%)
+Total spend      $2.00
 .sp
 # Exit status: 0
 # Notes: --from is required; an omitted --to means now. Bare dates read
-#        as midnight UTC. The per-period chart series are only in -o
-#        json.
+#        as midnight UTC. The per-bucket series is only in -o json.
 .EE
 
 .PP
 \fBSample 2\fP
 
 .EX
-user@host ~ % axilio usage metrics --from 2026-08-01 --to 2026-08-22 --granularity daily
-Period           <start> - <end> (daily)
-Compute minutes  42.5 (+10.0%)
+user@host ~ % axilio usage metrics --from 2026-08-01 --to 2026-08-22 --granularity day
+Period           <start> - <end>
 Session spend    $1.25
 Inference spend  $0.75
-Other spend      $0.00
-Infra cost       $2.00 total, $2.00 this period (-5.0%)
+Total spend      $2.00
 .sp
 # Exit status: 0
 .EE

@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -19,6 +20,9 @@ import (
 
 // maxFilesListLimit mirrors the backend's files-list page bound.
 const maxFilesListLimit int64 = 100
+
+// filesSortValues are the columns `files list --sort` and the API's order_by accept.
+var filesSortValues = []string{"created_at", "filename", "size_bytes", "source"}
 
 // filesCmd is `axilio files` (AXI-1905): the org file library, unified.
 //
@@ -151,7 +155,7 @@ func (f *filesListFlags) validate() error {
 // session-scoped listings can never drift on what is filterable.
 func (f *filesListFlags) apply(req *platformgo.FilesListRequest) error {
 	if f.search != "" {
-		req.Q = &f.search
+		req.Search = &f.search
 	}
 	if f.mimeType != "" {
 		req.MimeType = &f.mimeType
@@ -235,19 +239,21 @@ func filesListCmd() *cobra.Command {
 				}
 				req.Surface = &s
 			}
-			if sortBy != "" {
-				s, err := platformgo.NewFilesListRequestSortFromString(sortBy)
+			if sortBy != "" || order != "" {
+				// A bare --order sorts the default column (created_at).
+				field, err := oneOf("--sort", sortBy, filesSortValues)
 				if err != nil {
-					return exit.Usagef("unsupported --sort value; use created_at, filename, size_bytes, or source")
+					return err
 				}
-				req.Sort = &s
-			}
-			if order != "" {
-				o, err := platformgo.NewFilesListRequestOrderFromString(order)
+				if field == "" {
+					field = "created_at"
+				}
+				dir, err := oneOf("--order", order, []string{"asc", "desc"})
 				if err != nil {
-					return exit.Usagef("unsupported --order value; use asc or desc")
+					return err
 				}
-				req.Order = &o
+				orderBy := strings.TrimSpace(field + " " + dir)
+				req.OrderBy = &orderBy
 			}
 
 			cl, err := newClient()
@@ -574,7 +580,7 @@ func sessionsFilesCmd() *cobra.Command {
 				Offset:    &flags.offset,
 			}
 			if flags.search != "" {
-				req.Q = &flags.search
+				req.Search = &flags.search
 			}
 			if flags.mimeType != "" {
 				req.MimeType = &flags.mimeType

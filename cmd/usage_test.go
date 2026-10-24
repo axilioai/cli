@@ -68,3 +68,17 @@ func TestRunsStatsRendersRateAsPercentage(t *testing.T) {
 		t.Fatalf("total runs missing:\n%s", out)
 	}
 }
+
+// Metrics arrive as per-bucket microdollar points; the summary sums them.
+func TestUsageMetricsSumsPointsIntoDollars(t *testing.T) {
+	srv := fakeAPI(t)
+	out, err := run(t, srv, "usage", "metrics", "--from", "2026-08-01", "--to", "2026-08-03")
+	if err != nil {
+		t.Fatalf("usage metrics: %v", err)
+	}
+	for _, want := range []string{"$1.25", "$0.75", "$2.00"} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("summary missing %q:\n%s", want, out)
+		}
+	}
+}
