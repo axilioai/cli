@@ -22,6 +22,8 @@ github.com/MarvinJWendt/testza v0.5.2/go.mod h1:xu53QFE5sCdjtMCKk8YMQ2MnymimEctc
 github.com/atomicgo/cursor v0.0.1/go.mod h1:cBON2QmmrysudxNBFthvMtN32r3jxVRIvzkUiF/RuIk=
 github.com/axilioai/platform-go v0.14.2-0.20261024035538-4708e725523c h1:V8NAZun3Le0KMGLHw/CPBllCvzJKKd6janY63MOYJLw=
 github.com/axilioai/platform-go v0.14.2-0.20261024035538-4708e725523c/go.mod h1:3GenStrK0DkHhhar/CgstItKrAHKxASboDUdqUmLC5k=
+github.com/axilioai/platform-go v0.14.2-0.20261024043045-d6b39c83ccce h1:NT9tBA7BgS8RVNFxJ4zw+v3dOPF2ACYqiZtkcETeCRE=
+github.com/axilioai/platform-go v0.14.2-0.20261024043045-d6b39c83ccce/go.mod h1:3GenStrK0DkHhhar/CgstItKrAHKxASboDUdqUmLC5k=
 github.com/aymanbagabas/go-udiff v0.3.1 h1:LV+qyBQ2pqe0u42ZsUEtPiCaUoqgA9gYRDs3vj1nolY=
 github.com/aymanbagabas/go-udiff v0.3.1/go.mod h1:G0fsKmG+P6ylD0r6N/KgQD/nWzgfnl8ZBcNLgcbrw8E=
 github.com/charmbracelet/colorprofile v0.3.3 h1:DjJzJtLP6/NZ8p7Cgjno0CKGr7wwRJGxWUwh2IyhfAI=
