@@ -43,10 +43,19 @@ const (
 
 var (
 	// The API spells the canceled status with a doubled L on the wire; keep it verbatim.
-	sessionStatusValues = []string{"ACTIVE", "COMPLETED", "CANCELLED", "EXPIRED"} //nolint:misspell
+	sessionStatusValues = []string{"active", "completed", "cancelled", "expired"} //nolint:misspell
 	sessionSourceValues = []string{"workflow", "interactive"}
 	sessionTypeValues   = []string{"shared", "dedicated"}
-	sessionSortValues   = []string{"started", "ended", "status", "duration", "source"}
+	// sessionSortFields maps the --sort values the CLI has always accepted to
+	// the API's order_by fields.
+	sessionSortFields = map[string]string{
+		"started":  "allocated_at",
+		"ended":    "deallocated_at",
+		"status":   "status",
+		"duration": "duration_seconds",
+		"source":   "source",
+	}
+	sessionSortValues = []string{"started", "ended", "status", "duration", "source"}
 )
 
 // historyFilters carries the `sessions list` flags that address the
@@ -94,19 +103,19 @@ func eachOf(flag string, values, allowed []string) ([]string, error) {
 	return out, nil
 }
 
-// timeFlag accepts RFC3339 or a bare YYYY-MM-DD date (midnight UTC) and
-// returns the RFC3339 string the API expects; empty stays empty.
-func timeFlag(flag, value string) (string, error) {
+// timeFlag accepts RFC3339 or a bare YYYY-MM-DD date (midnight UTC); empty
+// stays nil.
+func timeFlag(flag, value string) (*time.Time, error) {
 	if value == "" {
-		return "", nil
+		return nil, nil
 	}
 	if t, err := time.Parse("2006-01-02", value); err == nil {
-		return t.UTC().Format(time.RFC3339), nil
+		return &t, nil
 	}
 	if t, err := time.Parse(time.RFC3339, value); err == nil {
-		return t.Format(time.RFC3339), nil
+		return &t, nil
 	}
-	return "", exit.Usagef("%s must be RFC3339 or YYYY-MM-DD (got %q)", flag, value)
+	return nil, exit.Usagef("%s must be RFC3339 or YYYY-MM-DD (got %q)", flag, value)
 }
 
 func (h *historyFilters) active(cmd *cobra.Command) bool {
@@ -150,16 +159,18 @@ func (h *historyFilters) request() (*platformgo.PhonesListSessionsRequest, error
 	if err != nil {
 		return nil, err
 	}
-	req := &platformgo.PhonesListSessionsRequest{
-		Limit:  &h.limit,
-		Status: status,
-		Source: source,
+	req := &platformgo.PhonesListSessionsRequest{Limit: &h.limit}
+	for _, v := range status {
+		req.Status = append(req.Status, platformgo.PhonesListSessionsRequestStatusItem(v))
+	}
+	for _, v := range source {
+		req.Source = append(req.Source, platformgo.PhonesListSessionsRequestSourceItem(v))
+	}
+	for _, v := range phoneKind {
+		req.Dedicated = append(req.Dedicated, platformgo.PhonesListSessionsRequestDedicatedItem(v))
 	}
 	if h.offset > 0 {
 		req.Offset = &h.offset
-	}
-	if len(phoneKind) > 0 {
-		req.Dedicated = phoneKind
 	}
 	if h.search != "" {
 		req.Search = &h.search
@@ -167,33 +178,33 @@ func (h *historyFilters) request() (*platformgo.PhonesListSessionsRequest, error
 	if h.workflowID != "" {
 		req.WorkflowID = &h.workflowID
 	}
-	if sort != "" {
-		req.Sort = &sort
+	if sort != "" || order != "" {
+		// A bare --order sorts the default column (started).
+		if sort == "" {
+			sort = "started"
+		}
+		orderBy := sessionSortFields[sort]
+		if order != "" {
+			orderBy += " " + order
+		}
+		req.OrderBy = &orderBy
 	}
-	if order != "" {
-		req.Order = &order
+	bounds := []struct {
+		flag  string
+		value string
+		field **time.Time
+	}{
+		{"--started-after", h.startedAfter, &req.AllocatedAfter},
+		{"--started-before", h.startedBefore, &req.AllocatedBefore},
+		{"--ended-after", h.endedAfter, &req.DeallocatedAfter},
+		{"--ended-before", h.endedBefore, &req.DeallocatedBefore},
 	}
-	for flag, field := range map[string]*string{
-		"--started-after": &h.startedAfter, "--started-before": &h.startedBefore,
-		"--ended-after": &h.endedAfter, "--ended-before": &h.endedBefore,
-	} {
-		v, err := timeFlag(flag, *field)
+	for _, b := range bounds {
+		t, err := timeFlag(b.flag, b.value)
 		if err != nil {
 			return nil, err
 		}
-		*field = v
-	}
-	if h.startedAfter != "" {
-		req.StartedAfter = &h.startedAfter
-	}
-	if h.startedBefore != "" {
-		req.StartedBefore = &h.startedBefore
-	}
-	if h.endedAfter != "" {
-		req.EndedAfter = &h.endedAfter
-	}
-	if h.endedBefore != "" {
-		req.EndedBefore = &h.endedBefore
+		*b.field = t
 	}
 	return req, nil
 }
@@ -305,7 +316,7 @@ func listRemoteSessions() error {
 	if err != nil {
 		return err
 	}
-	resp, err := cl.Phones.ActiveSessions(context.Background(), &platformgo.PhonesActiveSessionsRequest{})
+	resp, err := cl.Phones.ListSessions(context.Background(), activeSessionsRequest())
 	if err != nil {
 		return err
 	}
@@ -322,7 +333,19 @@ func listRemoteSessions() error {
 			})
 		}
 		p.Table(rows)
+		if resp.Total > int64(len(resp.Sessions)) {
+			p.Note("%d of %d active sessions; use `sessions list --status active --offset` to page", len(resp.Sessions), resp.Total)
+		}
 	})
+}
+
+// activeSessionsRequest asks for the org's active sessions, one full page.
+func activeSessionsRequest() *platformgo.PhonesListSessionsRequest {
+	limit := maxSessionsListLimit
+	return &platformgo.PhonesListSessionsRequest{
+		Limit:  &limit,
+		Status: []platformgo.PhonesListSessionsRequestStatusItem{platformgo.PhonesListSessionsRequestStatusItemActive},
+	}
 }
 
 func sessionsCurrentCmd() *cobra.Command {
@@ -353,7 +376,7 @@ func sessionsCurrentCmd() *cobra.Command {
 
 func sessionsStartCmd() *cobra.Command {
 	var phoneType, phoneID, workflowID, shellFlag string
-	var export bool
+	var export, accessibility bool
 	cmd := &cobra.Command{
 		Use:   "start",
 		Short: "Acquire a phone and open a session that remains active until stopped.",
@@ -361,13 +384,20 @@ func sessionsStartCmd() *cobra.Command {
 			"only; --phone-type remains available for scripts that pass android explicitly, " +
 			"and any other value is a usage error. The session remains active in Axilio " +
 			"until stopped; the CLI saves its connection information locally and marks " +
-			"it as the most recently started session. Without --phone-id the phone " +
-			"comes from the shared pool, billed per second at your plan's rate. Use " +
+			"it as the most recently started session. A session started without --phone-id " +
+			"gets a phone from the shared pool, billed per second at your plan's rate. Use " +
 			"--phone-id to pin a dedicated phone from `phones mine` (no phone-time " +
 			"charge), or " +
-			"attach the session to a workflow with --workflow. --export prints only " +
+			"attach the session to a workflow with --workflow.\n\n" +
+			"Accessibility mode, which lets phone commands select elements by " +
+			"--role, --name, and --id and `phone tree` read the screen's structure, " +
+			"is off by default. --accessibility turns it on and requires a phone " +
+			"that supports it, so only such phones are claimed; pinning one without " +
+			"support with --phone-id exits 6. While it is on, the accessibility " +
+			"service is visible to apps on the phone.\n\n" +
+			"--export prints only " +
 			"the AXILIO_SESSION assignment for the shell to evaluate and cannot be " +
-			"combined with -o json. --shell picks its syntax: posix prints " +
+			"combined with -o json. The --shell flag picks its syntax: posix prints " +
 			"`export AXILIO_SESSION=<id>` (eval \"$(axilio sessions start --export)\"), " +
 			"powershell prints `$env:AXILIO_SESSION = \"<id>\"` " +
 			"(axilio sessions start --export | Invoke-Expression), and cmd prints " +
@@ -399,7 +429,14 @@ func sessionsStartCmd() *cobra.Command {
 			if workflowID != "" {
 				req.WorkflowID = &workflowID
 			}
+			// Always sent, so the request states what the flag says rather
+			// than leaning on the server default (also false).
+			req.Accessibility = platformgo.Bool(accessibility)
 			a, err := cl.Phones.Allocate(context.Background(), req)
+			if platformgo.IsAccessibilityUnavailable(err) {
+				return exit.With(exit.Unavailable, fmt.Errorf(
+					"phone %s does not support accessibility mode; drop --phone-id to claim any phone that does, or drop --accessibility", phoneID))
+			}
 			if err != nil {
 				return err
 			}
@@ -426,6 +463,7 @@ func sessionsStartCmd() *cobra.Command {
 					{"Session", a.SessionID},
 					{"Phone", a.PhoneID},
 					{"Region", util.OrDash(strv(a.Region))},
+					{"Accessibility", fmt.Sprintf("%t", a.Accessibility)},
 					{"Live view", util.OrDash(strv(a.LiveViewURL))},
 					{"Control URL", util.OrDash(strv(a.ControlURL))},
 				})
@@ -445,6 +483,7 @@ func sessionsStartCmd() *cobra.Command {
 	cmd.Flags().StringVar(&workflowID, "workflow", "", "Workflow ID to attach; omit for an interactive session")
 	cmd.Flags().BoolVar(&export, "export", false, "Print only the AXILIO_SESSION assignment for the shell to evaluate")
 	cmd.Flags().StringVar(&shellFlag, "shell", "", shellFlagHelp)
+	cmd.Flags().BoolVar(&accessibility, "accessibility", false, "Turn on accessibility mode, which requires a phone that supports it; off by default")
 	return cmd
 }
 
@@ -470,7 +509,7 @@ func sessionsStopCmd() *cobra.Command {
 			id := args[0]
 			phoneID := id
 			// deallocate takes a phone_id; resolve a session_id to it via the active list.
-			if resp, err := cl.Phones.ActiveSessions(context.Background(), &platformgo.PhonesActiveSessionsRequest{}); err == nil {
+			if resp, err := cl.Phones.ListSessions(context.Background(), activeSessionsRequest()); err == nil {
 				for _, s := range resp.Sessions {
 					if id == s.SessionID || id == s.PhoneID {
 						phoneID = s.PhoneID
@@ -484,7 +523,7 @@ func sessionsStopCmd() *cobra.Command {
 				}
 				return exit.Usagef("aborted (pass --yes to release non-interactively)")
 			}
-			deallocation, err := cl.Phones.Deallocate(context.Background(), &platformgo.PhonesDeallocateRequest{PhoneID: phoneID})
+			deallocation, err := cl.Phones.Deallocate(context.Background(), &platformgo.PhoneDeallocateRequest{PhoneID: phoneID})
 			if err != nil {
 				return err
 			}

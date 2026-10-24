@@ -170,10 +170,10 @@ func phonesRenameCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			req := &platformgo.PhoneUpdateNicknameRequest{}
+			req := &platformgo.PhoneUpdatePhoneRequest{}
 			req.SetPhoneID(id)
 			req.SetNickname(nickname)
-			ph, err := cl.Phones.Nickname(cmd.Context(), req)
+			ph, err := cl.Phones.Update(cmd.Context(), req)
 			if err != nil {
 				return err
 			}

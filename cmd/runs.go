@@ -26,7 +26,7 @@ const (
 	// runHistoryStatusValues quotes the run-status wire enum verbatim. The API
 	// spells the terminal state with the double-L form, so user-facing docs
 	// must show and accept exactly that spelling despite the linter's US locale.
-	runHistoryStatusValues = "queued, running, completed, failed, cancelled" //nolint:misspell
+	runHistoryStatusValues = "scheduled, queued, running, completed, failed, cancelled" //nolint:misspell
 )
 
 func runsCmd() *cobra.Command {
@@ -60,7 +60,7 @@ func runsHistoryCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "history",
 		Short: "List historic (archived) runs over a time window.",
-		Long: "List the caller's historic runs between --from and --to, including " +
+		Long: "List the caller's historic runs that finished between --from and --to, including " +
 			"archived runs that `runs list` no longer returns. Filter by workflow, " +
 			"final status (repeatable), or a run/workflow ID substring with " +
 			"--search.\n\n" +
@@ -77,17 +77,17 @@ func runsHistoryCmd() *cobra.Command {
 				return exit.Usagef("--offset must be zero or positive (got %d)", offset)
 			}
 			req := &platformgo.RunsListHistoricRequest{
-				StartDate: start,
-				EndDate:   end,
-				Limit:     &limit,
-				Offset:    &offset,
+				CompletedAfter:  start,
+				CompletedBefore: end,
+				Limit:           &limit,
+				Offset:          &offset,
 			}
 			for _, s := range statuses {
-				item, err := platformgo.NewRunsListHistoricRequestStatusFilterItemFromString(s)
+				item, err := platformgo.NewRunsListHistoricRequestStatusItemFromString(s)
 				if err != nil {
 					return exit.Usagef("--status must be one of %s (got %q)", runHistoryStatusValues, s)
 				}
-				req.StatusFilter = append(req.StatusFilter, item)
+				req.Status = append(req.Status, item)
 			}
 			if workflowID != "" {
 				req.WorkflowID = &workflowID
@@ -112,7 +112,7 @@ func runsHistoryCmd() *cobra.Command {
 				rows := [][]string{{"RUN ID", "STATUS", "TRIGGER", "WORKFLOW", "STARTED", "COMPLETED"}}
 				for _, r := range resp.Runs {
 					rows = append(rows, []string{
-						r.RunID, string(r.Status), string(r.Trigger), r.WorkflowID,
+						r.ID, string(r.Status), string(r.Trigger), r.WorkflowID,
 						util.OrDash(tsp(r.StartedAt)), util.OrDash(tsp(r.CompletedAt)),
 					})
 				}
@@ -147,7 +147,7 @@ func runsStatsCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			resp, err := cl.Runs.Stats(context.Background(), &platformgo.RunsStatsRequest{WorkflowID: args[0]})
+			resp, err := cl.Workflows.GetRunStats(context.Background(), &platformgo.WorkflowsGetRunStatsRequest{WorkflowID: args[0]})
 			if err != nil {
 				return err
 			}

@@ -77,30 +77,28 @@ func usageMetricsCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "metrics",
 		Short: "Summarize usage spend over a reporting window.",
-		Long: "Summarize the organization's usage between --from and --to: total " +
-			"compute minutes, spend split by product (sessions, inference, other), " +
-			"and infrastructure costs, each with the change from the previous " +
-			"period.\n\n" +
-			"--granularity picks the bucket resolution (hourly or daily); the " +
-			"server chooses when omitted. --tz names an IANA timezone (e.g. " +
-			"America/Los_Angeles) for bucketing periods.\n\n" +
-			"Table mode prints the summary numbers; the per-period chart series " +
-			"are available in --output json.\n\n" + windowFlagsHelp,
+		Long: "Summarize the organization's usage spend between --from and --to, " +
+			"split into phone-session and inference spend.\n\n" +
+			"--granularity picks the bucket size (hour or day; hour needs a window " +
+			"of 7 days or less); the server chooses when omitted. --tz names an " +
+			"IANA time zone (e.g. America/Los_Angeles) the buckets follow.\n\n" +
+			"Table mode prints the totals; the per-bucket series is available in " +
+			"--output json.\n\n" + windowFlagsHelp,
 		RunE: func(_ *cobra.Command, _ []string) error {
 			start, end, err := parseWindow(from, to)
 			if err != nil {
 				return err
 			}
-			req := &platformgo.UsageGetMetricsRequest{StartDate: start, EndDate: end}
+			req := &platformgo.UsageGetMetricsRequest{PeriodStartAt: &start, PeriodEndAt: &end}
 			if granularity != "" {
 				g, err := platformgo.NewUsageGetMetricsRequestGranularityFromString(granularity)
 				if err != nil {
-					return exit.Usagef("--granularity must be hourly or daily (got %q)", granularity)
+					return exit.Usagef("--granularity must be hour or day (got %q)", granularity)
 				}
 				req.Granularity = g.Ptr()
 			}
 			if timezone != "" {
-				req.Timezone = &timezone
+				req.TimeZone = &timezone
 			}
 			cl, err := newClient()
 			if err != nil {
@@ -111,22 +109,26 @@ func usageMetricsCmd() *cobra.Command {
 				return err
 			}
 			p := printer()
+			var session, inference, total int64
+			for _, pt := range resp.Points {
+				session += pt.SessionCostMicrodollars
+				inference += pt.InferenceCostMicrodollars
+				total += pt.TotalCostMicrodollars
+			}
 			return p.Emit(resp, func() {
 				p.KV([][2]string{
-					{"Period", fmt.Sprintf("%s - %s (%s)", ts(resp.PeriodStart), ts(resp.PeriodEnd), resp.Granularity)},
-					{"Compute minutes", fmt.Sprintf("%.1f (%+.1f%%)", resp.ComputeMinutes.GetTotalMinutes(), resp.ComputeMinutes.GetChange())},
-					{"Session spend", dollars(resp.CostByProduct.GetSessions())},
-					{"Inference spend", dollars(resp.CostByProduct.GetInference())},
-					{"Other spend", dollars(resp.CostByProduct.GetOther())},
-					{"Infra cost", fmt.Sprintf("%s total, %s this period (%+.1f%%)", dollars(resp.InfraCosts.GetTotal()), dollars(resp.InfraCosts.GetThisPeriod()), resp.InfraCosts.GetChange())},
+					{"Period", fmt.Sprintf("%s - %s", ts(start), ts(end))},
+					{"Session spend", formatMicrodollars(session)},
+					{"Inference spend", formatMicrodollars(inference)},
+					{"Total spend", formatMicrodollars(total)},
 				})
 			})
 		},
 	}
 	cmd.Flags().StringVar(&from, "from", "", "Start of the reporting window (required)")
 	cmd.Flags().StringVar(&to, "to", "", "End of the reporting window (default: now)")
-	cmd.Flags().StringVar(&granularity, "granularity", "", "Bucket resolution: hourly or daily (default: server-chosen)")
-	cmd.Flags().StringVar(&timezone, "tz", "", "IANA timezone for bucketing periods, such as America/Los_Angeles")
+	cmd.Flags().StringVar(&granularity, "granularity", "", "Bucket size: hour or day (default: server-chosen)")
+	cmd.Flags().StringVar(&timezone, "tz", "", "IANA time zone the buckets follow, such as America/Los_Angeles")
 	return cmd
 }
 
@@ -147,7 +149,7 @@ func usageInferencesCmd() *cobra.Command {
 		Short: "List individual billed inference calls.",
 		Long: "List the billed vision inference calls between --from and --to, most " +
 			"recent first, with the cost and latency of each. Filter by endpoint " +
-			"(detect or locate, repeatable), model, or session; --search matches " +
+			"(detect, locate or element_locate, repeatable), model, or session; --search matches " +
 			"inference-ID substrings.\n\n" +
 			"--order-by is a '<field> <asc|desc>' expression; the field is one of " +
 			"created_at, cost_microdollars, latency_ms, endpoint, model, or " +
@@ -165,17 +167,18 @@ func usageInferencesCmd() *cobra.Command {
 				return exit.Usagef("--offset must be zero or positive (got %d)", offset)
 			}
 			req := &platformgo.UsageListInferencesRequest{
-				StartDate: start,
-				EndDate:   end,
-				Limit:     &limit,
-				Offset:    &offset,
+				CreatedAfter:  start,
+				CreatedBefore: end,
+				Limit:         &limit,
+				Offset:        &offset,
 			}
 			for _, e := range endpoints {
-				if _, err := platformgo.NewUsageInferenceEndpointFromString(e); err != nil {
-					return exit.Usagef("--endpoint must be detect or locate (got %q)", e)
+				item, err := platformgo.NewUsageListInferencesRequestEndpointItemFromString(e)
+				if err != nil {
+					return exit.Usagef("--endpoint must be detect, locate or element_locate (got %q)", e)
 				}
+				req.Endpoint = append(req.Endpoint, item)
 			}
-			req.EndpointFilter = endpoints
 			if model != "" {
 				req.Model = &model
 			}
@@ -225,7 +228,7 @@ func usageInferencesCmd() *cobra.Command {
 	cmd.Flags().StringVar(&to, "to", "", "End of the query window (default: now)")
 	cmd.Flags().Int64Var(&limit, "limit", 50, "Maximum inference calls in this page (1-100)")
 	cmd.Flags().Int64Var(&offset, "offset", 0, "Number of matching calls to skip before this page")
-	cmd.Flags().StringSliceVar(&endpoints, "endpoint", nil, "Restrict to a vision endpoint: detect or locate (repeatable)")
+	cmd.Flags().StringSliceVar(&endpoints, "endpoint", nil, "Restrict to a vision endpoint: detect, locate or element_locate (repeatable)")
 	cmd.Flags().StringVar(&model, "model", "", "Restrict to a single model name")
 	cmd.Flags().StringVar(&sessionID, "session", "", "Restrict to inferences that ran under one phone session")
 	cmd.Flags().StringVar(&search, "search", "", "Filter by inference-ID substring")

@@ -47,7 +47,7 @@ func runsWatchCmd() *cobra.Command {
 			"and exit with the run's outcome. Watching an already-finished run " +
 			"replays its recorded telemetry and exits the same way.\n\n" +
 			"While the session is active the stream attaches to the live " +
-			"telemetry WebSocket for push delivery; when the attach is refused " +
+			"telemetry event stream for push delivery; when the stream is refused " +
 			"or lost it follows the durable frame archive instead. Frames render " +
 			"exactly once either way, and spans appear on completion (in-flight " +
 			"span starts are not shown).\n\n" +
@@ -118,7 +118,7 @@ func watchRun(cl *client.Client, p *output.Printer, runID string) error {
 
 			if !liveTried && !dedupe.endSeen {
 				liveTried = true
-				if stream := tryLiveAttach(ctx, cl, p, sessionID); stream != nil {
+				if stream := tryLiveAttach(ctx, p, sessionID); stream != nil {
 					_, err := streamLive(ctx, stream, dedupe)
 					if err != nil {
 						return watchInterrupted(ctx, p, runID, err)

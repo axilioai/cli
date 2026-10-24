@@ -325,8 +325,8 @@ var commandDocumentationByKey = map[string]CommandDocumentation{
 		sampleWithNote("axilio sessions list -o json", "[\n  {\n    \"session_id\": \"<session-id>\",\n    \"phone_id\": \"<phone-id>\",\n    \"phone_type\": \"android\",\n    \"control_url\": \"<control-url>\",\n    \"created_at\": \"<timestamp>\"\n  }\n]", "none", "Locally saved session JSON includes the stored control URL; IDs and URLs vary."),
 	}},
 	"sessions get": {Samples: []CommandSample{
-		sampleWithNote("axilio sessions get sess_123", "Session        sess_123\nName           -\nStatus         completed\nSource         workflow\nAllocated by   api_run\nPhone          <phone-id>\nPhone name     -\nNickname       -\nModel          Pixel 8\nType           android\nLocation       us-central\nDedicated      false\nWorkflow       <workflow-id>\nWorkflow name  demo\nAllocated      2026-08-05 20:00\nReleased       2026-08-05 20:12\nDuration       12m00s\nTags           team=qa\nCapture        true\nTelemetry      true\nRecording      ready\nRecording URL  <recording-url>\nThumbnail URL  -", "none", "Works for active and released sessions; the thumbnail URL is present on active sessions only."),
-		sampleWithNote("axilio sessions get sess_123 -o json", "{\n  \"session_id\": \"sess_123\",\n  \"status\": \"active\",\n  \"source\": \"interactive\",\n  \"phone_id\": \"<phone-id>\",\n  \"allocated_at\": \"<timestamp>\",\n  \"recording_status\": \"pending\",\n  \"thumbnail_status\": \"ready\",\n  \"thumbnail_url\": \"<thumbnail-url>\"\n}", "none", "Excerpt: JSON is the canonical session detail response plus thumbnail_status/thumbnail_url enrichment on active sessions."),
+		sampleWithNote("axilio sessions get sess_123", "Session        sess_123\nName           -\nStatus         completed\nSource         workflow\nAllocated by   api_run\nPhone          <phone-id>\nPhone name     -\nNickname       -\nModel          Pixel 8\nType           android\nLocation       us-central\nDedicated      false\nWorkflow       <workflow-id>\nWorkflow name  demo\nAllocated      2026-08-05 20:00\nReleased       2026-08-05 20:12\nDuration       12m00s\nTags           team=qa\nCapture        true\nTelemetry      true\nAccessibility  false\nRecording      ready\nRecording URL  <recording-url>", "none", "Works for active and released sessions."),
+		sampleWithNote("axilio sessions get sess_123 -o json", "{\n  \"session_id\": \"sess_123\",\n  \"status\": \"active\",\n  \"source\": \"interactive\",\n  \"phone_id\": \"<phone-id>\",\n  \"allocated_at\": \"<timestamp>\",\n  \"recording_status\": \"pending\"\n}", "none", "Excerpt: JSON is the canonical session detail response."),
 	}},
 	"sessions trace": {Samples: []CommandSample{
 		sampleWithNote("axilio sessions trace sess_123", "TIME          KIND      NAME            DURATION  STATUS  COST\n20:00:01.000  session   session         12m00s    ok      -\n20:00:02.000  sdk_call  Screen.observe  1.0s      ok      $0.0031\n20:00:02.100  inference inference       800ms     ok      $0.0020\n20:00:03.500  log:output_log  hello     -         INFO    -", "1204 frames; billed sdk_call cost $0.0311", "Costs are billed microdollars: sdk_call spans price by span ID, inference spans by inference ID. Frames with an unknown kind are listed generically, never dropped."),
@@ -339,9 +339,11 @@ var commandDocumentationByKey = map[string]CommandDocumentation{
 		sampleWithNote("axilio sessions current -o json", "{\n  \"session_id\": \"<session-id>\",\n  \"phone_id\": \"<phone-id>\",\n  \"phone_type\": \"android\",\n  \"control_url\": \"<control-url>\",\n  \"created_at\": \"<timestamp>\"\n}", "none", "A selected session keeps the same JSON shape. With no selected session, stdout is empty and exit status is 4."),
 	}},
 	"sessions start": {Samples: []CommandSample{
-		sampleWithNote("axilio sessions start", "Session      <session-id>\nPhone        <phone-id>\nRegion       us-central\nLive view    <live-view-url>\nControl URL  <control-url>", "Drive it:  axilio phone observe\nPin it to this shell (for parallel work):  export AXILIO_SESSION=<session-id>\nRelease it with:  axilio sessions stop <session-id>", "Without --phone-id the phone comes from the shared pool, billed per second of session time at your plan's rate. Pass --phone-id to use a dedicated phone instead."),
-		sample("axilio sessions start --phone-id ph_123", "Session      <session-id>\nPhone        ph_123\nRegion       us-central\nLive view    <live-view-url>\nControl URL  <control-url>", "Drive it:  axilio phone observe\nPin it to this shell (for parallel work):  export AXILIO_SESSION=<session-id>\nRelease it with:  axilio sessions stop <session-id>"),
-		sample("axilio sessions start --workflow wf_123", "Session      <session-id>\nPhone        <phone-id>\nRegion       us-central\nLive view    <live-view-url>\nControl URL  <control-url>", "Drive it:  axilio phone observe\nPin it to this shell (for parallel work):  export AXILIO_SESSION=<session-id>\nRelease it with:  axilio sessions stop <session-id>"),
+		sampleWithNote("axilio sessions start", "Session        <session-id>\nPhone          <phone-id>\nRegion         us-central\nAccessibility  false\nLive view      <live-view-url>\nControl URL    <control-url>", "Drive it:  axilio phone observe\nPin it to this shell (for parallel work):  export AXILIO_SESSION=<session-id>\nRelease it with:  axilio sessions stop <session-id>", "Without --phone-id the phone comes from the shared pool, billed per second of session time at your plan's rate. Pass --phone-id to use a dedicated phone instead."),
+		sample("axilio sessions start --phone-id ph_123", "Session        <session-id>\nPhone          ph_123\nRegion         us-central\nAccessibility  false\nLive view      <live-view-url>\nControl URL    <control-url>", "Drive it:  axilio phone observe\nPin it to this shell (for parallel work):  export AXILIO_SESSION=<session-id>\nRelease it with:  axilio sessions stop <session-id>"),
+		sampleWithNote("axilio sessions start --accessibility", "Session        <session-id>\nPhone          <phone-id>\nRegion         us-central\nAccessibility  true\nLive view      <live-view-url>\nControl URL    <control-url>", "Drive it:  axilio phone observe\nPin it to this shell (for parallel work):  export AXILIO_SESSION=<session-id>\nRelease it with:  axilio sessions stop <session-id>", "Accessibility mode is off by default; --accessibility turns it on and claims only a phone that supports it."),
+		failedSample("axilio sessions start --phone-id ph_old --accessibility", "none", "phone ph_old does not support accessibility mode; drop --phone-id to claim any phone that does, or drop --accessibility", 6, "--accessibility needs a phone that supports it; nothing is allocated."),
+		sample("axilio sessions start --workflow wf_123", "Session        <session-id>\nPhone          <phone-id>\nRegion         us-central\nAccessibility  false\nLive view      <live-view-url>\nControl URL    <control-url>", "Drive it:  axilio phone observe\nPin it to this shell (for parallel work):  export AXILIO_SESSION=<session-id>\nRelease it with:  axilio sessions stop <session-id>"),
 		sampleWithNote("axilio sessions start --export", "export AXILIO_SESSION=<session-id>", "none", "--export is exact shell text; combining it with -o json is a usage error before allocation."),
 		sampleWithNote(`eval "$(axilio sessions start --export)"`, "none", "none", "The shell consumes the nested command's export line and sets AXILIO_SESSION in the current shell."),
 		sampleWithNote("axilio sessions start --export --shell powershell", `$env:AXILIO_SESSION = "<session-id>"`, "none", "On Windows this is the default syntax unless SHELL is set, as it is in Git Bash and MSYS2. --shell cmd prints `set AXILIO_SESSION=<session-id>`."),
@@ -389,6 +391,7 @@ var commandDocumentationByKey = map[string]CommandDocumentation{
 	"phone find": {Samples: []CommandSample{
 		sample(`axilio phone find "the search box"`, "Resolved by  vlm\nCenter       540,620\nBBox         80,560 920x120\nTook         1840ms\nModel        vision-default", "none"),
 		sampleWithNote(`axilio phone find "settings icon" --ocr-engine premium`, "Resolved by  vlm\nCenter       900,120\nBBox         840,60 120x120\nTook         2310ms\nModel        vision-default", "none", "The phone waits up to --timeout for the target; coordinates depend on the current frame."),
+		sampleWithNote(`axilio phone find --role button --name "Log in"`, "Resolved by  a11y\nCenter       540,1480\nBBox         80,1420 920x120\nTook         95ms", "none", "Needs accessibility mode on the session; without it the command exits 2."),
 		sampleWithNote(`axilio phone find "continue button" --timeout 15s -o json`, "{\n  \"text\": \"Continue\",\n  \"center\": {\"x\": 540, \"y\": 1120},\n  \"bbox\": {\"x\": 80, \"y\": 1060, \"width\": 920, \"height\": 120},\n  \"confidence\": 0.98,\n  \"source\": \"ocr\"\n}", "none", "Element content and coordinates depend on the current frame."),
 	}},
 	"phone find-text": {Samples: []CommandSample{
@@ -406,6 +409,8 @@ var commandDocumentationByKey = map[string]CommandDocumentation{
 		sample(`axilio phone tap --query "the search box"`, `Tapped "the search box" at 540,620`, "none"),
 		sample("axilio phone tap 540 1200", "Tapped 540,1200", "none"),
 		sample(`axilio phone tap --session sess_123 --query "continue"`, `Tapped "continue" at 540,1120`, "none"),
+		sampleWithNote(`axilio phone tap --role button --name "Log in"`, `Tapped button "Log in" at 540,1480`, "none", "Selected from the accessibility tree; needs accessibility mode on the session."),
+		sample(`axilio phone tap --id com.example.app:id/login`, `Tapped #com.example.app:id/login at 540,1480`, "none"),
 	}},
 	"phone long-press": {Samples: []CommandSample{
 		sample("axilio phone long-press 540 1080", "Long-pressed 540,1080 for 800ms", "none"),
@@ -431,7 +436,28 @@ var commandDocumentationByKey = map[string]CommandDocumentation{
 		sample(`axilio phone wait-for "Results"`, "Resolved by  ocr\nCenter       540,1120\nBBox         80,1060 920x120\nTook         2650ms", "none"),
 		sample(`axilio phone wait-for "Loading" --gone`, `"Loading" gone`, "none"),
 		sampleWithNote(`axilio phone wait-for "Ready" --exact --timeout 30s`, "Resolved by  ocr\nCenter       540,1120\nBBox         80,1060 920x120\nTook         12040ms", "none", "Exact matching is case-sensitive and waits up to 30 seconds."),
+		sampleWithNote(`axilio phone wait-for --role progressbar --gone`, `progressbar gone`, "none", "Waits on the accessibility tree; needs accessibility mode on the session."),
 		failedSample(`axilio phone wait-for "Results" --timeout 1s`, "none", "timeout: text not found within deadline: Results", 5, "A wait timeout exits 5."),
+	}},
+	"phone tree": {Samples: []CommandSample{
+		sampleWithNote("axilio phone tree", "window 12 [application]  com.example.app  focused\n  generic @540,1200 [n1]\n    textbox \"Email\" #com.example.app:id/email @540,900 [n4]\n    button \"Log in\" #com.example.app:id/login @540,1480 [n7]", "3 nodes, 1 windows", "Layout-only nodes are dropped; --all keeps them."),
+		sampleWithNote("axilio phone tree --window 12 --depth 1 -o json", "{\n  \"nodes\": [\n    {\n      \"node_id\": \"n1\",\n      \"ignored\": false,\n      \"role\": {\"type\": \"role\", \"value\": \"generic\"},\n      \"child_ids\": [\"n4\", \"n7\"],\n      \"bounds\": {\"x\": 0, \"y\": 0, \"width\": 1080, \"height\": 2400},\n      \"window_id\": \"12\",\n      \"actions\": []\n    }\n  ],\n  \"windows\": [\n    {\"window_id\": \"12\", \"type\": \"application\", \"app\": \"com.example.app\", \"focused\": true, \"bounds\": {\"x\": 0, \"y\": 0, \"width\": 1080, \"height\": 2400}, \"root_id\": \"n1\"}\n  ],\n  \"captured_at\": \"<timestamp>\"\n}", "none", "Shortened representative JSON; nodes also carry names, properties, and Android attributes."),
+		failedSample("axilio phone tree", "none", "strategy_unavailable: accessibility tree is off for this session", 2, "Accessibility mode is off by default; start the session with `sessions start --accessibility`, or turn it on with `phone accessibility enable` where toggleable."),
+	}},
+	"phone accessibility": workflow(
+		"axilio phone accessibility status",
+		"axilio phone accessibility enable",
+		"axilio phone accessibility disable",
+	),
+	"phone accessibility status": {Samples: []CommandSample{
+		sample("axilio phone accessibility status", "Enabled     true\nToggleable  true", "none"),
+		sample("axilio phone accessibility status -o json", "{\n  \"enabled\": true,\n  \"toggleable\": true\n}", "none"),
+	}},
+	"phone accessibility enable": {Samples: []CommandSample{
+		sampleWithNote("axilio phone accessibility enable", "Accessibility on.", "none", "Returns once the phone confirms the tree is on."),
+	}},
+	"phone accessibility disable": {Samples: []CommandSample{
+		sampleWithNote("axilio phone accessibility disable", "Accessibility off.", "none", "Returns once the phone confirms the tree is off."),
 	}},
 	"phone send": {Samples: []CommandSample{
 		sampleWithNote("axilio phone send ./photo.jpg", "Delivery  <delivery-id>\nFile      photo.jpg\nStatus    dispatched", "→ Sending photo.jpg to phone <phone-id>\npushed without requesting delivery receipt. In the future, add --wait if you want the cli to wait for delivery confirmation and report result.", "The upload remains in the organization library."),
@@ -453,10 +479,11 @@ var commandDocumentationByKey = map[string]CommandDocumentation{
 	"workflows create": {Samples: []CommandSample{
 		sampleWithNote("axilio workflows create checkout-flow --platform android --code checkout.py", "Workflow     <workflow-id>\nRevision     1\nRevision ID  <revision-id>", "none", "With --code, the file is saved atomically as revision 1. Without it, only the workflow ID prints."),
 		sample("axilio workflows create checkout-flow --recording=false", "Workflow  <workflow-id>", "none"),
+		sampleWithNote("axilio workflows create checkout-flow --accessibility", "Workflow  <workflow-id>", "none", "Accessibility mode is off by default; with it on, every run needs a phone that supports it."),
 		failedSample("axilio workflows create \"bad name\"", "none", "workflow name must contain only letters, digits, hyphens, and underscores (got \"bad name\")", 2, "The name rule is validated before credentials or an API request."),
 	}},
 	"workflows get": {Samples: []CommandSample{
-		sample("axilio workflows get wf_123", "Workflow      wf_123\nName          Checkout\nPlatform      android\nStatus        active\nOCR engine    free\nRecording     true\nTelemetry     true\nCapture       true\nCreated       <timestamp>\nUpdated       <timestamp>\nLast run      <timestamp>\nTotal runs    4\nSuccess rate  75%", "none"),
+		sample("axilio workflows get wf_123", "Workflow       wf_123\nName           Checkout\nPlatform       android\nStatus         active\nOCR engine     free\nRecording      true\nTelemetry      true\nCapture        true\nAccessibility  false\nCreated        <timestamp>\nUpdated        <timestamp>\nLast run       <timestamp>\nTotal runs     4\nSuccess rate   75%", "none"),
 		sampleWithNote("axilio workflows get wf_123 -o json", "{\n  \"stats\": {\n    \"success_rate\": 0.75,\n    \"total_runs\": 4\n  },\n  \"workflow\": {\n    \"id\": \"wf_123\",\n    \"name\": \"Checkout\",\n    \"platform\": \"android\",\n    \"status\": \"active\"\n  }\n}", "none", "Shortened representative JSON output; the workflow record includes the full field set."),
 	}},
 	"workflows delete": {Samples: []CommandSample{
@@ -523,8 +550,8 @@ var commandDocumentationByKey = map[string]CommandDocumentation{
 		"axilio usage inferences --from 2026-08-01 --endpoint locate",
 	),
 	"usage metrics": {Samples: []CommandSample{
-		sampleWithNote("axilio usage metrics --from 2026-08-01", "Period           <start> - <end> (daily)\nCompute minutes  42.5 (+10.0%)\nSession spend    $1.25\nInference spend  $0.75\nOther spend      $0.00\nInfra cost       $2.00 total, $2.00 this period (-5.0%)", "none", "--from is required; an omitted --to means now. Bare dates read as midnight UTC. The per-period chart series are only in -o json."),
-		sample("axilio usage metrics --from 2026-08-01 --to 2026-08-22 --granularity daily", "Period           <start> - <end> (daily)\nCompute minutes  42.5 (+10.0%)\nSession spend    $1.25\nInference spend  $0.75\nOther spend      $0.00\nInfra cost       $2.00 total, $2.00 this period (-5.0%)", "none"),
+		sampleWithNote("axilio usage metrics --from 2026-08-01", "Period           <start> - <end>\nSession spend    $1.25\nInference spend  $0.75\nTotal spend      $2.00", "none", "--from is required; an omitted --to means now. Bare dates read as midnight UTC. The per-bucket series is only in -o json."),
+		sample("axilio usage metrics --from 2026-08-01 --to 2026-08-22 --granularity day", "Period           <start> - <end>\nSession spend    $1.25\nInference spend  $0.75\nTotal spend      $2.00", "none"),
 	}},
 	"usage inferences": {Samples: []CommandSample{
 		sampleWithNote("axilio usage inferences --from 2026-08-01", "TIME        INFERENCE ID   ENDPOINT  MODEL            COST     LATENCY  SESSION\n<timestamp> <inference-id> locate    axilio-ground-1  $0.0012  321 ms   -", "none", "Costs render in dollars from the API's microdollar amounts. An empty successful result prints No inferences found."),
@@ -553,7 +580,7 @@ var commandDocumentationByKey = map[string]CommandDocumentation{
 	),
 	"billing balance": {Samples: []CommandSample{
 		sampleWithNote("axilio billing balance", "Balance    $12.50\nIncluded   $10.00 (resets at renewal)\nPurchased  $2.50 (next expiry <timestamp>)\nPlan       Pro (monthly, renews <timestamp>)", "none", "Amounts vary by account; Plan reads (none) when the organization has no active subscription."),
-		sampleWithNote("axilio billing balance -o json", "{\n  \"balance\": {\n    \"balance_display\": \"$12.50\",\n    \"balance_microdollars\": 12500000,\n    \"included_microdollars\": 10000000,\n    \"purchased_microdollars\": 2500000\n  },\n  \"plan\": {\n    \"plan_id\": \"pro\",\n    \"plan_name\": \"Pro\",\n    \"billing_cycle\": \"monthly\",\n    \"current_period_end\": \"<timestamp>\"\n  }\n}", "none", "plan is null when the organization has no active subscription."),
+		sampleWithNote("axilio billing balance -o json", "{\n  \"balance\": {\n    \"balance_display\": \"$12.50\",\n    \"balance_microdollars\": 12500000,\n    \"included_microdollars\": 10000000,\n    \"purchased_microdollars\": 2500000\n  },\n  \"plan\": {\n    \"plan_id\": \"pro\",\n    \"plan_name\": \"Pro\",\n    \"billing_cycle\": \"monthly\",\n    \"current_period_end_at\": \"<timestamp>\"\n  }\n}", "none", "plan is null when the organization has no active subscription."),
 	}},
 	"billing plan": {Samples: []CommandSample{
 		sampleWithNote("axilio billing plan", "Plan                 Pro (pro)\nStatus               active\nBilling cycle        monthly\nPrice                $20.00/mo\nIncluded / cycle     $10.00\nMax concurrent runs  5\nCurrent period       <timestamp> → <timestamp>", "none", "Cancellation, pending-downgrade, and trial rows appear only when set; without an active subscription the command fails with the API's not-found error."),

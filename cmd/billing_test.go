@@ -39,7 +39,7 @@ func billingAPI(t *testing.T, withPlan bool) *httptest.Server {
 			_, _ = io.WriteString(w, `{
 				"balance_display":"$12.50","balance_microdollars":12500000,
 				"included_microdollars":10000000,"purchased_microdollars":2500000,
-				"purchased_next_expiry":"2027-08-01T00:00:00Z"}`)
+				"purchased_expires_at":"2027-08-01T00:00:00Z"}`)
 		case strings.HasSuffix(r.URL.Path, "/billing/subscription"):
 			if !withPlan {
 				http.Error(w, `{"title":"Not Found","status":404,"detail":"no active subscription"}`, http.StatusNotFound)
@@ -47,12 +47,12 @@ func billingAPI(t *testing.T, withPlan bool) *httptest.Server {
 			}
 			_, _ = io.WriteString(w, `{
 				"id":"sub_1","plan_id":"pro","plan_name":"Pro","status":"active",
-				"billing_cycle":"monthly","monthly_price":20,"yearly_price":200,
+				"billing_cycle":"monthly","monthly_price_microdollars":20000000,"yearly_price_microdollars":200000000,
 				"balance_display":"$12.50","balance_microdollars":12500000,
 				"included_balance_display":"$10.00","included_balance_microdollars":10000000,
 				"max_concurrent_runs":5,"cancel_at_period_end":false,
-				"current_period_start":"2026-08-12T00:00:00Z",
-				"current_period_end":"2026-09-12T00:00:00Z",
+				"current_period_start_at":"2026-08-12T00:00:00Z",
+				"current_period_end_at":"2026-09-12T00:00:00Z",
 				"price_per_second_microdollars":100}`)
 		default:
 			http.Error(w, `{"title":"Not Found","status":404}`, http.StatusNotFound)

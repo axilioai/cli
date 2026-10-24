@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 	"os/signal"
@@ -35,8 +34,7 @@ func sessionsGetCmd() *cobra.Command {
 		Long: "Fetch one session by ID, active or historical. The result includes " +
 			"status, source, phone, allocation and release times, duration, tags, " +
 			"workflow, capture and telemetry settings, and the recording status and " +
-			"playback URL when ready. Active sessions also include a short-lived " +
-			"screen thumbnail URL. Discover IDs with `sessions list --remote` or " +
+			"playback URL when ready. Discover IDs with `sessions list --remote` or " +
 			"`sessions list --history`.",
 		Args: cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
@@ -48,27 +46,8 @@ func sessionsGetCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			// The JSON payload is the canonical detail response plus the
-			// thumbnail fields, which live behind their own endpoint. The
-			// thumbnail only exists while a session is active, and its absence
-			// must not fail the command — it is enrichment, not the record.
-			payload, err := toMap(d)
-			if err != nil {
-				return err
-			}
-			var thumbURL string
-			if d.Status == platformgo.PhoneSessionDetailResponseStatusActive {
-				th, thErr := cl.Phones.SessionThumbnail(context.Background(), &platformgo.PhonesSessionThumbnailRequest{SessionID: args[0]})
-				if thErr == nil {
-					thumbURL = strv(th.URL)
-					payload["thumbnail_status"] = string(th.Status)
-					if th.URL != nil {
-						payload["thumbnail_url"] = *th.URL
-					}
-				}
-			}
 			p := printer()
-			return p.Emit(payload, func() {
+			return p.Emit(d, func() {
 				p.KV([][2]string{
 					{"Session", d.SessionID},
 					{"Name", util.OrDash(strv(d.Name))},
@@ -77,7 +56,7 @@ func sessionsGetCmd() *cobra.Command {
 					{"Allocated by", util.OrDash(enumv(d.AllocatedBy))},
 					{"Phone", d.PhoneID},
 					{"Phone name", util.OrDash(strv(d.PhoneName))},
-					{"Nickname", util.OrDash(strv(d.Nickname))},
+					{"Nickname", util.OrDash(strv(d.PhoneNickname))},
 					{"Model", util.OrDash(strv(d.ModelName))},
 					{"Type", util.OrDash(enumv(d.PhoneType))},
 					{"Location", util.OrDash(strv(d.Location))},
@@ -90,27 +69,13 @@ func sessionsGetCmd() *cobra.Command {
 					{"Tags", util.OrDash(tagList(d.Tags))},
 					{"Capture", fmt.Sprintf("%t", d.CaptureEnabled)},
 					{"Telemetry", fmt.Sprintf("%t", !d.TelemetryDisabled)},
+					{"Accessibility", fmt.Sprintf("%t", d.Accessibility)},
 					{"Recording", string(d.RecordingStatus)},
 					{"Recording URL", util.OrDash(strv(d.RecordingURL))},
-					{"Thumbnail URL", util.OrDash(thumbURL)},
 				})
 			})
 		},
 	}
-}
-
-// toMap round-trips a response through JSON so extra CLI-composed fields can
-// be added without losing the canonical wire field names.
-func toMap(v any) (map[string]any, error) {
-	raw, err := json.Marshal(v)
-	if err != nil {
-		return nil, err
-	}
-	var m map[string]any
-	if err := json.Unmarshal(raw, &m); err != nil {
-		return nil, err
-	}
-	return m, nil
 }
 
 // sessionDuration renders the session length, running to now while active.
@@ -185,7 +150,7 @@ func sessionsTraceCmd() *cobra.Command {
 			"frames response (frames, sdk_call_costs, inference_costs, totals) merged " +
 			"across pages.\n\n" +
 			"--follow keeps the trace open on an active session: after the archived " +
-			"listing, new frames stream live (attaching to the telemetry WebSocket, " +
+			"listing, new frames stream live (from the telemetry event stream, " +
 			"with the archive as fallback) until the session-end frame. Live rows " +
 			"show COST as \"-\"; billing joins at read time, so live totals settle " +
 			"in the closing summary. With JSON output the follow contract becomes " +
@@ -289,23 +254,21 @@ func traceFollow(cl *client.Client, p *output.Printer, sessionID string) error {
 	fetched := int64(len(merged.Frames))
 
 	for !dedupe.endSeen {
-		tok, mintErr := cl.Phones.SessionTelemetryToken(ctx, &platformgo.PhonesSessionTelemetryTokenRequest{SessionID: sessionID})
+		stream, openErr := openLiveStream(ctx, sessionID)
 		if ctx.Err() != nil {
 			return traceFollowInterrupted(p, sessionID)
 		}
-		if mintErr == nil {
-			if stream, dialErr := telemetry.Tail(ctx, tok.TelemetryURL); dialErr == nil {
-				p.Step("attached to live telemetry — Ctrl-C to stop")
-				if _, err := streamLive(ctx, stream, dedupe); err != nil {
-					if ctx.Err() != nil {
-						return traceFollowInterrupted(p, sessionID)
-					}
-					return err
+		sessionOver := false
+		if openErr == nil {
+			p.Step("attached to live telemetry — Ctrl-C to stop")
+			over, err := streamLive(ctx, stream, dedupe)
+			if err != nil {
+				if ctx.Err() != nil {
+					return traceFollowInterrupted(p, sessionID)
 				}
+				return err
 			}
-			if ctx.Err() != nil {
-				return traceFollowInterrupted(p, sessionID)
-			}
+			sessionOver = over
 		}
 		// Backfill what the live window missed — and, when live is
 		// unavailable, the polling leg itself.
@@ -320,8 +283,12 @@ func traceFollow(cl *client.Client, p *output.Printer, sessionID string) error {
 		if dedupe.endSeen {
 			break
 		}
-		if mintErr != nil {
+		if sessionOver {
 			p.Note("session is not active — the archived trace above is complete")
+			break
+		}
+		if telemetry.IsTelemetryOff(openErr) || telemetry.IsNotFound(openErr) || telemetry.IsUnauthorized(openErr) {
+			p.Note("live telemetry unavailable for this session — the archived trace above is complete")
 			break
 		}
 		select {

@@ -32,8 +32,8 @@ func fakeAPI(t *testing.T) *httptest.Server {
 		switch {
 		case strings.Contains(p, "/billing/balance"):
 			body = `{"balance_display":"$5.00","balance_microdollars":5000000}`
-		case strings.Contains(p, "/phones/sessions/active"):
-			body = `{"sessions":[]}`
+		case strings.HasSuffix(p, "/phones/sessions"):
+			body = `{"sessions":[],"total":0,"limit":100,"offset":0}`
 		case strings.Contains(p, ":deallocate"):
 			body = `{"phone_id":"p1","session_id":"s1","workflow_id":"w1","deallocated_at":"2026-08-05T20:00:00Z"}`
 		case strings.HasSuffix(p, "/phones"):
@@ -48,19 +48,18 @@ func fakeAPI(t *testing.T) *httptest.Server {
 				{"id":"k1","name":"ci","key_preview":"axl_ci…","created_at":"2026-07-14T00:00:00Z"}],
 				"total":1,"limit":50,"offset":0}`
 		case strings.Contains(p, "/usage/metrics"):
-			body = `{"period_start":"2026-08-01T00:00:00Z","period_end":"2026-08-22T00:00:00Z","granularity":"daily",
-				"compute_minutes":{"total_minutes":42.5,"change":10.0},
-				"cost_by_product":{"sessions":1.25,"inference":0.75,"other":0},
-				"infra_costs":{"total":2.0,"this_period":2.0,"change":-5.0}}`
+			body = `{"points":[
+				{"period_start_at":"2026-08-01T00:00:00Z","session_cost_microdollars":1000000,"inference_cost_microdollars":250000,"total_cost_microdollars":1250000},
+				{"period_start_at":"2026-08-02T00:00:00Z","session_cost_microdollars":250000,"inference_cost_microdollars":500000,"total_cost_microdollars":750000}]}`
 		case strings.Contains(p, "/usage/inferences"):
 			body = `{"inferences":[
 				{"inference_id":"inf1","endpoint":"locate","model":"axilio-ground-1","cost_microdollars":1234,"latency_ms":321,"created_at":"2026-08-20T00:00:00Z","ocr_pages":0}],
 				"total":1,"limit":50,"offset":0}`
 		case strings.Contains(p, "/runs/history"):
 			body = `{"runs":[
-				{"run_id":"r9","status":"completed","trigger":"manual","workflow_id":"w1","user_id":"u1","success":true,"started_at":"2026-08-10T00:00:00Z","completed_at":"2026-08-10T00:05:00Z"}],
+				{"id":"r9","status":"completed","trigger":"manual","workflow_id":"w1","user_id":"u1","success":true,"started_at":"2026-08-10T00:00:00Z","completed_at":"2026-08-10T00:05:00Z"}],
 				"total":1,"limit":50,"offset":0}`
-		case strings.Contains(p, "/runs/stats/"):
+		case strings.HasSuffix(p, "/run-stats"):
 			body = `{"total_runs":8,"success_rate":0.875}`
 		case strings.Contains(p, ":cancel"):
 			// run cancel: POST /runs/{run_id}:cancel (custom method, 0.72 API).
@@ -154,21 +153,13 @@ func fakeAPI(t *testing.T) *httptest.Server {
 			// phones_pending_removal is deprecated and always 0 since a library
 			// delete stopped touching phones; the CLI no longer reads it.
 			body = `{"message":"file deleted successfully","phones_pending_removal":0}`
-		case strings.HasSuffix(p, "/code/restore") && r.Method == http.MethodPost:
-			// workflow code restore: POST /workflows/{id}/code/restore.
-			var reqBody struct {
-				RevisionID string `json:"revision_id"`
-			}
-			_ = json.NewDecoder(r.Body).Decode(&reqBody)
-			if reqBody.RevisionID == "" {
-				http.Error(w, `{"title":"Unprocessable Entity","status":422,"detail":"expected required property revision_id to be present"}`, http.StatusUnprocessableEntity)
-				return
-			}
+		case strings.HasSuffix(p, ":restore") && r.Method == http.MethodPost:
+			// workflow revision restore: POST /workflows/{id}/revisions/{revision_id}:restore.
 			body = `{"no_op":false,"revision":4,"revision_id":"rev4"}`
 		case strings.HasSuffix(p, "/code") && r.Method == http.MethodGet:
 			body = `{"revision":2,"revision_id":"rev2","source":"print('hello')\n","updated_at":"2026-08-05T20:00:00Z"}`
-		case strings.HasSuffix(p, "/code") && r.Method == http.MethodPost:
-			// workflow code save: POST /workflows/{id}/code. The backend
+		case strings.HasSuffix(p, "/revisions") && r.Method == http.MethodPost:
+			// workflow revision create: POST /workflows/{id}/revisions. The backend
 			// requires source; reject its absence so the test seam stays
 			// faithful to the real contract.
 			var reqBody struct {
