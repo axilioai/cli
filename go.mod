@@ -55,3 +55,5 @@ require (
 	golang.org/x/sys v0.47.0 // indirect
 	golang.org/x/text v0.41.0 // indirect
 )
+
+replace github.com/axilioai/platform-go => /private/tmp/claude-501/-Users-dom-Desktop-axilio-ai-axilio/27520ae3-3a52-41da-8610-f7461089ec93/scratchpad/pgo-3006
