@@ -62,11 +62,11 @@ func watchAPI(t *testing.T, terminal string, errorMessage string) *httptest.Serv
 			}
 			msg := ""
 			if errorMessage != "" {
-				msg = fmt.Sprintf(`,"error_message":%q`, errorMessage)
+				msg = fmt.Sprintf(`,"error":%q`, errorMessage)
 			}
-			fmt.Fprintf(w, `{"id":"r1","status":%q,"trigger":"manual","workflow_id":"w1","created_at":"2026-08-22T20:00:00Z"%s%s}`, status, session, msg)
+			fmt.Fprintf(w, `{"id":"r1","status":%q,"trigger":"manual","mode":"code","agent_id":"a1","user_id":"u1","updated_at":"2026-08-22T20:00:00Z","created_at":"2026-08-22T20:00:00Z"%s%s}`, status, session, msg)
 		case strings.HasSuffix(p, "/runs") && r.Method == http.MethodPost:
-			fmt.Fprint(w, `{"run_ids":["r1"]}`)
+			fmt.Fprint(w, `{"id":"r1","mode":"code","status":"queued","trigger":"api","agent_id":"a1","user_id":"u1","created_at":"2026-08-22T20:00:00Z","updated_at":"2026-08-22T20:00:00Z"}`)
 		default:
 			http.Error(w, `{"error":"not found"}`, http.StatusNotFound)
 		}
@@ -178,30 +178,37 @@ func TestRunsWatchOutcomeExitCodes(t *testing.T) {
 	}
 }
 
-// --watch on runs start follows the run it created; with any other count the
-// flag is a preflight usage error that sends nothing over the wire.
+// A failed run's watch_end summary carries the run's `error`; the retired
+// error_message field is gone.
+func TestRunsWatchJSONSummaryCarriesError(t *testing.T) {
+	fastWatch(t)
+	srv := watchAPI(t, "failed", "phone rebooted mid-run")
+	out, err := run(t, srv, "-o", "json", "runs", "watch", "r1")
+	if err == nil || exit.Classify(err) != exit.Err {
+		t.Fatalf("got %v, want a generic error exit", err)
+	}
+	lines := strings.Split(strings.TrimSpace(out), "\n")
+	var last map[string]any
+	_ = json.Unmarshal([]byte(lines[len(lines)-1]), &last)
+	if last["error"] != "phone rebooted mid-run" {
+		t.Fatalf("watch_end summary missing error: %v", last)
+	}
+	if _, ok := last["error_message"]; ok {
+		t.Fatalf("watch_end summary kept the retired error_message field: %v", last)
+	}
+}
+
+// --watch on runs start follows the run it created.
 func TestRunsStartWatchFlag(t *testing.T) {
-	t.Run("count preflight", func(t *testing.T) {
-		_, requests := noRequestServer(t)
-		_, err := execRoot(t, "runs", "start", "w1", "--watch", "--count", "2")
-		if err == nil || exit.Classify(err) != exit.Usage {
-			t.Fatalf("got %v, want usage error", err)
+	fastWatch(t)
+	srv := watchAPI(t, "completed", "")
+	out, err := run(t, srv, "runs", "start", "--agent", "a1", "--watch")
+	if err != nil {
+		t.Fatalf("start --watch: %v", err)
+	}
+	for _, want := range []string{"Started run r1", "hello from the phone", "Run r1 completed"} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("output missing %q:\n%s", want, out)
 		}
-		if *requests != 0 {
-			t.Fatalf("made %d HTTP requests before the usage error", *requests)
-		}
-	})
-	t.Run("follows created run", func(t *testing.T) {
-		fastWatch(t)
-		srv := watchAPI(t, "completed", "")
-		out, err := run(t, srv, "runs", "start", "w1", "--watch")
-		if err != nil {
-			t.Fatalf("start --watch: %v", err)
-		}
-		for _, want := range []string{"Started run r1", "hello from the phone", "Run r1 completed"} {
-			if !strings.Contains(out, want) {
-				t.Fatalf("output missing %q:\n%s", want, out)
-			}
-		}
-	})
+	}
 }

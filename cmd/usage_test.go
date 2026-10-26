@@ -8,8 +8,8 @@ import (
 )
 
 // The reporting-window flags are validated before credentials or any HTTP
-// request: --from is required, both flags must parse, and the window must be
-// ordered. Shared by usage metrics/inferences and runs history.
+// request: --from is required on usage, both flags must parse, and the window must be
+// ordered. Shared by usage metrics/inferences and runs metrics.
 func TestWindowFlagsRejectBeforeRequest(t *testing.T) {
 	cases := []struct {
 		name string
@@ -20,8 +20,8 @@ func TestWindowFlagsRejectBeforeRequest(t *testing.T) {
 		{"metrics inverted window", []string{"usage", "metrics", "--from", "2026-08-02", "--to", "2026-08-01"}},
 		{"metrics bad granularity", []string{"usage", "metrics", "--from", "2026-08-01", "--granularity", "weekly"}},
 		{"inferences bad endpoint", []string{"usage", "inferences", "--from", "2026-08-01", "--endpoint", "classify"}},
-		{"history missing from", []string{"runs", "history"}},
-		{"history bad status", []string{"runs", "history", "--from", "2026-08-01", "--status", "exploded"}},
+		{"runs metrics malformed from", []string{"runs", "metrics", "--from", "yesterday"}},
+		{"runs metrics inverted window", []string{"runs", "metrics", "--from", "2026-08-02", "--to", "2026-08-01"}},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -50,22 +50,6 @@ func TestUsageInferencesRendersMicrodollarsAsDollars(t *testing.T) {
 	}
 	if !strings.Contains(out, "321 ms") {
 		t.Fatalf("latency column missing:\n%s", out)
-	}
-}
-
-// The stats success_rate is a 0..1 fraction over finished runs only; the
-// rendering multiplies by 100 and says what the denominator is.
-func TestRunsStatsRendersRateAsPercentage(t *testing.T) {
-	srv := fakeAPI(t)
-	out, err := run(t, srv, "runs", "stats", "w1")
-	if err != nil {
-		t.Fatalf("runs stats: %v", err)
-	}
-	if !strings.Contains(out, "87.5% of finished runs") {
-		t.Fatalf("success rate not rendered as a finished-runs percentage:\n%s", out)
-	}
-	if !strings.Contains(out, "8") {
-		t.Fatalf("total runs missing:\n%s", out)
 	}
 }
 

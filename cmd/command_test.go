@@ -35,7 +35,7 @@ func fakeAPI(t *testing.T) *httptest.Server {
 		case strings.HasSuffix(p, "/phones/sessions"):
 			body = `{"sessions":[],"total":0,"limit":100,"offset":0}`
 		case strings.Contains(p, ":deallocate"):
-			body = `{"phone_id":"p1","session_id":"s1","workflow_id":"w1","deallocated_at":"2026-08-05T20:00:00Z"}`
+			body = `{"phone_id":"p1","session_id":"s1","agent_id":"a1","deallocated_at":"2026-08-05T20:00:00Z"}`
 		case strings.HasSuffix(p, "/phones"):
 			if got := r.URL.Query().Get("ownership"); got != "dedicated" {
 				t.Errorf("phones list requested ownership %q, want dedicated", got)
@@ -55,35 +55,33 @@ func fakeAPI(t *testing.T) *httptest.Server {
 			body = `{"inferences":[
 				{"inference_id":"inf1","endpoint":"locate","model":"axilio-ground-1","cost_microdollars":1234,"latency_ms":321,"created_at":"2026-08-20T00:00:00Z","ocr_pages":0}],
 				"total":1,"limit":50,"offset":0}`
-		case strings.Contains(p, "/runs/history"):
-			body = `{"runs":[
-				{"id":"r9","status":"completed","trigger":"manual","workflow_id":"w1","user_id":"u1","success":true,"started_at":"2026-08-10T00:00:00Z","completed_at":"2026-08-10T00:05:00Z"}],
-				"total":1,"limit":50,"offset":0}`
-		case strings.HasSuffix(p, "/run-stats"):
-			body = `{"total_runs":8,"success_rate":0.875}`
+		case strings.HasSuffix(p, "/runs/metrics"):
+			body = `{"points":[
+				{"agent":"a1","period_start_at":"2026-08-10T00:00:00Z","runs":4,"completed_runs":3,"failed_runs":1,"model_steps":0,"success_rate":0.75,"total_cost_microdollars":420000},
+				{"agent":"a1","period_start_at":"2026-08-11T00:00:00Z","runs":3,"completed_runs":3,"failed_runs":0,"model_steps":0,"success_rate":1,"total_cost_microdollars":80000},
+				{"agent":"a2","period_start_at":"2026-08-10T00:00:00Z","runs":2,"completed_runs":0,"failed_runs":2,"model_steps":0,"success_rate":0,"total_cost_microdollars":10000}]}`
 		case strings.Contains(p, ":cancel"):
-			// run cancel: POST /runs/{run_id}:cancel (custom method, 0.72 API).
+			// run cancel: POST /runs/{run_id}:cancel (custom method).
 			body = `{"success":true}`
 		case strings.HasSuffix(p, "/runs") && r.Method == http.MethodPost:
-			// run creation: POST /workflows/{workflow_id}/runs (0.72 API). The
-			// backend requires a non-empty `runs` array (one config per run);
-			// reject its absence so this test stays faithful to the real contract.
+			// run creation: POST /runs. A saved-agent run names agent_id;
+			// reject its absence so this test stays faithful to the contract.
 			var reqBody struct {
-				Runs []map[string]any `json:"runs"`
+				AgentID   *string        `json:"agent_id"`
+				Variables map[string]any `json:"variables"`
 			}
 			_ = json.NewDecoder(r.Body).Decode(&reqBody)
-			if len(reqBody.Runs) == 0 {
-				http.Error(w, `{"title":"Unprocessable Entity","status":422,"detail":"expected required property runs to be present"}`, http.StatusUnprocessableEntity)
+			if reqBody.AgentID == nil {
+				http.Error(w, `{"title":"Unprocessable Entity","status":422,"detail":"expected agent_id or task"}`, http.StatusUnprocessableEntity)
 				return
 			}
-			if _, ok := reqBody.Runs[0]["variables"]; !ok {
-				http.Error(w, `{"title":"Unprocessable Entity","status":422,"detail":"expected required property variables to be present"}`, http.StatusUnprocessableEntity)
-				return
-			}
-			body = `{"run_ids":["r1"]}`
+			body = `{"id":"r1","mode":"code","status":"queued","trigger":"api","agent_id":"a1","user_id":"u1","created_at":"2026-08-10T00:00:00Z","updated_at":"2026-08-10T00:00:00Z"}`
 		case strings.HasSuffix(p, "/runs") && r.Method == http.MethodGet:
+			if got := r.URL.Query().Get("agent_id"); got != "" && got != "a1" {
+				t.Errorf("runs list requested agent_id %q", got)
+			}
 			body = `{"runs":[
-				{"id":"r1","status":"completed","trigger":"manual","workflow_id":"w1","success":true}],
+				{"id":"r1","mode":"code","status":"completed","trigger":"manual","agent_id":"a1","agent_name":"demo","success":true,"user_id":"u1","created_at":"2026-08-10T00:00:00Z","updated_at":"2026-08-10T00:00:00Z"}],
 				"total":1,"limit":20,"offset":0}`
 		case strings.HasSuffix(p, "/blob"):
 			// Stands in for the storage service behind a capture's signed URL.
@@ -153,30 +151,32 @@ func fakeAPI(t *testing.T) *httptest.Server {
 			// phones_pending_removal is deprecated and always 0 since a library
 			// delete stopped touching phones; the CLI no longer reads it.
 			body = `{"message":"file deleted successfully","phones_pending_removal":0}`
-		case strings.HasSuffix(p, ":restore") && r.Method == http.MethodPost:
-			// workflow revision restore: POST /workflows/{id}/revisions/{revision_id}:restore.
-			body = `{"no_op":false,"revision":4,"revision_id":"rev4"}`
-		case strings.HasSuffix(p, "/code") && r.Method == http.MethodGet:
-			body = `{"revision":2,"revision_id":"rev2","source":"print('hello')\n","updated_at":"2026-08-05T20:00:00Z"}`
+		case strings.HasSuffix(p, ":rollback") && r.Method == http.MethodPost:
+			// agent rollback: POST /agents/{id}:rollback.
+			body = `{"id":"rev4","agent_id":"a1","author_user_id":"u1","kind":"code","revision":4,"created_at":"2026-08-05T20:00:00Z"}`
 		case strings.HasSuffix(p, "/revisions") && r.Method == http.MethodPost:
-			// workflow revision create: POST /workflows/{id}/revisions. The backend
-			// requires source; reject its absence so the test seam stays
-			// faithful to the real contract.
+			// agent revision create: POST /agents/{id}/revisions. The backend
+			// requires kind and, for code, the code; reject their absence so
+			// the test seam stays faithful to the real contract.
 			var reqBody struct {
-				Source *string `json:"source"`
+				Kind *string `json:"kind"`
+				Code *string `json:"code"`
 			}
 			_ = json.NewDecoder(r.Body).Decode(&reqBody)
-			if reqBody.Source == nil {
-				http.Error(w, `{"title":"Unprocessable Entity","status":422,"detail":"expected required property source to be present"}`, http.StatusUnprocessableEntity)
+			if reqBody.Kind == nil || *reqBody.Kind != "code" || reqBody.Code == nil {
+				http.Error(w, `{"title":"Unprocessable Entity","status":422,"detail":"expected kind code with code"}`, http.StatusUnprocessableEntity)
 				return
 			}
-			body = `{"no_op":false,"revision":3,"revision_id":"rev3"}`
+			body = `{"id":"rev3","agent_id":"a1","author_user_id":"u1","kind":"code","revision":3,"code":"x","created_at":"2026-08-05T20:00:00Z"}`
 		case strings.HasSuffix(p, "/revisions") && r.Method == http.MethodGet:
 			body = `{"revisions":[
-				{"id":"rev2","revision":2,"author_user_id":"u1","bytes":14,"sha256":"abc","message":"tweak","created_at":"2026-08-05T20:00:00Z"},
-				{"id":"rev1","revision":1,"author_user_id":"u1","bytes":12,"sha256":"def","created_at":"2026-08-04T20:00:00Z"}]}`
-		case strings.HasSuffix(p, "/workflows") && r.Method == http.MethodPost:
-			// workflow create: POST /workflows. Echo back a first revision only
+				{"id":"rev2","agent_id":"a1","kind":"code","revision":2,"author_user_id":"u1","bytes":14,"message":"tweak","created_at":"2026-08-05T20:00:00Z"},
+				{"id":"rev1","agent_id":"a1","kind":"code","revision":1,"author_user_id":"u1","bytes":12,"created_at":"2026-08-04T20:00:00Z"}],
+				"total":2,"limit":50,"offset":0}`
+		case strings.Contains(p, "/revisions/") && r.Method == http.MethodGet:
+			body = `{"id":"rev2","agent_id":"a1","author_user_id":"u1","kind":"code","revision":2,"code":"print('hello')\n","created_at":"2026-08-05T20:00:00Z"}`
+		case strings.HasSuffix(p, "/agents") && r.Method == http.MethodPost:
+			// agent create: POST /agents. Echo back a first revision only
 			// when code was provided, like the real endpoint.
 			var reqBody struct {
 				Name string  `json:"name"`
@@ -188,18 +188,18 @@ func fakeAPI(t *testing.T) *httptest.Server {
 				return
 			}
 			if reqBody.Code != nil {
-				body = `{"workflow_id":"w2","revision":1,"revision_id":"rev1"}`
+				body = `{"id":"a2","name":"checkout-flow","model":"m1","current_revision_id":"rev1"}`
 			} else {
-				body = `{"workflow_id":"w2"}`
+				body = `{"id":"a2","name":"checkout-flow","model":"m1"}`
 			}
-		case strings.Contains(p, "/workflows/") && r.Method == http.MethodDelete:
-			body = `{"message":"deleted"}`
-		case strings.Contains(p, "/workflows/") && r.Method == http.MethodGet:
-			body = `{"workflow":{"id":"w1","name":"demo","platform":"android","status":"active","ocr_engine":"free","recording":true,"telemetry":true,"capture":false,"created_at":"2026-08-01T00:00:00Z","updated_at":"2026-08-05T00:00:00Z","user_id":"u1"},
-				"stats":{"total_runs":4,"success_rate":0.75}}`
-		case strings.Contains(p, "/workflows"):
-			body = `{"workflows":[
-				{"workflow":{"id":"w1","name":"demo","platform":"android","status":"active"}}],
+		case strings.Contains(p, "/agents/") && r.Method == http.MethodDelete:
+			w.WriteHeader(http.StatusNoContent)
+			return
+		case strings.Contains(p, "/agents/") && r.Method == http.MethodGet:
+			body = `{"id":"a1","name":"demo","model":"m1","current_revision_id":"rev2","recording_enabled":false,"telemetry_enabled":true,"capture_enabled":true,"accessibility_enabled":false,"max_steps":500,"timeout_seconds":3600,"max_cost_microdollars":10000000,"pause_timeout_seconds":600,"created_at":"2026-08-01T00:00:00Z","updated_at":"2026-08-05T00:00:00Z"}`
+		case strings.Contains(p, "/agents"):
+			body = `{"agents":[
+				{"id":"a1","name":"demo","model":"m1"}],
 				"total":1,"limit":20,"offset":0}`
 		default:
 			http.Error(w, `{"error":"not found"}`, http.StatusNotFound)
@@ -324,7 +324,7 @@ func TestSessionsStartNormalizesAndroidPhoneType(t *testing.T) {
 		}
 		gotPhoneType = body.PhoneType
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = io.WriteString(w, `{"phone_id":"p1","session_id":"s1","workflow_started_at":"2026-08-03T00:00:00Z"}`)
+		_, _ = io.WriteString(w, `{"phone_id":"p1","session_id":"s1","allocated_at":"2026-08-03T00:00:00Z"}`)
 	}))
 	t.Cleanup(srv.Close)
 
@@ -347,57 +347,100 @@ func TestRunsListJSON(t *testing.T) {
 	}
 }
 
-func TestWorkflowsListJSON(t *testing.T) {
+func TestAgentsListJSON(t *testing.T) {
 	srv := fakeAPI(t)
-	out, err := run(t, srv, "-o", "json", "workflows", "list")
+	out, err := run(t, srv, "-o", "json", "agents", "list")
 	if err != nil {
-		t.Fatalf("workflows list: %v", err)
+		t.Fatalf("agents list: %v", err)
 	}
-	if !strings.Contains(out, `"id": "w1"`) {
-		t.Fatalf("expected the fake workflow in output:\n%s", out)
+	if !strings.Contains(out, `"id": "a1"`) {
+		t.Fatalf("expected the fake agent in output:\n%s", out)
 	}
 }
 
 func TestRunsStartJSON(t *testing.T) {
 	srv := fakeAPI(t)
-	out, err := run(t, srv, "-o", "json", "runs", "start", "w1")
+	out, err := run(t, srv, "-o", "json", "runs", "start", "--agent", "a1")
 	if err != nil {
 		t.Fatalf("runs start: %v", err)
 	}
-	if !strings.Contains(out, `"r1"`) {
-		t.Fatalf("expected the created run id in output:\n%s", out)
+	if !strings.Contains(out, `"id": "r1"`) || !strings.Contains(out, `"mode": "code"`) {
+		t.Fatalf("expected the created run in output:\n%s", out)
 	}
 }
 
-func TestRunsStartRejectsInvalidCountBeforeRequest(t *testing.T) {
-	requests := 0
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		requests++
-		http.Error(w, "unexpected request", http.StatusInternalServerError)
-	}))
-	t.Cleanup(srv.Close)
-	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
-	t.Setenv("AXILIO_API_KEY", "axl_test")
-	t.Setenv("AXILIO_BASE_URL", srv.URL)
-
-	for _, count := range []string{"-1", "0", "1001"} {
-		out, err := execRoot(t, "runs", "start", "w1", "--count", count)
-		if err == nil || exit.Classify(err) != exit.Usage {
-			t.Fatalf("--count %s: got %v, want usage error", count, err)
-		}
-		if out != "" {
-			t.Fatalf("--count %s wrote stdout on failure: %q", count, out)
-		}
+func TestRunsStartRequiresAgentBeforeRequest(t *testing.T) {
+	_, requests := noRequestServer(t)
+	out, err := execRoot(t, "runs", "start")
+	if err == nil || exit.Classify(err) != exit.Usage {
+		t.Fatalf("runs start without --agent: got %v, want usage error", err)
 	}
-	if requests != 0 {
-		t.Fatalf("invalid counts made %d HTTP requests", requests)
+	if out != "" {
+		t.Fatalf("wrote stdout on failure: %q", out)
+	}
+	if *requests != 0 {
+		t.Fatalf("made %d HTTP requests", *requests)
 	}
 }
 
-func TestRunsStartAcceptsCountUpperBound(t *testing.T) {
+func TestRunsListFilters(t *testing.T) {
 	srv := fakeAPI(t)
-	if _, err := run(t, srv, "runs", "start", "w1", "--count", "1000"); err != nil {
-		t.Fatalf("--count 1000: %v", err)
+	out, err := run(t, srv, "runs", "list", "--agent", "a1", "--mode", "code", "--status", "completed", "--status", "failed")
+	if err != nil {
+		t.Fatalf("runs list: %v", err)
+	}
+	for _, want := range []string{"code", "completed", "demo"} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("expected %q in output:\n%s", want, out)
+		}
+	}
+	_, requests := noRequestServer(t)
+	for _, args := range [][]string{
+		{"runs", "list", "--mode", "workflow"},
+		{"runs", "list", "--status", "done"},
+	} {
+		if _, err := execRoot(t, args...); err == nil || exit.Classify(err) != exit.Usage {
+			t.Fatalf("%v: got %v, want usage error", args, err)
+		}
+	}
+	if *requests != 0 {
+		t.Fatalf("invalid filters made %d HTTP requests", *requests)
+	}
+}
+
+func TestRunsMetricsFoldsPerAgent(t *testing.T) {
+	srv := fakeAPI(t)
+	out, err := run(t, srv, "runs", "metrics")
+	if err != nil {
+		t.Fatalf("runs metrics: %v", err)
+	}
+	// a1: 7 runs, 6 completed, 1 failed; 6 of 7 finished = 86%.
+	if !strings.Contains(out, "a1") || !strings.Contains(out, "86%") || !strings.Contains(out, "$0.5000") || !strings.Contains(out, "a2") {
+		t.Fatalf("unexpected metrics table:\n%s", out)
+	}
+}
+
+func TestRunsMetricsAgentFilter(t *testing.T) {
+	srv := fakeAPI(t)
+	out, err := run(t, srv, "-o", "json", "runs", "metrics", "--agent", "a2")
+	if err != nil {
+		t.Fatalf("runs metrics --agent: %v", err)
+	}
+	got := mustJSON(t, out)
+	points, _ := got["points"].([]any)
+	if len(points) != 1 || strings.Contains(out, `"a1"`) {
+		t.Fatalf("expected only agent a2 points:\n%s", out)
+	}
+}
+
+func TestRunsHistoryAndStatsAreGone(t *testing.T) {
+	for _, name := range []string{"history", "stats"} {
+		if c, _, _ := Root().Find([]string{"runs", name}); c != nil && c.Name() == name {
+			t.Errorf("runs %s should be removed", name)
+		}
+	}
+	if c, _, _ := Root().Find([]string{"workflows"}); c != nil && c.Name() == "workflows" {
+		t.Error("workflows should be removed")
 	}
 }
 

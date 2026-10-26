@@ -124,7 +124,7 @@ func TestSessionsListHistoryFiltersMapToQuery(t *testing.T) {
 	t.Cleanup(srv.Close)
 
 	_, err := run(t, srv, "sessions", "list",
-		"--status", "completed", "--source", "workflow",
+		"--status", "completed", "--source", "agent",
 		"--started-after", "2026-08-01", "--sort", "duration", "--order", "asc")
 	if err != nil {
 		t.Fatalf("sessions list history: %v", err)

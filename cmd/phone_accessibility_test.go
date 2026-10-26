@@ -283,7 +283,7 @@ func TestSessionsStartAccessibilityFlag(t *testing.T) {
 				_ = json.NewDecoder(r.Body).Decode(&body)
 				got = body["accessibility"]
 				w.Header().Set("Content-Type", "application/json")
-				_, _ = io.WriteString(w, `{"phone_id":"p1","session_id":"s1","workflow_started_at":"2026-08-03T00:00:00Z","accessibility":true}`)
+				_, _ = io.WriteString(w, `{"phone_id":"p1","session_id":"s1","allocated_at":"2026-08-03T00:00:00Z","accessibility":true}`)
 			}))
 			t.Cleanup(srv.Close)
 			args := append([]string{"sessions", "start"}, c.args...)

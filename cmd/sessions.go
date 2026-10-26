@@ -44,7 +44,7 @@ const (
 var (
 	// The API spells the canceled status with a doubled L on the wire; keep it verbatim.
 	sessionStatusValues = []string{"active", "completed", "cancelled", "expired"} //nolint:misspell
-	sessionSourceValues = []string{"workflow", "interactive"}
+	sessionSourceValues = []string{"agent", "interactive"}
 	sessionTypeValues   = []string{"shared", "dedicated"}
 	// sessionSortFields maps the --sort values the CLI has always accepted to
 	// the API's order_by fields.
@@ -67,7 +67,7 @@ type historyFilters struct {
 	source        []string
 	phoneKind     []string
 	search        string
-	workflowID    string
+	agentID       string
 	startedAfter  string
 	startedBefore string
 	endedAfter    string
@@ -122,7 +122,7 @@ func (h *historyFilters) active(cmd *cobra.Command) bool {
 	if h.history {
 		return true
 	}
-	for _, name := range []string{"status", "source", "type", "search", "workflow",
+	for _, name := range []string{"status", "source", "type", "search", "agent",
 		"started-after", "started-before", "ended-after", "ended-before",
 		"sort", "order", "offset"} {
 		if cmd.Flags().Changed(name) {
@@ -175,8 +175,8 @@ func (h *historyFilters) request() (*platformgo.PhonesListSessionsRequest, error
 	if h.search != "" {
 		req.Search = &h.search
 	}
-	if h.workflowID != "" {
-		req.WorkflowID = &h.workflowID
+	if h.agentID != "" {
+		req.AgentID = &h.agentID
 	}
 	if sort != "" || order != "" {
 		// A bare --order sorts the default column (started).
@@ -257,7 +257,7 @@ func sessionsListCmd() *cobra.Command {
 			"indicate which session this CLI would select.\n\n" +
 			"Use --history for the org's full session history, active and released. " +
 			"Any history filter flag switches to history mode on its own: status, " +
-			"source, phone type, search, workflow, and started/ended time bounds, " +
+			"source, phone type, search, agent, and started/ended time bounds, " +
 			"plus sort, order, and offset. Time bounds accept RFC3339 or " +
 			"YYYY-MM-DD. Inspect a returned ID with `sessions get` or " +
 			"`sessions trace`.",
@@ -296,10 +296,10 @@ func sessionsListCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&remote, "remote", false, "List all active Axilio sessions instead of sessions saved locally")
 	cmd.Flags().BoolVar(&h.history, "history", false, "List the org's session history, active and released")
 	cmd.Flags().StringSliceVar(&h.status, "status", nil, "Filter history by status: active|completed|cancelled|expired (repeatable)") //nolint:misspell // wire spelling
-	cmd.Flags().StringSliceVar(&h.source, "source", nil, "Filter history by source: workflow|interactive (repeatable)")
+	cmd.Flags().StringSliceVar(&h.source, "source", nil, "Filter history by source: agent|interactive (repeatable)")
 	cmd.Flags().StringSliceVar(&h.phoneKind, "type", nil, "Filter history by phone type: shared|dedicated (repeatable)")
-	cmd.Flags().StringVar(&h.search, "search", "", "Case-insensitive match on phone, session, or workflow")
-	cmd.Flags().StringVar(&h.workflowID, "workflow", "", "Only sessions for this workflow ID")
+	cmd.Flags().StringVar(&h.search, "search", "", "Case-insensitive match on phone, session, or agent")
+	cmd.Flags().StringVar(&h.agentID, "agent", "", "Only sessions for this agent ID")
 	cmd.Flags().StringVar(&h.startedAfter, "started-after", "", "Only sessions started at or after this time")
 	cmd.Flags().StringVar(&h.startedBefore, "started-before", "", "Only sessions started at or before this time")
 	cmd.Flags().StringVar(&h.endedAfter, "ended-after", "", "Only sessions released at or after this time")
@@ -375,7 +375,7 @@ func sessionsCurrentCmd() *cobra.Command {
 }
 
 func sessionsStartCmd() *cobra.Command {
-	var phoneType, phoneID, workflowID, shellFlag string
+	var phoneType, phoneID, shellFlag string
 	var export, accessibility bool
 	cmd := &cobra.Command{
 		Use:   "start",
@@ -387,8 +387,7 @@ func sessionsStartCmd() *cobra.Command {
 			"it as the most recently started session. A session started without --phone-id " +
 			"gets a phone from the shared pool, billed per second at your plan's rate. Use " +
 			"--phone-id to pin a dedicated phone from `phones mine` (no phone-time " +
-			"charge), or " +
-			"attach the session to a workflow with --workflow.\n\n" +
+			"charge).\n\n" +
 			"Accessibility mode, which lets phone commands select elements by " +
 			"--role, --name, and --id and `phone tree` read the screen's structure, " +
 			"is off by default. --accessibility turns it on and requires a phone " +
@@ -425,9 +424,6 @@ func sessionsStartCmd() *cobra.Command {
 			}
 			if phoneID != "" {
 				req.PhoneID = &phoneID
-			}
-			if workflowID != "" {
-				req.WorkflowID = &workflowID
 			}
 			// Always sent, so the request states what the flag says rather
 			// than leaning on the server default (also false).
@@ -480,7 +476,6 @@ func sessionsStartCmd() *cobra.Command {
 	}
 	cmd.Flags().StringVar(&phoneType, "phone-type", "android", "Phone platform to allocate (currently only android)")
 	cmd.Flags().StringVar(&phoneID, "phone-id", "", "Pin a dedicated phone ID from `phones mine` instead of pool allocation")
-	cmd.Flags().StringVar(&workflowID, "workflow", "", "Workflow ID to attach; omit for an interactive session")
 	cmd.Flags().BoolVar(&export, "export", false, "Print only the AXILIO_SESSION assignment for the shell to evaluate")
 	cmd.Flags().StringVar(&shellFlag, "shell", "", shellFlagHelp)
 	cmd.Flags().BoolVar(&accessibility, "accessibility", false, "Turn on accessibility mode, which requires a phone that supports it; off by default")
@@ -496,7 +491,7 @@ func sessionsStopCmd() *cobra.Command {
 			"ID. Discover IDs with `sessions list --remote`; matching locally saved " +
 			"session information and the most-recent-session marker are removed after " +
 			"release. JSON output is the canonical API deallocation response, including " +
-			"the phone, session, workflow, and deallocation time. Without --yes, table " +
+			"the phone, session, agent, and deallocation time. Without --yes, table " +
 			"mode prompts only when stdin is a terminal. " +
 			"Redirected, JSON, and quiet execution do not prompt and require --yes.",
 		Args: cobra.ExactArgs(1),

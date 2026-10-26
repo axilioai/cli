@@ -50,10 +50,10 @@ func TestParseRunVariables(t *testing.T) {
 }
 
 // An invalid --variables value must fail as a usage error before credentials
-// are read or any HTTP request is made, mirroring the --count preflight.
+// are read or any HTTP request is made, mirroring the other start-time preflights.
 func TestRunsStartRejectsInvalidVariablesBeforeRequest(t *testing.T) {
 	_, requests := noRequestServer(t)
-	out, err := execRoot(t, "runs", "start", "w1", "--variables", "[1,2]")
+	out, err := execRoot(t, "runs", "start", "--agent", "a1", "--variables", "[1,2]")
 	if err == nil || exit.Classify(err) != exit.Usage {
 		t.Fatalf("--variables [1,2]: got %v, want usage error", err)
 	}
@@ -65,44 +65,37 @@ func TestRunsStartRejectsInvalidVariablesBeforeRequest(t *testing.T) {
 	}
 }
 
-// --variables rides every created run config in the one-element-array wire
-// shape; without the flag each config still carries a single empty object.
+// --variables rides the run request as the variables object; without the
+// flag the field is left out.
 func TestRunsStartSendsVariables(t *testing.T) {
 	var got struct {
-		Runs []struct {
-			Variables []map[string]any `json:"variables"`
-		} `json:"runs"`
+		AgentID   string         `json:"agent_id"`
+		Variables map[string]any `json:"variables"`
 	}
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if strings.HasSuffix(r.URL.Path, "/runs") && r.Method == http.MethodPost {
 			_ = json.NewDecoder(r.Body).Decode(&got)
 			w.Header().Set("Content-Type", "application/json")
-			_, _ = w.Write([]byte(`{"run_ids":["r1","r2"]}`))
+			_, _ = w.Write([]byte(`{"id":"r1","mode":"code","status":"queued","trigger":"api","user_id":"u1","created_at":"2026-08-10T00:00:00Z","updated_at":"2026-08-10T00:00:00Z"}`))
 			return
 		}
 		http.Error(w, "unexpected request", http.StatusInternalServerError)
 	}))
 	t.Cleanup(srv.Close)
 
-	if _, err := run(t, srv, "runs", "start", "w1", "--count", "2", "--variables", `{"who":"cli","n":1}`); err != nil {
+	if _, err := run(t, srv, "runs", "start", "--agent", "a1", "--variables", `{"who":"cli","n":1}`); err != nil {
 		t.Fatalf("runs start --variables: %v", err)
 	}
-	want := []map[string]any{{"who": "cli", "n": float64(1)}}
-	if len(got.Runs) != 2 {
-		t.Fatalf("got %d run configs, want 2", len(got.Runs))
-	}
-	for i, rc := range got.Runs {
-		if !reflect.DeepEqual(want, rc.Variables) {
-			t.Fatalf("run %d carried variables %#v, want %#v", i, rc.Variables, want)
-		}
+	want := map[string]any{"who": "cli", "n": float64(1)}
+	if got.AgentID != "a1" || !reflect.DeepEqual(want, got.Variables) {
+		t.Fatalf("request = %+v, want agent a1 with variables %#v", got, want)
 	}
 
-	got.Runs = nil
-	if _, err := run(t, srv, "runs", "start", "w1"); err != nil {
+	got.Variables = nil
+	if _, err := run(t, srv, "runs", "start", "--agent", "a1"); err != nil {
 		t.Fatalf("runs start (no variables): %v", err)
 	}
-	wantDefault := []map[string]any{{}}
-	if len(got.Runs) != 1 || !reflect.DeepEqual(wantDefault, got.Runs[0].Variables) {
-		t.Fatalf("default run config = %+v, want one empty variables object", got.Runs)
+	if len(got.Variables) != 0 {
+		t.Fatalf("variables = %#v, want none sent", got.Variables)
 	}
 }

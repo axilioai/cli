@@ -66,7 +66,7 @@ func liveAPI(t *testing.T, events func(conn int, w http.ResponseWriter, r *http.
 			fmt.Fprintf(w, `{"frames":[%s],"total":%d,"limit":1000,"offset":%d,"retention_expired":false,"sdk_call_costs":{"s-call":3100},"inference_costs":{}}`,
 				strings.Join(archive[offset:], ","), len(archive), offset)
 		case strings.Contains(p, "/runs/") && r.Method == http.MethodGet:
-			fmt.Fprintf(w, `{"id":"r1","status":%q,"trigger":"manual","workflow_id":"w1","created_at":"2026-08-22T20:00:00Z","session_id":"sess-1"}`, terminal)
+			fmt.Fprintf(w, `{"id":"r1","status":%q,"trigger":"manual","mode":"code","agent_id":"a1","user_id":"u1","updated_at":"2026-08-22T20:00:00Z","created_at":"2026-08-22T20:00:00Z","session_id":"sess-1"}`, terminal)
 		default:
 			http.Error(w, `{"error":"not found"}`, http.StatusNotFound)
 		}

@@ -25,9 +25,11 @@ const (
 	// accessibility mode: `phone tree` and the `phone accessibility` group
 	// (status, enable, disable); --role/--name/--id/--strategy/--exact on the
 	// locator verbs; --accessibility on `sessions start`;
-	// --accessibility on `workflows create`.
-	applicationCommandCount = 80
-	applicationFlagCount    = 147
+	// --accessibility on `agents create`. The 0.14.0 Agents release replaced
+	// `workflows` with `agents` (rollback for restore), dropped `runs history`
+	// and `runs stats` for `runs metrics`, and dropped `runs start --count`.
+	applicationCommandCount = 79
+	applicationFlagCount    = 149
 )
 
 func TestApplicationHelpMetadata(t *testing.T) {
@@ -298,21 +300,22 @@ func TestRenderedHelpContracts(t *testing.T) {
 			},
 		},
 		{
-			name: "workflows",
-			args: []string{"workflows", "--help"},
+			name: "agents",
+			args: []string{"agents", "--help"},
 			want: []string{
-				"workflows list",
+				"agents list",
 				"runs start",
-				"sessions start --workflow",
+				"rollback",
 			},
 		},
 		{
 			name: "runs",
 			args: []string{"runs", "--help"},
 			want: []string{
-				"workflows list",
+				"agents list",
 				"runs start",
 				"runs get",
+				"runs metrics",
 				"cancel",
 			},
 		},
@@ -320,10 +323,10 @@ func TestRenderedHelpContracts(t *testing.T) {
 			name: "runs start",
 			args: []string{"runs", "start", "--help"},
 			want: []string{
-				"must be between 1 and 1000, inclusive",
-				"Number of run configurations to create (1-1000)",
-				"--count must be between 1 and 1000 (got 0)",
-				"range is validated before credentials, allocation, or an API request",
+				"Start a run of the saved agent --agent",
+				"Agent ID to run (required)",
+				"--agent is required; discover an agent ID with `axilio agents list`",
+				"flag is validated before credentials or an API request",
 			},
 		},
 		{
@@ -554,7 +557,7 @@ func TestDocumentationHelpParity(t *testing.T) {
 	for _, command := range []string{
 		"`phone send`",
 		"`runs start`",
-		"`workflows list`",
+		"`agents list`",
 		"`uploads add`",
 		"`uploads list`",
 		"`uploads push`",

@@ -52,13 +52,13 @@ func runsWatchCmd() *cobra.Command {
 			"exactly once either way, and spans appear on completion (in-flight " +
 			"span starts are not shown).\n\n" +
 			"The exit code reflects the outcome: 0 when the run completed, 1 when " +
-			"it failed (the error message is printed), 7 when it was canceled or " +
+			"it failed (the error is printed), 7 when it was canceled or " +
 			"the watch was interrupted. Interrupting the watch does not affect the " +
 			"run; re-run `runs watch` to replay and resume following.\n\n" +
 			"JSON mode streams newline-delimited JSON rather than a single " +
 			"document: one object per telemetry frame in archive order, then a " +
 			"final `{\"watch_end\": true, ...}` object carrying the run's status " +
-			"and error message.",
+			"and error.",
 		Args: cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
 			cl, err := newClient()
@@ -220,10 +220,10 @@ func renderWatchFrame(p *output.Printer, f *platformgo.RunSessionFramesResponseF
 func watchOutcome(p *output.Printer, run *platformgo.RunResponse) error {
 	if p.JSON {
 		if err := p.JSONLine(map[string]any{
-			"watch_end":     true,
-			"run_id":        run.ID,
-			"status":        run.Status,
-			"error_message": run.ErrorMessage,
+			"watch_end": true,
+			"run_id":    run.ID,
+			"status":    run.Status,
+			"error":     run.Error,
 		}); err != nil {
 			return err
 		}
@@ -235,9 +235,9 @@ func watchOutcome(p *output.Printer, run *platformgo.RunResponse) error {
 	case platformgo.RunResponseStatusCancelled:
 		return exit.With(exit.Canceled, fmt.Errorf("run %s was canceled", run.ID))
 	default: // failed
-		msg := strv(run.ErrorMessage)
+		msg := strv(run.Error)
 		if msg == "" {
-			msg = "no error message recorded"
+			msg = "no error recorded"
 		}
 		return exit.With(exit.Err, fmt.Errorf("run %s failed: %s", run.ID, msg))
 	}

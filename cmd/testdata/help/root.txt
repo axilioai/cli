@@ -1,4 +1,4 @@
-Acquire Axilio phones, drive live sessions, run workflows, and manage
+Acquire Axilio phones, drive live sessions, run agents, and manage
   the resources that support them.
 
   Start with login, acquire a session, observe its phone, then act on what is
@@ -8,7 +8,7 @@ Acquire Axilio phones, drive live sessions, run workflows, and manage
   The main command families are:
     phones / sessions   discover phones and manage active phone sessions
     phone               observe and control the selected session's phone
-    workflows / runs    author, version, and run workflows; create or inspect runs
+    agents / runs       author, version, and run agents; start, watch, or inspect runs
     uploads             store media and deliver it to phones
     api-keys            manage organization-scoped API keys
 
@@ -60,6 +60,7 @@ Acquire Axilio phones, drive live sessions, run workflows, and manage
 
   COMMANDS
 
+    agents [command]              Create, inspect, edit, and version agents.
     api-keys [command]            List, create, and delete organization API keys.
     billing [command]             Read your organization's balance and plan.
     completion [command]          Generate the autocompletion script for the specified shell
@@ -73,12 +74,11 @@ Acquire Axilio phones, drive live sessions, run workflows, and manage
     orgs [command]                List and switch the active organization (OAuth sessions).
     phone [command] [--flags]     Observe and control the selected session's phone.
     phones [command]              Discover and manage your dedicated phones.
-    runs [command]                Start, inspect, and cancel workflow runs.
+    runs [command]                Start, inspect, watch, and cancel agent runs.
     sessions [command] [--flags]  Acquire, list, select, and release phone sessions.
     status                        Check your credentials and reach the API.
     upgrade [--flags]             Update axilio to the latest release.
     usage [command]               Report usage spend and per-inference costs.
-    workflows [command]           Create, inspect, edit, and version workflows.
 
   FLAGS
 

@@ -186,7 +186,7 @@ func attachCommandDocumentation(root *cobra.Command) {
 	walk(root)
 }
 
-func workflow(invocations ...string) CommandDocumentation {
+func usageSteps(invocations ...string) CommandDocumentation {
 	docs := CommandDocumentation{Samples: make([]CommandSample, 0, len(invocations))}
 	for _, invocation := range invocations {
 		docs.Samples = append(docs.Samples, CommandSample{Invocation: invocation})
@@ -236,7 +236,7 @@ axilio phone tap 540 1120`
 // (commandHelpKey), with the root itself under its own name. Every public
 // command needs an entry, including the ones Cobra generates.
 var commandDocumentationByKey = map[string]CommandDocumentation{
-	"axilio": workflow(
+	"axilio": usageSteps(
 		"axilio login",
 		`eval "$(axilio sessions start --phone-id ph_123 --export)"`,
 		"axilio phone observe",
@@ -276,7 +276,7 @@ var commandDocumentationByKey = map[string]CommandDocumentation{
 		sample("axilio orgs", "   SLUG         NAME          ID\n*  example-org  Example Inc.  <organization-id>", "none"),
 		sample("axilio orgs list", "   SLUG         NAME          ID\n*  example-org  Example Inc.  <organization-id>", "none"),
 		sample("axilio orgs use example-org", "Active organization set to example-org (Example Inc.).", "none"),
-		sample("axilio --org another-org workflows list", "WORKFLOW ID   NAME      PLATFORM  STATUS  LAST RUN\n<workflow-id> Checkout  android   active  <timestamp>", "none"),
+		sample("axilio --org another-org agents list", "AGENT ID    NAME      MODEL       LAST RUN\n<agent-id>  Checkout  <model-id>  <timestamp>", "none"),
 		sample("axilio orgs clear", "Cleared the active organization; using your session default.", "none"),
 	}},
 	"orgs list": {Samples: []CommandSample{
@@ -300,7 +300,7 @@ var commandDocumentationByKey = map[string]CommandDocumentation{
 		sampleWithNote("axilio init --agent codex", "✓ Wrote the Axilio agent skill to AGENTS.md", "warning: not signed in; a human must run `axilio login` in this environment, or securely provide AXILIO_API_KEY", "Excerpt: stderr then prints the readiness check and suggested first agent prompt."),
 		sampleWithNote("axilio init --agent claude --force", "✓ Wrote the Axilio agent skill to .claude/skills/axilio/SKILL.md", "warning: not signed in; a human must run `axilio login` in this environment, or securely provide AXILIO_API_KEY", "Excerpt: --force replaces an existing Axilio-owned Claude skill before the readiness check and suggested first agent prompt."),
 	}},
-	"sessions": workflow(
+	"sessions": usageSteps(
 		"axilio sessions list",
 		"axilio sessions start --phone-id ph_123",
 		"axilio sessions current",
@@ -325,7 +325,7 @@ var commandDocumentationByKey = map[string]CommandDocumentation{
 		sampleWithNote("axilio sessions list -o json", "[\n  {\n    \"session_id\": \"<session-id>\",\n    \"phone_id\": \"<phone-id>\",\n    \"phone_type\": \"android\",\n    \"control_url\": \"<control-url>\",\n    \"created_at\": \"<timestamp>\"\n  }\n]", "none", "Locally saved session JSON includes the stored control URL; IDs and URLs vary."),
 	}},
 	"sessions get": {Samples: []CommandSample{
-		sampleWithNote("axilio sessions get sess_123", "Session        sess_123\nName           -\nStatus         completed\nSource         workflow\nAllocated by   api_run\nPhone          <phone-id>\nPhone name     -\nNickname       -\nModel          Pixel 8\nType           android\nLocation       us-central\nDedicated      false\nWorkflow       <workflow-id>\nWorkflow name  demo\nAllocated      2026-08-05 20:00\nReleased       2026-08-05 20:12\nDuration       12m00s\nTags           team=qa\nCapture        true\nTelemetry      true\nAccessibility  false\nRecording      ready\nRecording URL  <recording-url>", "none", "Works for active and released sessions."),
+		sampleWithNote("axilio sessions get sess_123", "Session        sess_123\nName           -\nStatus         completed\nSource         agent\nAllocated by   api_run\nPhone          <phone-id>\nPhone name     -\nNickname       -\nModel          Pixel 8\nType           android\nLocation       us-central\nDedicated      false\nAgent          <agent-id>\nAgent name     demo\nAllocated      2026-08-05 20:00\nReleased       2026-08-05 20:12\nDuration       12m00s\nTags           team=qa\nCapture        true\nTelemetry      true\nAccessibility  false\nRecording      ready\nRecording URL  <recording-url>", "none", "Works for active and released sessions."),
 		sampleWithNote("axilio sessions get sess_123 -o json", "{\n  \"session_id\": \"sess_123\",\n  \"status\": \"active\",\n  \"source\": \"interactive\",\n  \"phone_id\": \"<phone-id>\",\n  \"allocated_at\": \"<timestamp>\",\n  \"recording_status\": \"pending\"\n}", "none", "Excerpt: JSON is the canonical session detail response."),
 	}},
 	"sessions trace": {Samples: []CommandSample{
@@ -343,7 +343,7 @@ var commandDocumentationByKey = map[string]CommandDocumentation{
 		sample("axilio sessions start --phone-id ph_123", "Session        <session-id>\nPhone          ph_123\nRegion         us-central\nAccessibility  false\nLive view      <live-view-url>\nControl URL    <control-url>", "Drive it:  axilio phone observe\nPin it to this shell (for parallel work):  export AXILIO_SESSION=<session-id>\nRelease it with:  axilio sessions stop <session-id>"),
 		sampleWithNote("axilio sessions start --accessibility", "Session        <session-id>\nPhone          <phone-id>\nRegion         us-central\nAccessibility  true\nLive view      <live-view-url>\nControl URL    <control-url>", "Drive it:  axilio phone observe\nPin it to this shell (for parallel work):  export AXILIO_SESSION=<session-id>\nRelease it with:  axilio sessions stop <session-id>", "Accessibility mode is off by default; --accessibility turns it on and claims only a phone that supports it."),
 		failedSample("axilio sessions start --phone-id ph_old --accessibility", "none", "phone ph_old does not support accessibility mode; drop --phone-id to claim any phone that does, or drop --accessibility", 6, "--accessibility needs a phone that supports it; nothing is allocated."),
-		sample("axilio sessions start --workflow wf_123", "Session        <session-id>\nPhone          <phone-id>\nRegion         us-central\nAccessibility  false\nLive view      <live-view-url>\nControl URL    <control-url>", "Drive it:  axilio phone observe\nPin it to this shell (for parallel work):  export AXILIO_SESSION=<session-id>\nRelease it with:  axilio sessions stop <session-id>"),
+		sample("axilio sessions start --phone-id ph_123", "Session        <session-id>\nPhone          <phone-id>\nRegion         us-central\nAccessibility  false\nLive view      <live-view-url>\nControl URL    <control-url>", "Drive it:  axilio phone observe\nPin it to this shell (for parallel work):  export AXILIO_SESSION=<session-id>\nRelease it with:  axilio sessions stop <session-id>"),
 		sampleWithNote("axilio sessions start --export", "export AXILIO_SESSION=<session-id>", "none", "--export is exact shell text; combining it with -o json is a usage error before allocation."),
 		sampleWithNote(`eval "$(axilio sessions start --export)"`, "none", "none", "The shell consumes the nested command's export line and sets AXILIO_SESSION in the current shell."),
 		sampleWithNote("axilio sessions start --export --shell powershell", `$env:AXILIO_SESSION = "<session-id>"`, "none", "On Windows this is the default syntax unless SHELL is set, as it is in Git Bash and MSYS2. --shell cmd prints `set AXILIO_SESSION=<session-id>`."),
@@ -352,9 +352,9 @@ var commandDocumentationByKey = map[string]CommandDocumentation{
 	"sessions stop": {Samples: []CommandSample{
 		sampleWithNote("axilio sessions stop sess_123", "Released <phone-id>.", "Release <phone-id>? [y/N]", "Without --yes, table mode prompts only when stdin is a terminal. Redirected, JSON, and quiet execution require --yes."),
 		sample("axilio sessions stop ph_123 --yes", "Released ph_123.", "none"),
-		sampleWithNote("axilio sessions stop ph_123 --yes -o json", "{\n  \"deallocated_at\": \"<timestamp>\",\n  \"phone_id\": \"ph_123\",\n  \"session_id\": \"<session-id>\",\n  \"workflow_id\": \"<workflow-id>\"\n}", "none", "JSON is the canonical API deallocation response; workflow_id may be empty for an interactive session."),
+		sampleWithNote("axilio sessions stop ph_123 --yes -o json", "{\n  \"deallocated_at\": \"<timestamp>\",\n  \"phone_id\": \"ph_123\",\n  \"session_id\": \"<session-id>\",\n  \"agent_id\": \"<agent-id>\"\n}", "none", "JSON is the canonical API deallocation response; agent_id may be empty for an interactive session."),
 	}},
-	"phones": workflow("axilio phones list", "axilio phones mine", "axilio phones rename <phone-id> \"crawler 3\""),
+	"phones": usageSteps("axilio phones list", "axilio phones mine", "axilio phones rename <phone-id> \"crawler 3\""),
 	"phones list": {Samples: []CommandSample{
 		sampleWithNote("axilio phones list", "PHONE ID   TYPE     MODEL    STATUS\n<phone-id> android  Pixel 8  active", "none", "An empty successful result prints No phones available."),
 		sampleWithNote("axilio phones list -o json", "{\n  \"android_count\": 1,\n  \"phones\": [\n    {\n      \"created_at\": \"<timestamp>\",\n      \"model_name\": \"Pixel 8\",\n      \"ownership_type\": \"shared\",\n      \"phone_id\": \"<phone-id>\",\n      \"phone_type\": \"android\",\n      \"status\": \"active\",\n      \"updated_at\": \"<timestamp>\"\n    }\n  ]\n}", "none", "Counts, inventory, and optional phone fields vary by organization and availability."),
@@ -374,7 +374,7 @@ var commandDocumentationByKey = map[string]CommandDocumentation{
 		sampleWithNote("axilio phones preview <phone-id>", "Status  ready\nURL     <signed-url>", "none", "Every call mints a fresh short-lived URL; a phone with no captured frame yet reports Preview pending."),
 		sampleWithNote("axilio phones preview <phone-id> --out preview.jpg", "Wrote preview.jpg (<bytes> bytes)", "none", "Downloads the current JPEG frame; overwriting an existing file replaces its contents."),
 	}},
-	"phone": workflow(
+	"phone": usageSteps(
 		"axilio phone observe",
 		`axilio phone tap --query "the search box"`,
 		`axilio phone type "Axilio"`,
@@ -444,7 +444,7 @@ var commandDocumentationByKey = map[string]CommandDocumentation{
 		sampleWithNote("axilio phone tree --window 12 --depth 1 -o json", "{\n  \"nodes\": [\n    {\n      \"node_id\": \"n1\",\n      \"ignored\": false,\n      \"role\": {\"type\": \"role\", \"value\": \"generic\"},\n      \"child_ids\": [\"n4\", \"n7\"],\n      \"bounds\": {\"x\": 0, \"y\": 0, \"width\": 1080, \"height\": 2400},\n      \"window_id\": \"12\",\n      \"actions\": []\n    }\n  ],\n  \"windows\": [\n    {\"window_id\": \"12\", \"type\": \"application\", \"app\": \"com.example.app\", \"focused\": true, \"bounds\": {\"x\": 0, \"y\": 0, \"width\": 1080, \"height\": 2400}, \"root_id\": \"n1\"}\n  ],\n  \"captured_at\": \"<timestamp>\"\n}", "none", "Shortened representative JSON; nodes also carry names, properties, and Android attributes."),
 		failedSample("axilio phone tree", "none", "strategy_unavailable: accessibility tree is off for this session", 2, "Accessibility mode is off by default; start the session with `sessions start --accessibility`, or turn it on with `phone accessibility enable` where toggleable."),
 	}},
-	"phone accessibility": workflow(
+	"phone accessibility": usageSteps(
 		"axilio phone accessibility status",
 		"axilio phone accessibility enable",
 		"axilio phone accessibility disable",
@@ -464,88 +464,84 @@ var commandDocumentationByKey = map[string]CommandDocumentation{
 		sampleWithNote("axilio phone send ./clip.mp4 --collection Movies", "Delivery  <delivery-id>\nFile      clip.mp4\nStatus    dispatched", "→ Sending clip.mp4 to phone <phone-id>\npushed without requesting delivery receipt. In the future, add --wait if you want the cli to wait for delivery confirmation and report result.", "The upload remains in the organization library and is delivered to Movies."),
 		sampleWithNote("axilio phone send ./photo.jpg --wait --timeout 2m", "Delivery  <delivery-id>\nFile      photo.jpg\nStatus    delivered", "→ Sending photo.jpg to phone <phone-id>", "With --wait, the command returns only after delivered, failed, or the two-minute deadline."),
 	}},
-	"workflows": workflow(
-		"axilio workflows list",
-		"axilio workflows create checkout-flow --code checkout.py",
-		"axilio workflows pull wf_123 --out checkout.py",
-		"axilio workflows push wf_123 checkout.py -m \"handle 2FA\"",
-		"axilio runs start wf_123",
+	"agents": usageSteps(
+		"axilio agents list",
+		"axilio agents create checkout-flow --code checkout.py",
+		"axilio agents pull ag_123 --out checkout.py",
+		`axilio agents push ag_123 checkout.py -m "handle 2FA"`,
 	),
-	"workflows list": {Samples: []CommandSample{
-		sampleWithNote("axilio workflows list", "WORKFLOW ID   NAME      PLATFORM  STATUS  LAST RUN\n<workflow-id> Checkout  android   active  <timestamp>", "none", "An empty successful result prints No workflows found."),
-		sampleWithNote("axilio workflows list --search checkout --limit 10", "WORKFLOW ID   NAME      PLATFORM  STATUS  LAST RUN\n<workflow-id> Checkout  android   active  <timestamp>", "none", "Names, IDs, statuses, and timestamps vary by organization."),
-		sampleWithNote("axilio workflows list -o json", "{\n  \"limit\": 20,\n  \"offset\": 0,\n  \"total\": 1,\n  \"workflows\": [\n    {\n      \"workflow\": {\n        \"id\": \"<workflow-id>\",\n        \"name\": \"Checkout\",\n        \"platform\": \"android\",\n        \"status\": \"active\"\n      }\n    }\n  ]\n}", "none", "Shortened representative JSON output; workflow records may include additional fields and statistics."),
+	"agents list": {Samples: []CommandSample{
+		sampleWithNote("axilio agents list", "AGENT ID    NAME      MODEL        LAST RUN\n<agent-id>  Checkout  <model-id>   <timestamp>", "none", "An empty successful result prints No agents found."),
+		sampleWithNote("axilio agents list --search checkout --limit 10", "AGENT ID    NAME      MODEL        LAST RUN\n<agent-id>  Checkout  <model-id>   <timestamp>", "none", "Names, IDs, models, and timestamps vary by organization."),
+		sampleWithNote("axilio agents list -o json", "{\n  \"agents\": [\n    {\n      \"id\": \"<agent-id>\",\n      \"name\": \"Checkout\",\n      \"model\": \"<model-id>\"\n    }\n  ],\n  \"limit\": 20,\n  \"offset\": 0,\n  \"total\": 1\n}", "none", "Shortened representative JSON output; agent records include additional fields."),
 	}},
-	"workflows create": {Samples: []CommandSample{
-		sampleWithNote("axilio workflows create checkout-flow --platform android --code checkout.py", "Workflow     <workflow-id>\nRevision     1\nRevision ID  <revision-id>", "none", "With --code, the file is saved atomically as revision 1. Without it, only the workflow ID prints."),
-		sample("axilio workflows create checkout-flow --recording=false", "Workflow  <workflow-id>", "none"),
-		sampleWithNote("axilio workflows create checkout-flow --accessibility", "Workflow  <workflow-id>", "none", "Accessibility mode is off by default; with it on, every run needs a phone that supports it."),
-		failedSample("axilio workflows create \"bad name\"", "none", "workflow name must contain only letters, digits, hyphens, and underscores (got \"bad name\")", 2, "The name rule is validated before credentials or an API request."),
+	"agents create": {Samples: []CommandSample{
+		sampleWithNote("axilio agents create checkout-flow --code checkout.py", "Agent        <agent-id>\nName         checkout-flow\nRevision ID  <revision-id>", "none", "With --code, the file is saved as revision 1. Without --code or --instructions, only the agent ID and name print."),
+		sample(`axilio agents create cart-flow --instructions "Add the first item to the cart"`, "Agent        <agent-id>\nName         checkout-flow\nRevision ID  <revision-id>", "none"),
+		sample("axilio agents create checkout-flow --recording", "Agent  <agent-id>\nName   checkout-flow", "none"),
+		sampleWithNote("axilio agents create checkout-flow --accessibility", "Agent  <agent-id>\nName   checkout-flow", "none", "Accessibility mode is off by default; with it on, every run needs a phone that supports it."),
+		failedSample("axilio agents create \"bad name\"", "none", "agent name must contain only letters, digits, hyphens, and underscores (got \"bad name\")", 2, "The name rule is validated before credentials or an API request."),
 	}},
-	"workflows get": {Samples: []CommandSample{
-		sample("axilio workflows get wf_123", "Workflow       wf_123\nName           Checkout\nPlatform       android\nStatus         active\nOCR engine     free\nRecording      true\nTelemetry      true\nCapture        true\nAccessibility  false\nCreated        <timestamp>\nUpdated        <timestamp>\nLast run       <timestamp>\nTotal runs     4\nSuccess rate   75%", "none"),
-		sampleWithNote("axilio workflows get wf_123 -o json", "{\n  \"stats\": {\n    \"success_rate\": 0.75,\n    \"total_runs\": 4\n  },\n  \"workflow\": {\n    \"id\": \"wf_123\",\n    \"name\": \"Checkout\",\n    \"platform\": \"android\",\n    \"status\": \"active\"\n  }\n}", "none", "Shortened representative JSON output; the workflow record includes the full field set."),
+	"agents get": {Samples: []CommandSample{
+		sample("axilio agents get ag_123", "Agent          ag_123\nName           Checkout\nModel          <model-id>\nRevision ID    <revision-id>\nRecording      false\nTelemetry      true\nCapture        true\nAccessibility  false\nMax steps      500\nTimeout        3600s\nCreated        <timestamp>\nUpdated        <timestamp>\nLast run       <timestamp>", "none"),
+		sampleWithNote("axilio agents get ag_123 -o json", "{\n  \"id\": \"ag_123\",\n  \"name\": \"Checkout\",\n  \"model\": \"<model-id>\",\n  \"current_revision_id\": \"<revision-id>\"\n}", "none", "Shortened representative JSON output; the agent record includes the full field set. Run statistics come from `runs metrics --agent`."),
 	}},
-	"workflows delete": {Samples: []CommandSample{
-		sampleWithNote("axilio workflows delete wf_123 --yes", "Deleted wf_123", "none", "Deletes the workflow and its code revisions; recorded runs remain."),
-		failedSample("axilio workflows delete wf_123 < /dev/null", "none", "aborted (pass --yes to delete non-interactively)", 2, "Redirected, JSON, and quiet execution never prompt; they require --yes."),
+	"agents delete": {Samples: []CommandSample{
+		sampleWithNote("axilio agents delete ag_123 --yes", "Deleted ag_123", "none", "Deletes the agent and its revisions; recorded runs remain."),
+		failedSample("axilio agents delete ag_123 < /dev/null", "none", "aborted (pass --yes to delete non-interactively)", 2, "Redirected, JSON, and quiet execution never prompt; they require --yes."),
 	}},
-	"workflows pull": {Samples: []CommandSample{
-		sampleWithNote("axilio workflows pull wf_123", "<the current revision's Python source>", "none", "The raw source prints to stdout so it can be piped or redirected."),
-		sampleWithNote("axilio workflows pull wf_123 --out checkout.py", "Wrote checkout.py (revision 3, <bytes> bytes)", "none", "A new file requests mode 0644, subject to the process umask. Overwriting an existing file preserves its mode while replacing its contents."),
+	"agents pull": {Samples: []CommandSample{
+		sampleWithNote("axilio agents pull ag_123", "<the current revision's Python code>", "none", "The raw code prints to stdout so it can be piped or redirected."),
+		sampleWithNote("axilio agents pull ag_123 --out checkout.py", "Wrote checkout.py (revision 3, <bytes> bytes)", "none", "A new file requests mode 0644, subject to the process umask. Overwriting an existing file preserves its mode while replacing its contents."),
 	}},
-	"workflows push": {Samples: []CommandSample{
-		sampleWithNote("axilio workflows push wf_123 checkout.py -m \"handle 2FA\"", "Saved revision 4 (<revision-id>)", "none", "The server deduplicates by content hash; unchanged source reports a no-op and creates no revision."),
-		sample("axilio workflows push wf_123 checkout.py -o json", "{\n  \"no_op\": false,\n  \"revision\": 4,\n  \"revision_id\": \"<revision-id>\"\n}", "none"),
+	"agents push": {Samples: []CommandSample{
+		sampleWithNote("axilio agents push ag_123 checkout.py -m \"handle 2FA\"", "Saved revision 4 (<revision-id>)", "none", "The new revision becomes the one runs use."),
+		sample("axilio agents push ag_123 checkout.py -o json", "{\n  \"agent_id\": \"ag_123\",\n  \"id\": \"<revision-id>\",\n  \"kind\": \"code\",\n  \"revision\": 4\n}", "none"),
 	}},
-	"workflows revisions": {Samples: []CommandSample{
-		sampleWithNote("axilio workflows revisions wf_123", "REV  REVISION ID    AUTHOR     SIZE   CREATED      MESSAGE\n4    <revision-id>  <user-id>  1.2 KiB <timestamp> handle 2FA\n3    <revision-id>  <user-id>  1.1 KiB <timestamp> -", "none", "Newest first. When a full page returns, a note names the --before cursor for older history."),
-		sample("axilio workflows revisions wf_123 --limit 10 --before 3", "REV  REVISION ID    AUTHOR     SIZE   CREATED      MESSAGE\n2    <revision-id>  <user-id>  1.0 KiB <timestamp> -", "none"),
+	"agents revisions": {Samples: []CommandSample{
+		sampleWithNote("axilio agents revisions ag_123", "REV  REVISION ID    KIND  AUTHOR     SIZE     CREATED      MESSAGE\n4    <revision-id>  code  <user-id>  1.2 KiB  <timestamp>  handle 2FA\n3    <revision-id>  code  <user-id>  1.1 KiB  <timestamp>  -", "none", "Newest first. When more revisions exist, a note names the --offset to page older history."),
+		sample("axilio agents revisions ag_123 --limit 10 --offset 2", "REV  REVISION ID    KIND  AUTHOR     SIZE     CREATED      MESSAGE\n2    <revision-id>  code  <user-id>  1.0 KiB  <timestamp>  -", "none"),
 	}},
-	"workflows restore": {Samples: []CommandSample{
-		sampleWithNote("axilio workflows restore wf_123 <revision-id>", "Restored <revision-id> as new revision 5 (<new-revision-id>)", "none", "Restore copies the old source into a new revision; nothing is deleted and the action stays visible in history."),
+	"agents rollback": {Samples: []CommandSample{
+		sampleWithNote("axilio agents rollback ag_123 <revision-id>", "Rolled back to <revision-id> as new revision 5 (<new-revision-id>)", "none", "Rollback copies the old revision forward as the newest one; nothing is deleted and the action stays visible in history."),
 	}},
-	"runs": workflow(
-		"axilio workflows list",
-		"axilio runs start wf_123",
-		"axilio runs list --workflow wf_123",
-		"axilio runs get run_123",
+	"runs": usageSteps(
+		"axilio agents list",
+		"axilio runs start --agent ag_123 --watch",
+		"axilio runs list --agent ag_123",
+		"axilio runs metrics --agent ag_123",
 	),
 	"runs list": {Samples: []CommandSample{
-		sampleWithNote("axilio runs list", "RUN ID   STATUS     TRIGGER  WORKFLOW      CREATED\n<run-id> completed  manual   <workflow-id> <timestamp>", "none", "An empty successful result prints No runs found."),
-		sampleWithNote("axilio runs list --workflow wf_123 --limit 10", "RUN ID   STATUS     TRIGGER  WORKFLOW  CREATED\n<run-id> completed  manual   wf_123    <timestamp>", "none", "Run IDs, statuses, and timestamps vary."),
-		sampleWithNote("axilio runs list -o json", "{\n  \"limit\": 20,\n  \"offset\": 0,\n  \"runs\": [\n    {\n      \"id\": \"<run-id>\",\n      \"status\": \"completed\",\n      \"trigger\": \"manual\",\n      \"workflow_id\": \"<workflow-id>\"\n    }\n  ],\n  \"total\": 1\n}", "none", "Shortened representative JSON output; run records may include additional fields."),
+		sampleWithNote("axilio runs list", "RUN ID   MODE  STATUS     TRIGGER  AGENT     CREATED\n<run-id> code  completed  manual   Checkout  <timestamp>", "none", "An empty successful result prints No runs found."),
+		sampleWithNote("axilio runs list --agent ag_123 --status failed --limit 10", "RUN ID   MODE  STATUS  TRIGGER  AGENT     CREATED\n<run-id> code  failed  manual   Checkout  <timestamp>", "none", "Run IDs, statuses, and timestamps vary. --schedule, --mode, and --offset narrow or page the list."),
+		sampleWithNote("axilio runs list -o json", "{\n  \"limit\": 20,\n  \"offset\": 0,\n  \"runs\": [\n    {\n      \"id\": \"<run-id>\",\n      \"mode\": \"code\",\n      \"status\": \"completed\",\n      \"trigger\": \"manual\",\n      \"agent_id\": \"<agent-id>\"\n    }\n  ],\n  \"total\": 1\n}", "none", "Shortened representative JSON output; run records may include additional fields."),
 	}},
 	"runs start": {Samples: []CommandSample{
-		sampleWithNote("axilio runs start wf_123", "Started run <run-id>", "none", "-o json emits the complete run_ids response on stdout. --count accepts 1 through 1000, inclusive."),
-		sample("axilio runs start wf_123 --count 3", "Started run <run-id-1>\nStarted run <run-id-2>\nStarted run <run-id-3>", "none"),
-		failedSample("axilio runs start wf_123 --count 0", "none", "--count must be between 1 and 1000 (got 0)", 2, "The range is validated before credentials, allocation, or an API request."),
-		sample("axilio runs start wf_123 --phone-id ph_123", "Started run <run-id>", "none"),
-		sample("axilio runs start wf_123 --start-timeout 300", "Started run <run-id>", "none"),
-		sampleWithNote("axilio runs start wf_123 --watch", "Started run <run-id>\n<frame stream>\n✓ Run <run-id> completed", "→ Run <run-id> queued — waiting for a phone", "Follows the created run exactly like `runs watch`; requires --count 1."),
+		sampleWithNote("axilio runs start --agent ag_123", "Started run <run-id>", "none", "-o json emits the complete run record on stdout."),
+		sample("axilio runs start --agent ag_123 --phone-id ph_123", "Started run <run-id>", "none"),
+		sample("axilio runs start --agent ag_123 --start-timeout 300", "Started run <run-id>", "none"),
+		sample(`axilio runs start --agent ag_123 --variables '{"store":"main"}'`, "Started run <run-id>", "none"),
+		sampleWithNote("axilio runs start --agent ag_123 --watch", "Started run <run-id>\n<frame stream>\n✓ Run <run-id> completed", "→ Run <run-id> queued — waiting for a phone", "Follows the created run exactly like `runs watch`."),
+		failedSample("axilio runs start", "none", "--agent is required; discover an agent ID with `axilio agents list`", 2, "The flag is validated before credentials or an API request."),
 	}},
 	"runs watch": {Samples: []CommandSample{
-		sampleWithNote("axilio runs watch run_123", "<time>  span  sdk_call    Screen.observe  250ms\n<time>  INFO  output_log  <workflow output>\n✓ Run run_123 completed", "→ Run run_123 running — streaming session <session-id>", "Streams the session's telemetry — logs and completed spans — until the session ends. Exit 0 on completed, 1 on failed (with the run's error message), 7 on canceled or interrupt. Watching a finished run replays its telemetry."),
-		sampleWithNote("axilio runs watch run_123 -o json", "{\"watch_end\":true,\"run_id\":\"run_123\",\"status\":\"completed\"}", "none", "JSON mode is newline-delimited, not a single document: one object per telemetry frame in archive order (unknown kinds pass through verbatim), then the watch_end summary — carrying status and error_message — as the final line."),
+		sampleWithNote("axilio runs watch run_123", "<time>  span  sdk_call    Screen.observe  250ms\n<time>  INFO  output_log  <agent output>\n✓ Run run_123 completed", "→ Run run_123 running — streaming session <session-id>", "Streams the session's telemetry — logs and completed spans — until the session ends. Exit 0 on completed, 1 on failed (with the run's error), 7 on canceled or interrupt. Watching a finished run replays its telemetry."),
+		sampleWithNote("axilio runs watch run_123 -o json", "{\"watch_end\":true,\"run_id\":\"run_123\",\"status\":\"completed\"}", "none", "JSON mode is newline-delimited, not a single document: one object per telemetry frame in archive order (unknown kinds pass through verbatim), then the watch_end summary — carrying status and error — as the final line."),
 	}},
 	"runs get": {Samples: []CommandSample{
-		sample("axilio runs get run_123", "Run        run_123\nStatus     completed\nTrigger    manual\nWorkflow   <workflow-id>\nSession    <session-id>\nPhone      <phone-id>\nCreated    <created-at>\nStarted    <started-at>\nCompleted  <completed-at>\nError      -\nVideo      <video-url>", "none"),
-		sampleWithNote("axilio runs get run_123 -o json", "{\n  \"id\": \"run_123\",\n  \"status\": \"completed\",\n  \"trigger\": \"manual\",\n  \"workflow_id\": \"<workflow-id>\",\n  \"session_id\": \"<session-id>\",\n  \"phone_id\": \"<phone-id>\"\n}", "none", "Shortened representative JSON output; timestamps, errors, and video URL appear when available."),
+		sample("axilio runs get run_123", "Run        run_123\nMode       code\nStatus     completed\nTrigger    manual\nAgent      Checkout\nSession    <session-id>\nPhone      <phone-id>\nCreated    <created-at>\nStarted    <started-at>\nCompleted  <completed-at>\nError      -\nVideo      <video-url>", "none"),
+		sampleWithNote("axilio runs get run_123 -o json", "{\n  \"id\": \"run_123\",\n  \"mode\": \"code\",\n  \"status\": \"completed\",\n  \"trigger\": \"manual\",\n  \"agent_id\": \"<agent-id>\",\n  \"session_id\": \"<session-id>\",\n  \"phone_id\": \"<phone-id>\"\n}", "none", "Shortened representative JSON output; timestamps, error, and video URL appear when available."),
 	}},
 	"runs cancel": {Samples: []CommandSample{
 		sampleWithNote("axilio runs cancel run_123", "Canceled run_123", "Cancel run run_123? [y/N]", "Without --yes, table mode prompts only when stdin is a terminal. Redirected, JSON, and quiet execution require --yes."),
 		sample("axilio runs cancel run_123 --yes", "Canceled run_123", "none"),
 	}},
-	"runs history": {Samples: []CommandSample{
-		sampleWithNote("axilio runs history --from 2026-08-01", "RUN ID   STATUS     TRIGGER  WORKFLOW      STARTED      COMPLETED\n<run-id> completed  manual   <workflow-id> <timestamp>  <timestamp>", "none", "--from is required; an omitted --to means now. Bare dates read as midnight UTC. An empty successful result prints No runs found."),
-		sample("axilio runs history --from 2026-08-01 --to 2026-08-22 --workflow wf_123 --status failed", "RUN ID   STATUS  TRIGGER  WORKFLOW  STARTED      COMPLETED\n<run-id> failed  manual   wf_123    <timestamp>  <timestamp>", "none"),
-		failedSample("axilio runs history", "none", "--from is required. Accepts an RFC 3339 timestamp (2026-08-01T00:00:00Z) or a bare YYYY-MM-DD date, which reads as midnight UTC of that day.", 2, "The window is validated before credentials or an API request."),
+	"runs metrics": {Samples: []CommandSample{
+		sampleWithNote("axilio runs metrics", "AGENT ID    RUNS  COMPLETED  FAILED  CANCELED  SUCCESS RATE  COST\n<agent-id>  8     7          1       0          88%           $0.4200", "none", "Covers the last 7 days by default. The success rate is completed runs over completed and failed runs."),
+		sample("axilio runs metrics --agent ag_123 --from 2026-08-01 --to 2026-08-22", "AGENT ID  RUNS  COMPLETED  FAILED  CANCELED  SUCCESS RATE  COST\nag_123    8     7          1       0          88%           $0.4200", "none"),
+		sampleWithNote("axilio runs metrics --agent ag_123 -o json", "{\n  \"points\": [\n    {\n      \"agent\": \"ag_123\",\n      \"period_start_at\": \"<timestamp>\",\n      \"runs\": 8,\n      \"completed_runs\": 7,\n      \"failed_runs\": 1,\n      \"success_rate\": 0.875,\n      \"total_cost_microdollars\": 420000\n    }\n  ]\n}", "none", "Shortened representative JSON output; JSON mode returns one point per day for the matching agents."),
 	}},
-	"runs stats": {Samples: []CommandSample{
-		sampleWithNote("axilio runs stats wf_123", "Workflow      wf_123\nTotal runs    8\nSuccess rate  87.5% of finished runs", "none", "The rate's denominator is completed plus failed runs; total runs counts every state."),
-		sample("axilio runs stats wf_123 -o json", "{\n  \"total_runs\": 8,\n  \"success_rate\": 0.875\n}", "none"),
-	}},
-	"usage": workflow(
+	"usage": usageSteps(
 		"axilio usage metrics --from 2026-08-01",
 		"axilio usage inferences --from 2026-08-01 --endpoint locate",
 	),
@@ -557,7 +553,7 @@ var commandDocumentationByKey = map[string]CommandDocumentation{
 		sampleWithNote("axilio usage inferences --from 2026-08-01", "TIME        INFERENCE ID   ENDPOINT  MODEL            COST     LATENCY  SESSION\n<timestamp> <inference-id> locate    axilio-ground-1  $0.0012  321 ms   -", "none", "Costs render in dollars from the API's microdollar amounts. An empty successful result prints No inferences found."),
 		sample("axilio usage inferences --from 2026-08-01 --endpoint locate --session ses_123", "TIME        INFERENCE ID   ENDPOINT  MODEL            COST     LATENCY  SESSION\n<timestamp> <inference-id> locate    axilio-ground-1  $0.0012  321 ms   ses_123", "none"),
 	}},
-	"api-keys": workflow(
+	"api-keys": usageSteps(
 		"axilio api-keys list",
 		"axilio api-keys create ci",
 		"axilio api-keys delete key_123 --yes",
@@ -574,7 +570,7 @@ var commandDocumentationByKey = map[string]CommandDocumentation{
 		sampleWithNote("axilio api-keys delete key_123", "Deleted key_123", "Delete API key key_123? [y/N]", "Without --yes, table mode prompts only when stdin is a terminal. Redirected, JSON, and quiet execution require --yes."),
 		sample("axilio api-keys delete key_123 --yes", "Deleted key_123", "none"),
 	}},
-	"billing": workflow(
+	"billing": usageSteps(
 		"axilio billing balance",
 		"axilio billing plan",
 	),
@@ -585,7 +581,7 @@ var commandDocumentationByKey = map[string]CommandDocumentation{
 	"billing plan": {Samples: []CommandSample{
 		sampleWithNote("axilio billing plan", "Plan                 Pro (pro)\nStatus               active\nBilling cycle        monthly\nPrice                $20.00/mo\nIncluded / cycle     $10.00\nMax concurrent runs  5\nCurrent period       <timestamp> → <timestamp>", "none", "Cancellation, pending-downgrade, and trial rows appear only when set; without an active subscription the command fails with the API's not-found error."),
 	}},
-	"files": workflow(
+	"files": usageSteps(
 		"axilio files list",
 		"axilio files upload ./photo.jpg",
 		"axilio files download file_123",
@@ -622,7 +618,7 @@ var commandDocumentationByKey = map[string]CommandDocumentation{
 		sampleWithNote("axilio help phone tap", "Perform a tap action on the selected phone.\n\nUSAGE\n\n  axilio phone tap [x y] [--flags]", "none", "The complete help includes examples and command-effective flag descriptions."),
 		sampleWithNote("axilio help --html", "file:///path/to/axilio.1.html", "none", "The URL points to the self-contained HTML manual installed with Homebrew or install.sh."),
 	}},
-	"completion": workflow(
+	"completion": usageSteps(
 		"source <(axilio completion bash)",
 		`axilio completion zsh > "${fpath[1]}/_axilio"`,
 		"axilio completion fish > ~/.config/fish/completions/axilio.fish",

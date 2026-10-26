@@ -25,8 +25,8 @@ func noRequestServer(t *testing.T) (*httptest.Server, *int) {
 }
 
 // The list commands preflight their pagination flags against the backend's
-// bounds (runs 1-500, workflows 1-500, uploads 1-100, offsets >= 0) before
-// credentials or any HTTP request, mirroring the runs start --count pattern.
+// bounds (runs 1-500, agents 1-500, uploads 1-100, offsets >= 0) before
+// credentials or any HTTP request, mirroring the other start-time preflights.
 func TestListLimitPreflightsRejectBeforeRequest(t *testing.T) {
 	cases := []struct {
 		name string
@@ -35,8 +35,11 @@ func TestListLimitPreflightsRejectBeforeRequest(t *testing.T) {
 		{"runs limit zero", []string{"runs", "list", "--limit", "0"}},
 		{"runs limit negative", []string{"runs", "list", "--limit", "-5"}},
 		{"runs limit above max", []string{"runs", "list", "--limit", "501"}},
-		{"workflows limit zero", []string{"workflows", "list", "--limit", "0"}},
-		{"workflows limit above max", []string{"workflows", "list", "--limit", "501"}},
+		{"runs negative offset", []string{"runs", "list", "--offset", "-1"}},
+		{"agents limit zero", []string{"agents", "list", "--limit", "0"}},
+		{"agents limit above max", []string{"agents", "list", "--limit", "501"}},
+		{"agents negative offset", []string{"agents", "list", "--offset", "-1"}},
+		{"agents revisions limit above max", []string{"agents", "revisions", "a1", "--limit", "201"}},
 		{"uploads limit zero", []string{"uploads", "list", "--limit", "0"}},
 		{"uploads limit above max", []string{"uploads", "list", "--limit", "101"}},
 		{"uploads negative offset", []string{"uploads", "list", "--offset", "-1"}},
@@ -48,9 +51,6 @@ func TestListLimitPreflightsRejectBeforeRequest(t *testing.T) {
 		{"usage inferences limit zero", []string{"usage", "inferences", "--from", "2026-08-01", "--limit", "0"}},
 		{"usage inferences limit above max", []string{"usage", "inferences", "--from", "2026-08-01", "--limit", "101"}},
 		{"usage inferences negative offset", []string{"usage", "inferences", "--from", "2026-08-01", "--offset", "-1"}},
-		{"runs history limit zero", []string{"runs", "history", "--from", "2026-08-01", "--limit", "0"}},
-		{"runs history limit above max", []string{"runs", "history", "--from", "2026-08-01", "--limit", "501"}},
-		{"runs history negative offset", []string{"runs", "history", "--from", "2026-08-01", "--offset", "-1"}},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -75,8 +75,8 @@ func TestListLimitUpperBoundsAccepted(t *testing.T) {
 	if _, err := run(t, srv, "runs", "list", "--limit", "500"); err != nil {
 		t.Fatalf("runs list --limit 500: %v", err)
 	}
-	if _, err := run(t, srv, "workflows", "list", "--limit", "500"); err != nil {
-		t.Fatalf("workflows list --limit 500: %v", err)
+	if _, err := run(t, srv, "agents", "list", "--limit", "500"); err != nil {
+		t.Fatalf("agents list --limit 500: %v", err)
 	}
 }
 
@@ -85,7 +85,7 @@ func TestListLimitUpperBoundsAccepted(t *testing.T) {
 func TestRunsStartRejectsInvalidStartTimeout(t *testing.T) {
 	_, requests := noRequestServer(t)
 	for _, timeout := range []string{"1", "30", "59", "86401"} {
-		out, err := execRoot(t, "runs", "start", "w1", "--start-timeout", timeout)
+		out, err := execRoot(t, "runs", "start", "--agent", "a1", "--start-timeout", timeout)
 		if err == nil || exit.Classify(err) != exit.Usage {
 			t.Fatalf("--start-timeout %s: got %v, want usage error", timeout, err)
 		}
@@ -101,7 +101,7 @@ func TestRunsStartRejectsInvalidStartTimeout(t *testing.T) {
 func TestRunsStartAcceptsStartTimeoutBounds(t *testing.T) {
 	srv := fakeAPI(t)
 	for _, timeout := range []string{"60", "86400", "0"} {
-		if _, err := run(t, srv, "runs", "start", "w1", "--start-timeout", timeout); err != nil {
+		if _, err := run(t, srv, "runs", "start", "--agent", "a1", "--start-timeout", timeout); err != nil {
 			t.Fatalf("--start-timeout %s: %v", timeout, err)
 		}
 	}

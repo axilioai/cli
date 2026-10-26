@@ -151,7 +151,7 @@ func TestPhoneObserveWalkthroughSurvivesFangWidths(t *testing.T) {
 
 // A bare `sessions start` lands on a shared-pool phone billed per second, and
 // agents copy the help's examples verbatim. The help must say so, and the
-// workflow examples an agent reads first must name a phone (AXI-2254).
+// usage-step examples an agent reads first must name a phone (AXI-2254).
 func TestSessionsStartHelpCallsOutSharedPoolCharge(t *testing.T) {
 	start := findCommand(t, Root(), "sessions start")
 	if !strings.Contains(start.Long, "shared pool, billed per second") {
@@ -165,7 +165,7 @@ func TestSessionsStartHelpCallsOutSharedPoolCharge(t *testing.T) {
 		}
 		for _, sample := range docs.Samples {
 			if strings.Contains(sample.Invocation, "sessions start") && !strings.Contains(sample.Invocation, "--phone-id") {
-				t.Errorf("%s workflow example %q starts a metered shared-pool session; name a phone", key, sample.Invocation)
+				t.Errorf("%s example %q starts a metered shared-pool session; name a phone", key, sample.Invocation)
 			}
 		}
 	}
