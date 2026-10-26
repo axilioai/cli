@@ -270,10 +270,12 @@ Precedence rules:
 | `phone tree` | Print the phone's accessibility tree (roles, names, resource ids, node ids) for a session with accessibility mode on. |
 | `phone accessibility status` / `enable` / `disable` | Show whether the session's accessibility tree is on, or turn it on or off mid-session. |
 | `phone send` | Upload a local image/video and push it to the selected session's phone. |
-| `workflows list` | Discover workflow IDs by recency or name search. |
-| `workflows create` / `get` / `delete` | Create a workflow (optionally seeding its first code revision from a file), inspect its details and run statistics, or delete it. |
-| `workflows pull` / `push` / `revisions` / `restore` | Round-trip workflow code: pull the current source, push a local file back as a new revision with an optional message, list revision history, and restore an earlier revision. |
-| `runs list` / `runs start` / `runs get` / `runs cancel` | Start, inspect, and cancel workflow runs. |
+| `agents list` | Discover agent IDs by name search or kind. |
+| `agents create` / `get` / `delete` | Create an agent (optionally seeding its first revision from a code file with `--code`), inspect its details, or delete it. |
+| `agents pull` / `push` / `revisions` / `rollback` | Round-trip agent code: pull the current code, push a local file back as a new revision with an optional message, list revision history, and bring an earlier revision back as the newest. |
+| `runs start` / `runs watch` | Start a run of an agent, optionally following it to the end with `--watch`, or attach to a running run (or replay a finished one) by ID. |
+| `runs list` / `runs get` / `runs cancel` | List runs (filter by agent, schedule, mode, or status), inspect one, or cancel queued and running work. |
+| `runs metrics` | Per-agent run counts, success rate, and cost over a window. |
 | `api-keys list` / `create` / `delete` | Manage your organization's API keys. |
 | `uploads add` / `uploads list` / `uploads push` / `uploads delete` | Store files, inspect quota, deliver uploads, and free library quota. |
 | `completion <shell>` | Generate a shell-completion script. |
@@ -358,7 +360,7 @@ axilio sessions stop <id>
 Accessibility mode is off by default. Start a session with `--accessibility`
 to get the phone's accessibility tree. That requires a phone that supports it:
 only such phones are claimed, and a named `--phone-id` that cannot provide it
-exits `6`. `workflows create --accessibility` turns it on for a workflow's
+exits `6`. `agents create --accessibility` turns it on for an agent's
 runs. While it is on, the accessibility service is visible to apps on the
 phone. With the tree on, the locator verbs take `--role`, `--name`, `--id` (and
 `--exact`), and `--strategy` picks the resolver (`auto`, `vision`, or
@@ -416,40 +418,59 @@ session, the most recently started session, then an ambiguity error.
 ### Start and inspect runs
 
 ```bash
-axilio workflows list --search checkout
-axilio runs start <workflow-id>
-axilio runs start <workflow-id> --count 3
-axilio runs list
+axilio agents list --search checkout
+axilio runs start --agent <agent-id>
+axilio runs start --agent <agent-id> --watch
+axilio runs watch <run-id>
+axilio runs list --agent <agent-id> --status failed
 axilio runs get <run-id>
+axilio runs metrics --agent <agent-id>
 axilio runs cancel <run-id> --yes
 ```
 
-`runs start --count` accepts values from 1 through 1000, inclusive, and
-`--start-timeout` accepts 60 through 86400 seconds (0 omits the field and uses
-the server default). The list commands bound their pagination the same way:
-`runs list`/`workflows list --limit` accept 1-500, `workflows revisions
---limit` accepts 1-200, and `uploads list --limit` accepts 1-100 with a
-non-negative `--offset`. All ranges are rejected with a usage error before
-authentication or an API request.
+`runs start` runs the agent's current revision: a code agent runs its Python,
+an instructions agent hands its task to a model. `--watch` follows the run
+exactly like `runs watch`. `--start-timeout` accepts 60 through 86400 seconds
+(0 omits the field and uses the server default). The list commands bound their
+pagination the same way: `runs list`/`agents list --limit` accept 1-500,
+`agents revisions --limit` accepts 1-200, and `uploads list --limit` accepts
+1-100 with a non-negative `--offset`. All ranges are rejected with a usage
+error before authentication or an API request.
 
-### Author and version workflow code
+`runs metrics` covers the last 7 days unless you pass `--from` and `--to`. The
+success rate is completed runs over completed and failed runs.
+
+### Author and version agent code
 
 ```bash
-axilio workflows create checkout-flow --platform android --code checkout.py
-axilio workflows pull <workflow-id> --out checkout.py
-axilio workflows push <workflow-id> checkout.py -m "handle 2FA"
-axilio workflows revisions <workflow-id>
-axilio workflows restore <workflow-id> <revision-id>
-axilio workflows get <workflow-id>
-axilio workflows delete <workflow-id> --yes
+axilio agents create checkout-flow --code checkout.py
+axilio agents pull <agent-id> --out checkout.py
+axilio agents push <agent-id> checkout.py -m "handle 2FA"
+axilio agents revisions <agent-id>
+axilio agents rollback <agent-id> <revision-id>
+axilio agents get <agent-id>
+axilio agents delete <agent-id> --yes
 ```
 
-`pull` prints the current revision's source to stdout (pipe or redirect it), or
-writes it to `--out`. `push` saves a local file as a new revision; the server
-deduplicates by content hash, so pushing unchanged source is a reported no-op.
-`restore` copies an earlier revision's source into a new revision, keeping the
-action visible in history. Source files are capped at 256 KiB, preflighted
-before any request.
+`pull` prints the current revision's code to stdout (pipe or redirect it), or
+writes it to `--out`. `push` saves a local file as a new revision, which
+becomes the one runs use. `rollback` copies an earlier revision forward as the
+newest one, keeping the action visible in history. Code files are capped at
+256 KiB, preflighted before any request.
+
+### Upgrading from 0.13
+
+0.14.0 follows the Agents release of the API and has three breaking changes:
+
+- `workflows` is now `agents`, and `workflows restore` is now `agents
+  rollback`. `runs start` takes `--agent <agent-id>` instead of a positional
+  workflow ID, and `--count` is gone. `sessions start --workflow` is gone and
+  `sessions list --history --workflow` is now `--agent`.
+- `runs history` and `runs stats` are removed. `runs list` now filters by
+  `--agent`, `--schedule`, `--mode`, and `--status`, and `runs metrics`
+  replaces `runs stats`.
+- The run's `error_message` field is now `error` in JSON output, including the
+  final `watch_end` line of `runs watch`.
 
 ### Manage API keys
 
