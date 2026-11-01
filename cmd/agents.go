@@ -433,7 +433,7 @@ func agentsRevisionsCmd() *cobra.Command {
 				rows := [][]string{{"REV", "REVISION ID", "KIND", "AUTHOR", "SIZE", "CREATED", "MESSAGE"}}
 				for _, rev := range resp.Revisions {
 					rows = append(rows, []string{
-						fmt.Sprintf("%d", rev.Revision), rev.ID, string(rev.Kind), rev.AuthorUserID,
+						fmt.Sprintf("%d", rev.Revision), rev.ID, string(rev.Kind), strv(rev.AuthorUserID),
 						humanBytes(rev.Bytes), ts(rev.CreatedAt), util.OrDash(strv(rev.Message)),
 					})
 				}

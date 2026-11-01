@@ -3,7 +3,7 @@ module github.com/axilioai/cli
 go 1.26.6
 
 require (
-	github.com/axilioai/platform-go v0.15.0
+	github.com/axilioai/platform-go v0.16.0
 	github.com/charmbracelet/fang v1.0.0
 	github.com/coder/websocket v1.8.15
 	github.com/cpuguy83/go-md2man/v2 v2.0.6
@@ -55,5 +55,3 @@ require (
 	golang.org/x/sys v0.47.0 // indirect
 	golang.org/x/text v0.41.0 // indirect
 )
-
-replace github.com/axilioai/platform-go => /private/tmp/claude-501/-Users-dom-Desktop-axilio-ai-axilio/27520ae3-3a52-41da-8610-f7461089ec93/scratchpad/pgo-3006
