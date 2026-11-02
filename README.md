@@ -462,7 +462,7 @@ newest one, keeping the action visible in history. Code files are capped at
 
 ### Upgrading from 0.13
 
-0.14.0 follows the Agents release of the API and has three breaking changes:
+0.14.0 follows the Agents release of the API and has four breaking changes:
 
 - `workflows` is now `agents`, and `workflows restore` is now `agents
   rollback`. `runs start` takes `--agent <agent-id>` instead of a positional
@@ -473,6 +473,8 @@ newest one, keeping the action visible in history. Code files are capped at
   replaces `runs stats`.
 - The run's `error_message` field is now `error` in JSON output, including the
   final `watch_end` line of `runs watch`.
+- `runs start` without `--phone-id` now takes one of your dedicated phones, not
+  a phone from the shared pool.
 
 ### Manage API keys
 

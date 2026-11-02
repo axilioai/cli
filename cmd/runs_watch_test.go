@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/axilioai/cli/internal/exit"
+	platformgo "github.com/axilioai/platform-go"
 )
 
 // watchFrames is the scripted session archive: a log, an sdk_call span, a
@@ -299,7 +300,7 @@ func TestRunsWatchPrintsPauseQuestionOnce(t *testing.T) {
 
 func TestRunsWatchCanceledKeepsReason(t *testing.T) {
 	fastWatch(t)
-	srv := watchAPI(t, "cancelled", "phone went offline")
+	srv := watchAPI(t, string(platformgo.RunResponseStatusCancelled), "phone went offline")
 	_, err := run(t, srv, "runs", "watch", "r1")
 	if err == nil || !strings.Contains(err.Error(), "canceled: phone went offline") {
 		t.Fatalf("got %v, want the cancel reason", err)
