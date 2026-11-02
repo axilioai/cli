@@ -106,7 +106,7 @@ func generateManpageMarkdown(root *cobra.Command, version string) (string, error
 	writeDescription(&b, rootOverview)
 	writeWrapped(&b, "Resolution precedence and output-mode details are collected under NOTES.")
 
-	writeManpageHeading(&b, 1, "COMMON WORKFLOW", "COMMON_WORKFLOW")
+	writeManpageHeading(&b, 1, "COMMON TASKS", "COMMON_TASKS")
 	writeWrapped(&b, "A typical interactive session signs in, acquires a phone, observes it, performs an action, verifies the result, and releases the session:")
 	if docs, ok := commandDocs(root); ok && len(docs.Samples) > 0 {
 		invocations := make([]string, 0, len(docs.Samples))
@@ -154,8 +154,8 @@ func generateManpageMarkdown(root *cobra.Command, version string) (string, error
 	writeLiteral(&b, "eval \"$(axilio sessions start --phone-id ph_123 --export)\"\naxilio phone screenshot --out screenshot.png")
 	writeWrapped(&b, "The same in PowerShell, where --export prints a $env: assignment by default on Windows:")
 	writeLiteral(&b, "axilio sessions start --phone-id ph_123 --export | Invoke-Expression\naxilio phone screenshot --out screenshot.png")
-	writeWrapped(&b, "Run a workflow and request machine-readable output:")
-	writeLiteral(&b, "axilio workflows list -o json\naxilio runs start <workflow-id> --count 2 -o json")
+	writeWrapped(&b, "Run an agent, follow it to the end, and request machine-readable output:")
+	writeLiteral(&b, "axilio agents list -o json\naxilio runs start --agent <agent-id> --watch -o json")
 
 	writeManpageHeading(&b, 1, "SEE ALSO", "SEE_ALSO")
 	writeWrapped(&b, "Local browser manual: run `axilio help --html` to print its installed `file://` URL.")
@@ -210,7 +210,7 @@ func writeCommandReference(b *strings.Builder, root, command *cobra.Command) {
 				writeSample(b, sample)
 			}
 		} else {
-			writeManpageLabel(b, "Workflow examples")
+			writeManpageLabel(b, "Example commands")
 			invocations := make([]string, 0, len(docs.Samples))
 			for _, sample := range docs.Samples {
 				invocations = append(invocations, sample.Invocation)

@@ -34,7 +34,7 @@ func TestGenerateManpageDeterministicAndComplete(t *testing.T) {
 		"# NAME {#NAME}\n",
 		"# SYNOPSIS {#SYNOPSIS}\n",
 		"# DESCRIPTION {#DESCRIPTION}\n",
-		"# COMMON WORKFLOW {#COMMON_WORKFLOW}\n",
+		"# COMMON TASKS {#COMMON_TASKS}\n",
 		"# GLOBAL OPTIONS {#GLOBAL_OPTIONS}\n",
 		"# COMMANDS {#COMMANDS}\n",
 		"# ENVIRONMENT {#ENVIRONMENT}\n",
@@ -83,15 +83,15 @@ func TestGenerateManpageDeterministicAndComplete(t *testing.T) {
 			last = position
 		}
 	}
-	commonWorkflow := strings.SplitN(markdown, "# COMMON WORKFLOW {#COMMON_WORKFLOW}\n", 2)[1]
-	commonWorkflow = strings.SplitN(commonWorkflow, "# GLOBAL OPTIONS {#GLOBAL_OPTIONS}\n", 2)[0]
+	commonTasks := strings.SplitN(markdown, "# COMMON TASKS {#COMMON_TASKS}\n", 2)[1]
+	commonTasks = strings.SplitN(commonTasks, "# GLOBAL OPTIONS {#GLOBAL_OPTIONS}\n", 2)[0]
 	rootDocs, ok := commandDocs(root)
 	if !ok {
 		t.Fatal("root command has no structured documentation")
 	}
 	for _, sample := range rootDocs.Samples {
-		if !strings.Contains(commonWorkflow, sample.Invocation) {
-			t.Errorf("common workflow missing root invocation %q", sample.Invocation)
+		if !strings.Contains(commonTasks, sample.Invocation) {
+			t.Errorf("common tasks missing root invocation %q", sample.Invocation)
 		}
 	}
 	observeDocs, ok := commandDocs(findManpageTestCommand(t, root, "phone observe"))

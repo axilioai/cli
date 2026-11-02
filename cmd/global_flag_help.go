@@ -265,7 +265,7 @@ func buildGlobalFlagHelp() map[string]commandGlobalFlagHelp {
 		"phones":              helpOnlyCommandHelp("phones"),
 		"phone":               helpOnlyCommandHelp("phone"),
 		"phone accessibility": helpOnlyCommandHelp("phone accessibility"),
-		"workflows":           helpOnlyCommandHelp("workflows"),
+		"agents":              helpOnlyCommandHelp("agents"),
 		"runs":                helpOnlyCommandHelp("runs"),
 		"usage":               helpOnlyCommandHelp("usage"),
 		"api-keys":            helpOnlyCommandHelp("api-keys"),
@@ -334,25 +334,25 @@ func buildGlobalFlagHelp() map[string]commandGlobalFlagHelp {
 	help["phone send"] = withQuiet(help["phone send"],
 		"Suppress upload progress and delivery notes; the delivery result remains on stdout")
 
-	help["workflows list"] = apiResultHelp("the workflow-list request", "the workflow-list result")
-	help["workflows create"] = apiResultHelp("the workflow-create request", "the created-workflow result")
-	help["workflows get"] = apiResultHelp("the workflow-detail request", "the workflow-detail result")
-	help["workflows delete"] = apiResultHelp("the workflow-delete request", "the deletion result")
-	help["workflows delete"] = withOutput(help["workflows delete"],
+	help["agents list"] = apiResultHelp("the agent-list request", "the agent-list result")
+	help["agents create"] = apiResultHelp("the agent-create request", "the created-agent result")
+	help["agents get"] = apiResultHelp("the agent-detail request", "the agent-detail result")
+	help["agents delete"] = apiResultHelp("the agent-delete request", "the deletion result")
+	help["agents delete"] = withOutput(help["agents delete"],
 		"Emit a human confirmation or JSON deletion result",
 		"Suppress the prompt and human confirmation; --yes is required; JSON still prints")
-	help["workflows pull"] = apiResultHelp("the workflow-code request", "the pulled-code result")
-	help["workflows pull"] = withOutput(help["workflows pull"],
+	help["agents pull"] = apiResultHelp("the agent-code request", "the pulled-code result")
+	help["agents pull"] = withOutput(help["agents pull"],
 		"Render pulled code as raw stdout text or a json document; --out writes the file either way",
-		"Suppress the --out acknowledgment; pulled source or JSON remains on stdout")
-	help["workflows push"] = apiResultHelp("the code-save request", "the saved-revision result")
-	help["workflows revisions"] = apiResultHelp("the revision-list request", "the revision-list result")
-	help["workflows restore"] = apiResultHelp("the revision-restore request", "the restored-revision result")
+		"Suppress the --out acknowledgment; pulled code or JSON remains on stdout")
+	help["agents push"] = apiResultHelp("the code-save request", "the saved-revision result")
+	help["agents revisions"] = apiResultHelp("the revision-list request", "the revision-list result")
+	help["agents rollback"] = apiResultHelp("the revision-rollback request", "the rolled-back revision result")
 	help["runs list"] = apiResultHelp("the run-list request", "the run-list result")
 	help["runs start"] = apiResultHelp("the run-create request", "the created-run result")
 	help["runs start"] = withOutput(help["runs start"],
-		"Emit created run IDs as human messages or json",
-		"Suppress table-mode run IDs and guidance; a JSON result remains on stdout")
+		"Emit the created run as a human message or json",
+		"Suppress the table-mode acknowledgment and guidance; a JSON result remains on stdout")
 	help["runs start"] = withNoColor(help["runs start"],
 		"No effect on runs start command; its human messages are unstyled")
 	help["runs get"] = apiResultHelp("the run-detail request", "the run-detail result")
@@ -362,8 +362,7 @@ func buildGlobalFlagHelp() map[string]commandGlobalFlagHelp {
 		"Stream frames as human lines or newline-delimited JSON",
 		"Suppress stderr progress notes; the frame stream remains on stdout")
 
-	help["runs history"] = apiResultHelp("the run-history request", "the run-history result")
-	help["runs stats"] = apiResultHelp("the run-stats request", "the run-stats result")
+	help["runs metrics"] = apiResultHelp("the run-metrics request", "the run-metrics result")
 
 	help["usage metrics"] = apiResultHelp("the usage-metrics request", "the usage summary")
 	help["usage inferences"] = apiResultHelp("the inference-list request", "the inference-list result")

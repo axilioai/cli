@@ -114,7 +114,7 @@ func TestSessionsStopJSON(t *testing.T) {
 		t.Fatalf("sessions stop: %v", err)
 	}
 	got := mustJSON(t, out)
-	if got["phone_id"] != "p1" || got["session_id"] != "s1" || got["workflow_id"] != "w1" ||
+	if got["phone_id"] != "p1" || got["session_id"] != "s1" || got["agent_id"] != "a1" ||
 		got["deallocated_at"] != "2026-08-05T20:00:00Z" {
 		t.Fatalf("unexpected payload: %v", got)
 	}

@@ -21,7 +21,7 @@ var manpageHTMLSections = []manpageHTMLSection{
 	{ID: "NAME", Label: "NAME"},
 	{ID: "SYNOPSIS", Label: "SYNOPSIS"},
 	{ID: "DESCRIPTION", Label: "DESCRIPTION"},
-	{ID: "COMMON_WORKFLOW", Label: "COMMON WORKFLOW"},
+	{ID: "COMMON_TASKS", Label: "COMMON TASKS"},
 	{ID: "GLOBAL_OPTIONS", Label: "GLOBAL OPTIONS"},
 	{ID: "COMMANDS", Label: "COMMANDS"},
 	{ID: "ENVIRONMENT", Label: "ENVIRONMENT"},

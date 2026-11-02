@@ -33,7 +33,7 @@ func sessionsGetCmd() *cobra.Command {
 		Short: "Show one session in detail.",
 		Long: "Fetch one session by ID, active or historical. The result includes " +
 			"status, source, phone, allocation and release times, duration, tags, " +
-			"workflow, capture and telemetry settings, and the recording status and " +
+			"agent, capture and telemetry settings, and the recording status and " +
 			"playback URL when ready. Discover IDs with `sessions list --remote` or " +
 			"`sessions list --history`.",
 		Args: cobra.ExactArgs(1),
@@ -61,8 +61,8 @@ func sessionsGetCmd() *cobra.Command {
 					{"Type", util.OrDash(enumv(d.PhoneType))},
 					{"Location", util.OrDash(strv(d.Location))},
 					{"Dedicated", fmt.Sprintf("%t", d.IsDedicatedPhone)},
-					{"Workflow", util.OrDash(strv(d.WorkflowID))},
-					{"Workflow name", util.OrDash(strv(d.WorkflowName))},
+					{"Agent", util.OrDash(strv(d.AgentID))},
+					{"Agent name", util.OrDash(strv(d.AgentName))},
 					{"Allocated", ts(d.AllocatedAt)},
 					{"Released", util.OrDash(tsp(d.DeallocatedAt))},
 					{"Duration", sessionDuration(d.AllocatedAt, d.DeallocatedAt)},

@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/axilioai/cli/internal/exit"
+	platformgo "github.com/axilioai/platform-go"
 )
 
 // watchFrames is the scripted session archive: a log, an sdk_call span, a
@@ -62,11 +63,11 @@ func watchAPI(t *testing.T, terminal string, errorMessage string) *httptest.Serv
 			}
 			msg := ""
 			if errorMessage != "" {
-				msg = fmt.Sprintf(`,"error_message":%q`, errorMessage)
+				msg = fmt.Sprintf(`,"error":%q`, errorMessage)
 			}
-			fmt.Fprintf(w, `{"id":"r1","status":%q,"trigger":"manual","workflow_id":"w1","created_at":"2026-08-22T20:00:00Z"%s%s}`, status, session, msg)
+			fmt.Fprintf(w, `{"id":"r1","status":%q,"trigger":"manual","mode":"code","agent_id":"a1","user_id":"u1","updated_at":"2026-08-22T20:00:00Z","created_at":"2026-08-22T20:00:00Z"%s%s}`, status, session, msg)
 		case strings.HasSuffix(p, "/runs") && r.Method == http.MethodPost:
-			fmt.Fprint(w, `{"run_ids":["r1"]}`)
+			fmt.Fprint(w, `{"id":"r1","mode":"code","status":"queued","trigger":"api","agent_id":"a1","user_id":"u1","created_at":"2026-08-22T20:00:00Z","updated_at":"2026-08-22T20:00:00Z"}`)
 		default:
 			http.Error(w, `{"error":"not found"}`, http.StatusNotFound)
 		}
@@ -178,30 +179,184 @@ func TestRunsWatchOutcomeExitCodes(t *testing.T) {
 	}
 }
 
-// --watch on runs start follows the run it created; with any other count the
-// flag is a preflight usage error that sends nothing over the wire.
+// A failed run's watch_end summary carries the run's `error`; the retired
+// error_message field is gone.
+func TestRunsWatchJSONSummaryCarriesError(t *testing.T) {
+	fastWatch(t)
+	srv := watchAPI(t, "failed", "phone rebooted mid-run")
+	out, err := run(t, srv, "-o", "json", "runs", "watch", "r1")
+	if err == nil || exit.Classify(err) != exit.Err {
+		t.Fatalf("got %v, want a generic error exit", err)
+	}
+	lines := strings.Split(strings.TrimSpace(out), "\n")
+	var last map[string]any
+	_ = json.Unmarshal([]byte(lines[len(lines)-1]), &last)
+	if last["error"] != "phone rebooted mid-run" {
+		t.Fatalf("watch_end summary missing error: %v", last)
+	}
+	if _, ok := last["error_message"]; ok {
+		t.Fatalf("watch_end summary kept the retired error_message field: %v", last)
+	}
+}
+
+// --watch on runs start follows the run it created.
 func TestRunsStartWatchFlag(t *testing.T) {
-	t.Run("count preflight", func(t *testing.T) {
-		_, requests := noRequestServer(t)
-		_, err := execRoot(t, "runs", "start", "w1", "--watch", "--count", "2")
-		if err == nil || exit.Classify(err) != exit.Usage {
-			t.Fatalf("got %v, want usage error", err)
+	fastWatch(t)
+	srv := watchAPI(t, "completed", "")
+	out, err := run(t, srv, "runs", "start", "--agent", "a1", "--watch")
+	if err != nil {
+		t.Fatalf("start --watch: %v", err)
+	}
+	for _, want := range []string{"Started run r1", "hello from the phone", "Run r1 completed"} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("output missing %q:\n%s", want, out)
 		}
-		if *requests != 0 {
-			t.Fatalf("made %d HTTP requests before the usage error", *requests)
-		}
-	})
-	t.Run("follows created run", func(t *testing.T) {
-		fastWatch(t)
-		srv := watchAPI(t, "completed", "")
-		out, err := run(t, srv, "runs", "start", "w1", "--watch")
-		if err != nil {
-			t.Fatalf("start --watch: %v", err)
-		}
-		for _, want := range []string{"Started run r1", "hello from the phone", "Run r1 completed"} {
-			if !strings.Contains(out, want) {
-				t.Fatalf("output missing %q:\n%s", want, out)
+	}
+}
+
+// heldSessionAPI serves a run whose session stream stays open after the run
+// finishes, as a kept-alive agent session does. runBody gives the run's JSON
+// fields for the nth read.
+func heldSessionAPI(t *testing.T, runBody func(read int) string) *httptest.Server {
+	t.Helper()
+	release := make(chan struct{})
+	reads := 0
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		p := r.URL.Path
+		switch {
+		case strings.HasSuffix(p, "/events"):
+			w.Header().Set("Content-Type", "text/event-stream")
+			w.WriteHeader(http.StatusOK)
+			w.(http.Flusher).Flush()
+			select {
+			case <-r.Context().Done():
+			case <-release:
 			}
+		case strings.Contains(p, "/frames"):
+			w.Header().Set("Content-Type", "application/json")
+			fmt.Fprint(w, `{"frames":[],"total":0,"limit":1000,"offset":0,"retention_expired":false,"sdk_call_costs":{},"inference_costs":{}}`)
+		case strings.Contains(p, "/runs/"):
+			reads++
+			w.Header().Set("Content-Type", "application/json")
+			fmt.Fprintf(w, `{"id":"r1","trigger":"manual","mode":"agent","user_id":"u1","session_id":"sess-1","updated_at":"2026-08-22T20:00:00Z","created_at":"2026-08-22T20:00:00Z",%s}`, runBody(reads))
+		default:
+			http.Error(w, `{"error":"not found"}`, http.StatusNotFound)
 		}
+	}))
+	t.Cleanup(func() {
+		close(release)
+		srv.Close()
 	})
+	return srv
+}
+
+// A finished run ends the watch even though its session stream is still open.
+func TestRunsWatchEndsWhenRunEndsWhileSessionHeld(t *testing.T) {
+	fastWatch(t)
+	srv := heldSessionAPI(t, func(read int) string {
+		if read < 3 {
+			return `"status":"running"`
+		}
+		return `"status":"completed","result_text":"Android 17"`
+	})
+	done := make(chan struct{})
+	var out string
+	var err error
+	go func() {
+		defer close(done)
+		out, err = run(t, srv, "runs", "watch", "r1")
+	}()
+	select {
+	case <-done:
+	case <-time.After(5 * time.Second):
+		t.Fatal("watch still waiting on the held session after the run finished")
+	}
+	if err != nil {
+		t.Fatalf("watch: %v", err)
+	}
+	if !strings.Contains(out, "Android 17") || !strings.Contains(out, "Run r1 completed") {
+		t.Fatalf("watch output missing the result:\n%s", out)
+	}
+}
+
+// A pause prints its question once, however many polls see it.
+func TestRunsWatchPrintsPauseQuestionOnce(t *testing.T) {
+	fastWatch(t)
+	const paused = `"status":"paused","input_request":{"id":"in1","reason":"approval_required","requested_by":"agent","message":"Post this?","created_at":"2026-08-22T20:00:00Z","expires_at":"2026-08-22T20:10:00Z"}`
+	srv := heldSessionAPI(t, func(read int) string {
+		if read < 6 {
+			return paused
+		}
+		return `"status":"completed"`
+	})
+	out, err := run(t, srv, "runs", "watch", "r1")
+	if err != nil {
+		t.Fatalf("watch: %v", err)
+	}
+	if n := strings.Count(out, "Post this?"); n != 1 {
+		t.Fatalf("question printed %d times, want once:\n%s", n, out)
+	}
+}
+
+func TestRunsWatchCanceledKeepsReason(t *testing.T) {
+	fastWatch(t)
+	srv := watchAPI(t, string(platformgo.RunResponseStatusCancelled), "phone went offline")
+	_, err := run(t, srv, "runs", "watch", "r1")
+	if err == nil || !strings.Contains(err.Error(), "canceled: phone went offline") {
+		t.Fatalf("got %v, want the cancel reason", err)
+	}
+}
+
+func TestRunsStartTaskTargetsDedicatedPhone(t *testing.T) {
+	var body map[string]any
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_ = json.NewDecoder(r.Body).Decode(&body)
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, `{"id":"r1","mode":"agent","status":"queued","trigger":"api","user_id":"u1","created_at":"2026-08-22T20:00:00Z","updated_at":"2026-08-22T20:00:00Z"}`)
+	}))
+	t.Cleanup(srv.Close)
+	if _, err := run(t, srv, "runs", "start", "--task", "open settings"); err != nil {
+		t.Fatalf("start: %v", err)
+	}
+	if body["task"] != "open settings" || body["agent_id"] != nil {
+		t.Fatalf("body = %v", body)
+	}
+	target := body["targets"].([]any)[0].(map[string]any)
+	if target["ownership"] != "dedicated" {
+		t.Fatalf("target = %v", target)
+	}
+}
+
+func TestRunsStartNeedsExactlyOneOfAgentAndTask(t *testing.T) {
+	srv := httptest.NewServer(http.NotFoundHandler())
+	t.Cleanup(srv.Close)
+	for _, args := range [][]string{
+		{"runs", "start"},
+		{"runs", "start", "--agent", "a1", "--task", "x"},
+	} {
+		if _, err := run(t, srv, args...); err == nil || !strings.Contains(err.Error(), "--agent or --task") {
+			t.Fatalf("%v: got %v", args, err)
+		}
+	}
+}
+
+func TestRunsGetShowsResultAndOutput(t *testing.T) {
+	srv := heldSessionAPI(t, func(int) string {
+		return `"status":"completed","result_text":"Android 17","output":{"version":"17"}`
+	})
+	out, err := run(t, srv, "runs", "get", "r1")
+	if err != nil {
+		t.Fatalf("get: %v", err)
+	}
+	if !strings.Contains(out, "Android 17") || !strings.Contains(out, `{"version":"17"}`) {
+		t.Fatalf("output:\n%s", out)
+	}
+}
+
+func TestAgentsListLimitMatchesBackend(t *testing.T) {
+	srv := httptest.NewServer(http.NotFoundHandler())
+	t.Cleanup(srv.Close)
+	if _, err := run(t, srv, "agents", "list", "--limit", "201"); err == nil || !strings.Contains(err.Error(), "between 1 and 200") {
+		t.Fatalf("got %v", err)
+	}
 }
