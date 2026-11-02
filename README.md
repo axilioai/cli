@@ -429,11 +429,13 @@ axilio runs cancel <run-id> --yes
 ```
 
 `runs start` runs the agent's current revision: a code agent runs its Python,
-an instructions agent hands its task to a model. `--watch` follows the run
-exactly like `runs watch`. `--start-timeout` accepts 60 through 86400 seconds
+an instructions agent hands its task to a model. `--task` runs a one-off
+instruction instead, without saving an agent. Runs take one of your dedicated
+phones unless `--phone-id` pins one. `--watch` follows the run exactly like
+`runs watch`, and ends when the run does, even while its phone is still held. `--start-timeout` accepts 60 through 86400 seconds
 (0 omits the field and uses the server default). The list commands bound their
-pagination the same way: `runs list`/`agents list --limit` accept 1-500,
-`agents revisions --limit` accepts 1-200, and `uploads list --limit` accepts
+pagination the same way: `runs list --limit` accepts 1-500, `agents list --limit`
+and `agents revisions --limit` accept 1-200, and `uploads list --limit` accepts
 1-100 with a non-negative `--offset`. All ranges are rejected with a usage
 error before authentication or an API request.
 

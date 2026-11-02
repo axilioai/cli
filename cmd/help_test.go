@@ -29,7 +29,7 @@ const (
 	// `workflows` with `agents` (rollback for restore), dropped `runs history`
 	// and `runs stats` for `runs metrics`, and dropped `runs start --count`.
 	applicationCommandCount = 79
-	applicationFlagCount    = 149
+	applicationFlagCount    = 150
 )
 
 func TestApplicationHelpMetadata(t *testing.T) {
@@ -324,8 +324,8 @@ func TestRenderedHelpContracts(t *testing.T) {
 			args: []string{"runs", "start", "--help"},
 			want: []string{
 				"Start a run of the saved agent --agent",
-				"Agent ID to run (required)",
-				"--agent is required; discover an agent ID with `axilio agents list`",
+				"Agent ID to run",
+				"pass --agent or --task, not both",
 				"flag is validated before credentials or an API request",
 			},
 		},

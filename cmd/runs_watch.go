@@ -2,9 +2,11 @@ package cmd
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 	"time"
 
@@ -12,6 +14,7 @@ import (
 	"github.com/axilioai/cli/internal/output"
 	platformgo "github.com/axilioai/platform-go"
 	"github.com/axilioai/platform-go/client"
+	"github.com/axilioai/platform-go/drivers/telemetry"
 	"github.com/spf13/cobra"
 )
 
@@ -53,12 +56,17 @@ func runsWatchCmd() *cobra.Command {
 			"span starts are not shown).\n\n" +
 			"The exit code reflects the outcome: 0 when the run completed, 1 when " +
 			"it failed (the error is printed), 7 when it was canceled or " +
-			"the watch was interrupted. Interrupting the watch does not affect the " +
-			"run; re-run `runs watch` to replay and resume following.\n\n" +
+			"the watch was interrupted. The watch ends when the run does, even " +
+			"if the run's phone is still held for a follow-up. Interrupting the " +
+			"watch does not affect the run; re-run `runs watch` to replay and " +
+			"resume following.\n\n" +
+			"A run that pauses for a person prints the question; answer it in " +
+			"the dashboard, and the watch carries on.\n\n" +
 			"JSON mode streams newline-delimited JSON rather than a single " +
-			"document: one object per telemetry frame in archive order, then a " +
-			"final `{\"watch_end\": true, ...}` object carrying the run's status " +
-			"and error.",
+			"document: one object per telemetry frame in archive order, a " +
+			"`{\"input_required\": true, ...}` object when the run pauses, then a " +
+			"final `{\"watch_end\": true, ...}` object carrying the run's status, " +
+			"error, result_text and output.",
 		Args: cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
 			cl, err := newClient()
@@ -80,9 +88,14 @@ func watchRun(cl *client.Client, p *output.Printer, runID string) error {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
+	// The poller below prints too while a frame stream is open.
+	var printMu sync.Mutex
 	dedupe := newFrameDeduper(func(f *platformgo.RunSessionFramesResponseFramesItem) error {
+		printMu.Lock()
+		defer printMu.Unlock()
 		return renderWatchFrame(p, f)
 	})
+	notedInput := ""
 	var (
 		sessionID string
 		fetched   int64 // archive frames consumed = next archive offset
@@ -97,6 +110,12 @@ func watchRun(cl *client.Client, p *output.Printer, runID string) error {
 			return watchInterrupted(ctx, p, runID, err)
 		}
 		run = r
+		printMu.Lock()
+		err = noteInputRequest(p, r, &notedInput)
+		printMu.Unlock()
+		if err != nil {
+			return err
+		}
 
 		if sessionID == "" && r.SessionID != nil && *r.SessionID != "" {
 			sessionID = *r.SessionID
@@ -119,7 +138,7 @@ func watchRun(cl *client.Client, p *output.Printer, runID string) error {
 			if !liveTried && !dedupe.endSeen {
 				liveTried = true
 				if stream := tryLiveAttach(ctx, p, sessionID); stream != nil {
-					_, err := streamLive(ctx, stream, dedupe)
+					err := streamUntilRunEnds(ctx, cl, p, &printMu, stream, dedupe, runID, &notedInput)
 					if err != nil {
 						return watchInterrupted(ctx, p, runID, err)
 					}
@@ -136,10 +155,7 @@ func watchRun(cl *client.Client, p *output.Printer, runID string) error {
 			}
 		}
 
-		terminal := r.Status == platformgo.RunResponseStatusCompleted ||
-			r.Status == platformgo.RunResponseStatusFailed ||
-			r.Status == platformgo.RunResponseStatusCancelled
-		if terminal {
+		if isTerminalRun(r.Status) {
 			// The archive can flush a beat behind the run status; give the
 			// terminal frame a bounded grace, then trust the run status.
 			if dedupe.endSeen || sessionID == "" || graceUsed >= watchEndGraceRounds {
@@ -154,6 +170,80 @@ func watchRun(cl *client.Client, p *output.Printer, runID string) error {
 		case <-time.After(watchPollInterval):
 		}
 	}
+}
+
+// streamUntilRunEnds follows the live stream while polling the run, because the
+// session stream stays open for as long as the session lasts: a finished agent
+// run keeps its phone for keep_alive_seconds, and a pause never appears on it.
+// The run's own status decides when the watch is done. A nil error means the
+// stream ended or the run did, and the caller's loop takes it from there.
+func streamUntilRunEnds(ctx context.Context, cl *client.Client, p *output.Printer, printMu *sync.Mutex, stream *telemetry.Stream, d *frameDeduper, runID string, notedInput *string) error {
+	liveCtx, cancelLive := context.WithCancel(ctx)
+	defer cancelLive()
+	var printErr error
+	pollDone := make(chan struct{})
+	go func() {
+		defer close(pollDone)
+		for {
+			select {
+			case <-liveCtx.Done():
+				return
+			case <-time.After(watchPollInterval):
+			}
+			r, err := cl.Runs.Get(liveCtx, &platformgo.RunsGetRequest{RunID: runID})
+			if err != nil {
+				continue // the outer loop's next read reports a lasting failure
+			}
+			printMu.Lock()
+			printErr = noteInputRequest(p, r, notedInput)
+			printMu.Unlock()
+			if printErr != nil || isTerminalRun(r.Status) {
+				cancelLive()
+				return
+			}
+		}
+	}()
+	_, err := streamLive(liveCtx, stream, d)
+	cancelLive()
+	<-pollDone
+	if printErr != nil {
+		return printErr
+	}
+	if err != nil && (ctx.Err() != nil || !errors.Is(err, context.Canceled)) {
+		return err
+	}
+	return nil
+}
+
+// isTerminalRun reports whether a run has reached a final status.
+func isTerminalRun(status platformgo.RunResponseStatus) bool {
+	return status == platformgo.RunResponseStatusCompleted ||
+		status == platformgo.RunResponseStatusFailed ||
+		status == platformgo.RunResponseStatusCancelled
+}
+
+// noteInputRequest prints a run's open question once per request. The CLI has
+// no way to answer, so it points at the dashboard.
+func noteInputRequest(p *output.Printer, r *platformgo.RunResponse, noted *string) error {
+	req := r.InputRequest
+	if req == nil || req.ID == *noted {
+		return nil
+	}
+	*noted = req.ID
+	if p.JSON {
+		return p.JSONLine(map[string]any{
+			"input_required": true,
+			"run_id":         r.ID,
+			"input_request":  req,
+		})
+	}
+	question := strv(req.Message)
+	if question == "" {
+		question = string(req.Reason)
+	}
+	p.Result("Run %s is waiting for a person: %s", r.ID, question)
+	p.Result("Answer it in the dashboard by %s", ts(req.ExpiresAt))
+	return p.Err()
 }
 
 // watchDrainFrames delivers every archived frame from offset onward through
@@ -220,19 +310,27 @@ func renderWatchFrame(p *output.Printer, f *platformgo.RunSessionFramesResponseF
 func watchOutcome(p *output.Printer, run *platformgo.RunResponse) error {
 	if p.JSON {
 		if err := p.JSONLine(map[string]any{
-			"watch_end": true,
-			"run_id":    run.ID,
-			"status":    run.Status,
-			"error":     run.Error,
+			"watch_end":   true,
+			"run_id":      run.ID,
+			"status":      run.Status,
+			"error":       run.Error,
+			"result_text": run.ResultText,
+			"output":      run.Output,
 		}); err != nil {
 			return err
 		}
 	}
 	switch run.Status {
 	case platformgo.RunResponseStatusCompleted:
+		if text := strv(run.ResultText); text != "" {
+			p.Result("%s", text)
+		}
 		p.Success("Run %s completed", run.ID)
 		return p.Err()
 	case platformgo.RunResponseStatusCancelled:
+		if reason := strv(run.Error); reason != "" {
+			return exit.With(exit.Canceled, fmt.Errorf("run %s was canceled: %s", run.ID, reason))
+		}
 		return exit.With(exit.Canceled, fmt.Errorf("run %s was canceled", run.ID))
 	default: // failed
 		msg := strv(run.Error)

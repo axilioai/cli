@@ -270,18 +270,22 @@ func parseRunVariables(raw string) (map[string]any, error) {
 func runsStartCmd() *cobra.Command {
 	var (
 		agentID       string
+		task          string
 		startTimeout  int64
 		phoneID       string
 		variablesJSON string
 		watch         bool
 	)
 	cmd := &cobra.Command{
-		Use:   "start --agent <agent-id>",
-		Short: "Start a run of an agent.",
+		Use:   "start (--agent <agent-id> | --task <text>)",
+		Short: "Start a run of an agent, or a one-off task.",
 		Long: "Start a run of the saved agent --agent, using its current revision " +
 			"and settings. Discover an agent ID with `agents list`. A code agent " +
 			"runs its Python; an instructions agent hands its task to a model.\n\n" +
-			"--phone-id pins the run to a specific dedicated phone.\n\n" +
+			"--task runs a one-off instruction without saving an agent, with the " +
+			"platform's default model and limits. Pass --task or --agent, not both.\n\n" +
+			"The run takes one of your organization's dedicated phones, whichever " +
+			"is free; --phone-id pins it to a specific one.\n\n" +
 			"--variables is a JSON object of run variables, exposed to agent " +
 			"code as the `variables` dict. Values are stored and delivered in " +
 			"plaintext - do not put secrets here.\n\n" +
@@ -294,8 +298,8 @@ func runsStartCmd() *cobra.Command {
 			"Successful output contains the created run.",
 		Args: cobra.NoArgs,
 		RunE: func(_ *cobra.Command, _ []string) error {
-			if agentID == "" {
-				return exit.Usagef("--agent is required; discover an agent ID with `axilio agents list`")
+			if (agentID == "") == (task == "") {
+				return exit.Usagef("pass --agent or --task, not both; discover an agent ID with `axilio agents list`")
 			}
 			if startTimeout > 0 && (startTimeout < minStartTimeout || startTimeout > maxStartTimeout) {
 				return exit.Usagef("--start-timeout must be between %d and %d seconds (got %d)", minStartTimeout, maxStartTimeout, startTimeout)
@@ -308,12 +312,19 @@ func runsStartCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			req := &platformgo.AgentRunCreateRequest{AgentID: &agentID, Variables: variables}
+			ownership := platformgo.RunTargetOwnershipDedicated
+			target := &platformgo.RunTarget{
+				DeviceClass: platformgo.RunTargetDeviceClassPhone,
+				Ownership:   &ownership,
+			}
 			if phoneID != "" {
-				req.Targets = []*platformgo.RunTarget{{
-					DeviceClass: platformgo.RunTargetDeviceClassPhone,
-					PhoneID:     &phoneID,
-				}}
+				target.PhoneID = &phoneID
+			}
+			req := &platformgo.AgentRunCreateRequest{Variables: variables, Targets: []*platformgo.RunTarget{target}}
+			if agentID != "" {
+				req.AgentID = &agentID
+			} else {
+				req.Task = &task
 			}
 			if startTimeout > 0 {
 				req.StartTimeoutSeconds = &startTimeout
@@ -340,7 +351,8 @@ func runsStartCmd() *cobra.Command {
 			})
 		},
 	}
-	cmd.Flags().StringVar(&agentID, "agent", "", "Agent ID to run (required)")
+	cmd.Flags().StringVar(&agentID, "agent", "", "Agent ID to run")
+	cmd.Flags().StringVar(&task, "task", "", "One-off instruction to run without saving an agent")
 	cmd.Flags().StringVar(&phoneID, "phone-id", "", "Dedicated phone ID to pin the run to")
 	cmd.Flags().StringVar(&variablesJSON, "variables", "", "JSON object of run variables (plaintext; no secrets)")
 	cmd.Flags().Int64Var(&startTimeout, "start-timeout", 0, startTimeoutHelp)
@@ -354,7 +366,7 @@ func runsGetCmd() *cobra.Command {
 		Short: "Show a single run in detail.",
 		Long: "Fetch one run by the ID returned from `runs list` or `runs start`. The " +
 			"result includes mode, status, trigger, agent, session, phone, created, " +
-			"started and completed times, error, and video URL when present.",
+			"started and completed times, error, result, output, and video URL when present.",
 		Args: cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
 			cl, err := newClient()
@@ -379,11 +391,25 @@ func runsGetCmd() *cobra.Command {
 					{"Started", util.OrDash(tsp(r.StartedAt))},
 					{"Completed", util.OrDash(tsp(r.CompletedAt))},
 					{"Error", util.OrDash(strv(r.Error))},
+					{"Result", util.OrDash(strv(r.ResultText))},
+					{"Output", util.OrDash(runOutputText(r.Output))},
 					{"Video", util.OrDash(strv(r.VideoURL))},
 				})
 			})
 		},
 	}
+}
+
+// runOutputText renders a run's structured output on one line.
+func runOutputText(output any) string {
+	if output == nil {
+		return ""
+	}
+	raw, err := json.Marshal(output)
+	if err != nil {
+		return fmt.Sprintf("%v", output)
+	}
+	return string(raw)
 }
 
 func runsCancelCmd() *cobra.Command {

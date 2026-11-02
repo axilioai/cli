@@ -25,7 +25,7 @@ func noRequestServer(t *testing.T) (*httptest.Server, *int) {
 }
 
 // The list commands preflight their pagination flags against the backend's
-// bounds (runs 1-500, agents 1-500, uploads 1-100, offsets >= 0) before
+// bounds (runs 1-500, agents 1-200, uploads 1-100, offsets >= 0) before
 // credentials or any HTTP request, mirroring the other start-time preflights.
 func TestListLimitPreflightsRejectBeforeRequest(t *testing.T) {
 	cases := []struct {
@@ -37,7 +37,7 @@ func TestListLimitPreflightsRejectBeforeRequest(t *testing.T) {
 		{"runs limit above max", []string{"runs", "list", "--limit", "501"}},
 		{"runs negative offset", []string{"runs", "list", "--offset", "-1"}},
 		{"agents limit zero", []string{"agents", "list", "--limit", "0"}},
-		{"agents limit above max", []string{"agents", "list", "--limit", "501"}},
+		{"agents limit above max", []string{"agents", "list", "--limit", "201"}},
 		{"agents negative offset", []string{"agents", "list", "--offset", "-1"}},
 		{"agents revisions limit above max", []string{"agents", "revisions", "a1", "--limit", "201"}},
 		{"uploads limit zero", []string{"uploads", "list", "--limit", "0"}},
@@ -75,8 +75,8 @@ func TestListLimitUpperBoundsAccepted(t *testing.T) {
 	if _, err := run(t, srv, "runs", "list", "--limit", "500"); err != nil {
 		t.Fatalf("runs list --limit 500: %v", err)
 	}
-	if _, err := run(t, srv, "agents", "list", "--limit", "500"); err != nil {
-		t.Fatalf("agents list --limit 500: %v", err)
+	if _, err := run(t, srv, "agents", "list", "--limit", "200"); err != nil {
+		t.Fatalf("agents list --limit 200: %v", err)
 	}
 }
 

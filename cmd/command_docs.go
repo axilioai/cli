@@ -521,8 +521,9 @@ var commandDocumentationByKey = map[string]CommandDocumentation{
 		sample("axilio runs start --agent ag_123 --phone-id ph_123", "Started run <run-id>", "none"),
 		sample("axilio runs start --agent ag_123 --start-timeout 300", "Started run <run-id>", "none"),
 		sample(`axilio runs start --agent ag_123 --variables '{"store":"main"}'`, "Started run <run-id>", "none"),
+		sample(`axilio runs start --task "Open Settings and report the Android version"`, "Started run <run-id>", "none"),
 		sampleWithNote("axilio runs start --agent ag_123 --watch", "Started run <run-id>\n<frame stream>\n✓ Run <run-id> completed", "→ Run <run-id> queued — waiting for a phone", "Follows the created run exactly like `runs watch`."),
-		failedSample("axilio runs start", "none", "--agent is required; discover an agent ID with `axilio agents list`", 2, "The flag is validated before credentials or an API request."),
+		failedSample("axilio runs start", "none", "pass --agent or --task, not both; discover an agent ID with `axilio agents list`", 2, "The flag is validated before credentials or an API request."),
 	}},
 	"runs watch": {Samples: []CommandSample{
 		sampleWithNote("axilio runs watch run_123", "<time>  span  sdk_call    Screen.observe  250ms\n<time>  INFO  output_log  <agent output>\n✓ Run run_123 completed", "→ Run run_123 running — streaming session <session-id>", "Streams the session's telemetry — logs and completed spans — until the session ends. Exit 0 on completed, 1 on failed (with the run's error), 7 on canceled or interrupt. Watching a finished run replays its telemetry."),

@@ -13,7 +13,7 @@ import (
 )
 
 // maxAgentsListLimit mirrors the backend's agents-list page bound.
-const maxAgentsListLimit int64 = 500
+const maxAgentsListLimit int64 = 200
 
 // maxAgentRevisionsLimit mirrors the backend's revisions-list page bound.
 const maxAgentRevisionsLimit int64 = 200
@@ -113,7 +113,7 @@ func agentsListCmd() *cobra.Command {
 			})
 		},
 	}
-	cmd.Flags().Int64Var(&limit, "limit", 20, "Maximum agents in this page (1-500)")
+	cmd.Flags().Int64Var(&limit, "limit", 20, "Maximum agents in this page (1-200)")
 	cmd.Flags().Int64Var(&offset, "offset", 0, "Number of matching agents to skip before this page")
 	cmd.Flags().StringVar(&search, "search", "", "Filter agent names by substring")
 	cmd.Flags().StringVar(&kind, "kind", "", "Only agents whose current revision is code or instructions")
@@ -433,7 +433,7 @@ func agentsRevisionsCmd() *cobra.Command {
 				rows := [][]string{{"REV", "REVISION ID", "KIND", "AUTHOR", "SIZE", "CREATED", "MESSAGE"}}
 				for _, rev := range resp.Revisions {
 					rows = append(rows, []string{
-						fmt.Sprintf("%d", rev.Revision), rev.ID, string(rev.Kind), strv(rev.AuthorUserID),
+						fmt.Sprintf("%d", rev.Revision), rev.ID, string(rev.Kind), util.OrDash(strv(rev.AuthorUserID)),
 						humanBytes(rev.Bytes), ts(rev.CreatedAt), util.OrDash(strv(rev.Message)),
 					})
 				}

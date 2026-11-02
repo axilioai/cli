@@ -138,7 +138,7 @@ directly to \fBruns start\fR\&.
 \fB--kind\fP=\fIvalue\fP - Only agents whose current revision is code or
 instructions
 .IP \(bu 2
-\fB--limit\fP=\fInumber\fP - Maximum agents in this page (1-500) (default
+\fB--limit\fP=\fInumber\fP - Maximum agents in this page (1-200) (default
 "20")
 .IP \(bu 2
 \fB--offset\fP=\fInumber\fP - Number of matching agents to skip before this
@@ -4792,7 +4792,8 @@ Fetch one run by the ID returned from \fBruns list\fR or \fBruns start\fR\&.
 
 .PP
 The result includes mode, status, trigger, agent, session, phone,
-created, started and completed times, error, and video URL when present.
+created, started and completed times, error, result, output, and video
+URL when present.
 
 .PP
 \fBGlobal-option behavior\fP
@@ -4962,7 +4963,7 @@ user@host ~ % axilio runs metrics --agent ag_123 -o json
 
 .SS start
 .EX
-axilio runs start --agent <agent-id> [flags]
+axilio runs start (--agent <agent-id> | --task <text>) [flags]
 .EE
 
 .PP
@@ -4971,7 +4972,12 @@ settings. Discover an agent ID with \fBagents list\fR\&. A code agent runs its
 Python; an instructions agent hands its task to a model.
 
 .PP
---phone-id pins the run to a specific dedicated phone.
+--task runs a one-off instruction without saving an agent, with the
+platform's default model and limits. Pass --task or --agent, not both.
+
+.PP
+The run takes one of your organization's dedicated phones, whichever is
+free; --phone-id pins it to a specific one.
 
 .PP
 --variables is a JSON object of run variables, exposed to agent code as
@@ -4992,13 +4998,16 @@ Successful output contains the created run.
 .PP
 \fBCommand options\fP
 .IP \(bu 2
-\fB--agent\fP=\fIvalue\fP - Agent ID to run (required)
+\fB--agent\fP=\fIvalue\fP - Agent ID to run
 .IP \(bu 2
 \fB--phone-id\fP=\fIvalue\fP - Dedicated phone ID to pin the run to
 .IP \(bu 2
 \fB--start-timeout\fP=\fInumber\fP - Queued-phone wait in whole seconds,
 60-86400, such as 300 or 900; 0 or negative values use the server
 default
+.IP \(bu 2
+\fB--task\fP=\fIvalue\fP - One-off instruction to run without saving an
+agent
 .IP \(bu 2
 \fB--variables\fP=\fIvalue\fP - JSON object of run variables (plaintext; no
 secrets)
@@ -5073,6 +5082,16 @@ Started run <run-id>
 \fBSample 5\fP
 
 .EX
+user@host ~ % axilio runs start --task "Open Settings and report the Android version"
+Started run <run-id>
+.sp
+# Exit status: 0
+.EE
+
+.PP
+\fBSample 6\fP
+
+.EX
 user@host ~ % axilio runs start --agent ag_123 --watch
 Started run <run-id>
 <frame stream>
@@ -5086,13 +5105,13 @@ Started run <run-id>
 .EE
 
 .PP
-\fBSample 6\fP
+\fBSample 7\fP
 
 .EX
 user@host ~ % axilio runs start
 .sp
 # Standard error:
---agent is required; discover an agent ID with `axilio agents list`
+pass --agent or --task, not both; discover an agent ID with `axilio agents list`
 .sp
 # Exit status: 2
 # Notes: The flag is validated before credentials or an API request.
@@ -5119,13 +5138,20 @@ not shown).
 .PP
 The exit code reflects the outcome: 0 when the run completed, 1 when it
 failed (the error is printed), 7 when it was canceled or the watch was
-interrupted. Interrupting the watch does not affect the run; re-run
-\fBruns watch\fR to replay and resume following.
+interrupted. The watch ends when the run does, even if the run's phone
+is still held for a follow-up. Interrupting the watch does not affect
+the run; re-run \fBruns watch\fR to replay and resume following.
+
+.PP
+A run that pauses for a person prints the question; answer it in the
+dashboard, and the watch carries on.
 
 .PP
 JSON mode streams newline-delimited JSON rather than a single document:
-one object per telemetry frame in archive order, then a final
-\fB{"watch_end": true, ...}\fR object carrying the run's status and error.
+one object per telemetry frame in archive order, a \fB{"input_required":
+true, ...}\fR object when the run pauses, then a final \fB{"watch_end":
+true, ...}\fR object carrying the run's status, error, result_text and
+output.
 
 .PP
 \fBGlobal-option behavior\fP
