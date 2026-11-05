@@ -14,8 +14,8 @@ import (
 
 // maxDeliveryBytes mirrors the server's per-file ceiling (100 MiB): both the
 // largest file a phone can receive and the largest file the library stores.
-// The SDK exports it as files.MaxDeliveryBytes from platform-go v0.6.1 (adopt
-// on the next dep bump). Mirrored so an oversize one-shot send fails here,
+// The Go SDK exports the same number as files.MaxDeliveryBytes. Mirrored so an
+// oversize one-shot send fails here,
 // before any request goes out. The server stays authoritative either way.
 const maxDeliveryBytes int64 = 100 << 20 // 100 MiB
 
@@ -31,7 +31,7 @@ func oversizeForDelivery(path string) error {
 	}
 	if info.Size() > maxDeliveryBytes {
 		return exit.Usagef(
-			"%s is %d bytes; files over 100 MiB can't be stored or sent today, so nothing was uploaded",
+			"%s is %d bytes; files over 100 MiB can't be stored or sent, so nothing was uploaded",
 			filepath.Base(path), info.Size())
 	}
 	return nil
