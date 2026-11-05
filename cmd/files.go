@@ -70,8 +70,7 @@ func filesUploadCmd() *cobra.Command {
 			"a phone, or `axilio phone send` to do both in one step. The stored filename " +
 			"defaults to the local basename and MIME type is inferred from the " +
 			"extension; --filename and --mime-type override those values. The library " +
-			"stores files up to 1 GiB, including files too large to deliver to a phone " +
-			"(phone delivery is limited to 100 MiB per file).",
+			"stores files up to 100 MiB, the same limit phone delivery has.",
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cl, err := newClient()
