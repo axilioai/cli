@@ -2131,9 +2131,8 @@ ready file in the library (source=upload).
 Use \fBaxilio files push\fR to send it to a phone, or \fBaxilio phone send\fR to
 do both in one step. The stored filename defaults to the local basename
 and MIME type is inferred from the extension; --filename and --mime-type
-override those values. The library stores files up to 1 GiB, including
-files too large to deliver to a phone (phone delivery is limited to 100
-MiB per file).
+override those values. The library stores files up to 100 MiB, the same
+limit phone delivery has.
 
 .PP
 \fBCommand options\fP
@@ -3607,14 +3606,12 @@ media library so it appears in the gallery.
 Targets the current session's phone (override with --session). Supported
 images are jpg, jpeg, png, webp, gif, and heic; supported videos are
 mp4, webm, mov, 3gp, and mkv. The target collection is inferred by media
-type unless DCIM, Pictures, or Movies is selected. Phone delivery is
-limited to 100 MiB per file, and larger files are rejected before
-anything is uploaded; the org library itself stores files up to 1 GiB
-(\fBaxilio uploads add\fR), including files too large to deliver to a phone.
-By default the command returns after dispatch; --wait blocks for
-delivered or failed, and --timeout applies only with --wait. This
-combines \fBuploads add\fR and \fBuploads push\fR and therefore retains the
-upload in the org library.
+type unless DCIM, Pictures, or Movies is selected. Files are limited to
+100 MiB, for the library and for phone delivery alike, and a larger file
+is rejected before anything is uploaded. By default the command returns
+after dispatch; --wait blocks for delivered or failed, and --timeout
+applies only with --wait. This combines \fBuploads add\fR and \fBuploads push\fR
+and therefore retains the upload in the org library.
 
 .PP
 \fBCommand options\fP
